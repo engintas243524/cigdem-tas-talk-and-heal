@@ -5,7 +5,7 @@
   --brand:#C9455F;
   --brand-deep:#8E2E44;
   --sage:#4F7A5C;
-  --taupe:#8C7570;
+  --taupe:#6E5A55;
   --border: rgba(36,27,30,0.12);
 
   --space-1: clamp(0.45rem, 0.35rem + 0.35vw, 0.7rem);
@@ -38,7 +38,7 @@
 }
 :root[data-theme="light"]{
   --ink:#4B4743; --paper:#F1E7E4; --surface:#FBF5F3;
-  --brand:#C9455F; --brand-deep:#8E2E44; --sage:#4F7A5C; --taupe:#8C7570;
+  --brand:#C9455F; --brand-deep:#8E2E44; --sage:#4F7A5C; --taupe:#6E5A55;
   --border: rgba(36,27,30,0.12);
   color-scheme: light;
 }
@@ -288,7 +288,7 @@ nav.primary.open{
   position:absolute;
   top:0; bottom:0;
   left:-5rem; right:-5rem;
-  background-image:url("assets/hero-leaf-texture.png");
+  background-image:url("assets/hero-leaf-texture.webp");
   background-size:cover;
   background-position:left center;
   background-repeat:no-repeat;
@@ -411,7 +411,7 @@ nav.primary.open{
 }
 .zig-bg{
   position:absolute; top:0; bottom:0; left:-5rem; right:-5rem;
-  background-image:url("assets/hero-leaf-texture.png");
+  background-image:url("assets/hero-leaf-texture.webp");
   background-size:cover; background-repeat:no-repeat;
   opacity:0.16;
 }
@@ -572,7 +572,7 @@ section.alt{ background:var(--surface); }
   padding:var(--space-3);
 }
 section.alt .service-card{ background:var(--paper); }
-.service-card h3{ font-size:1.05rem; margin-bottom:var(--space-1); }
+.service-card h2{ font-size:1.05rem; margin-bottom:var(--space-1); }
 .service-card p{ color:var(--taupe); font-size:0.92rem; margin:0; }
 
 /* Approach */
@@ -635,7 +635,7 @@ form.contact{ display:grid; gap:var(--space-2); }
 .form-note--error{ color:var(--brand-deep); }
 .contact-info{ display:grid; gap:var(--space-3); align-content:start; }
 .contact-info a{ text-decoration:underline; text-underline-offset:0.1875rem; }
-.contact-info h3{ font-size:1.05rem; }
+.contact-info h2{ font-size:1.05rem; }
 
 .whatsapp-link{
   display:inline-flex; align-items:center; gap:0.5rem;
