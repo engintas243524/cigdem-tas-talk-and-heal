@@ -127,6 +127,10 @@ header.site::before{
   flex-direction:column;
   align-items:flex-end;
   line-height:0.92;
+  /* pulls the text left so "TALK" lines up with the tip of the heart's
+     speech-bubble tail, not the icon's full bounding box (the heart's
+     right lobe extends further right than the tail does) */
+  margin-left:clamp(-0.42rem, -0.2rem - 0.26vw, -0.25rem);
   font-family:var(--font-display);
   white-space:nowrap;
 }
