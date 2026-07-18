@@ -142,10 +142,14 @@
     // motionless once you scrolled to them.
     var items = [];
     document.querySelectorAll('.hero-bg-wrap, .zig-bg-wrap, .page-intro-bg').forEach(function(el){
-      items.push({ el: el, prop: '--px', current: 0, target: 0, active: false });
+      items.push({ el: el, prop: '--px', current: 0, target: 0, active: false, rate: 0.4 });
     });
+    // Services/Approach's accent graphics and Blog's backdrop move at half
+    // the rate of Hero/About's backdrops (user request: 50% slower).
+    var slowEls = document.querySelectorAll('#servisler .zig-graphic, #yaklasim .zig-graphic, #blog .photo-backdrop');
     document.querySelectorAll('.zig-graphic, .photo-backdrop').forEach(function(el){
-      items.push({ el: el, prop: '--gpx', current: 0, target: 0, active: false });
+      var isSlow = Array.prototype.indexOf.call(slowEls, el) !== -1;
+      items.push({ el: el, prop: '--gpx', current: 0, target: 0, active: false, rate: isSlow ? 0.2 : 0.4 });
     });
     if (!items.length) return;
 
@@ -172,7 +176,7 @@
       lastY = y;
       items.forEach(function(item){
         if (!item.active) return;
-        item.target += delta * 0.4;
+        item.target += delta * item.rate;
         if (item.target > max) item.target = max;
         if (item.target < -max) item.target = -max;
       });
