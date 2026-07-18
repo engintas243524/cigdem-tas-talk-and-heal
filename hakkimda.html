@@ -134,29 +134,56 @@
   (function(){
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) return;
-    var wraps = document.querySelectorAll('.hero-bg-wrap, .zig-bg-wrap, .page-intro-bg');
-    var graphics = document.querySelectorAll('.zig-graphic');
-    var backdrops = document.querySelectorAll('.photo-backdrop');
-    if (!wraps.length && !graphics.length && !backdrops.length) return;
+
+    // Each background/accent image now tracks scroll independently, activated
+    // once it (or, on standalone pages, the fixed intro background) is at
+    // least 5% visible -- rather than one shared, page-wide accumulator that
+    // clamped out long before later sections came into view and then sat
+    // motionless once you scrolled to them.
+    var items = [];
+    document.querySelectorAll('.hero-bg-wrap, .zig-bg-wrap, .page-intro-bg').forEach(function(el){
+      items.push({ el: el, prop: '--px', current: 0, target: 0, active: false });
+    });
+    document.querySelectorAll('.zig-graphic, .photo-backdrop').forEach(function(el){
+      items.push({ el: el, prop: '--gpx', current: 0, target: 0, active: false });
+    });
+    if (!items.length) return;
+
     var lastY = window.scrollY;
-    var target = 0;
-    var current = 0;
     var max = 55;
+
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if (!entry.isIntersecting) return;
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].el === entry.target) items[i].active = true;
+          }
+        });
+      }, { threshold: 0.05 });
+      items.forEach(function(item){ io.observe(item.el); });
+    } else {
+      items.forEach(function(item){ item.active = true; });
+    }
+
     function onScroll(){
       var y = window.scrollY;
       var delta = y - lastY;
       lastY = y;
-      target += delta * 0.4;
-      if (target > max) target = max;
-      if (target < -max) target = -max;
+      items.forEach(function(item){
+        if (!item.active) return;
+        item.target += delta * 0.4;
+        if (item.target > max) item.target = max;
+        if (item.target < -max) item.target = -max;
+      });
     }
     window.addEventListener('scroll', onScroll, { passive: true });
+
     function tick(){
-      current += (target - current) * 0.08;
-      var px = current.toFixed(2) + 'px';
-      wraps.forEach(function(el){ el.style.setProperty('--px', px); });
-      graphics.forEach(function(el){ el.style.setProperty('--gpx', px); });
-      backdrops.forEach(function(el){ el.style.setProperty('--gpx', px); });
+      items.forEach(function(item){
+        item.current += (item.target - item.current) * 0.08;
+        item.el.style.setProperty(item.prop, item.current.toFixed(2) + 'px');
+      });
       requestAnimationFrame(tick);
     }
     tick();
