@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,400;0,500;0,600;0,700;1,500&family=WindSong&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 
@@ -180,7 +180,7 @@
     var notes = {
       empty: { en:'Please write a message first.', tr:'Lütfen önce bir mesaj yaz.' },
       translating: { en:'Translating…', tr:'Çevriliyor…' },
-      error: { en:'Translation failed. Please try again.', tr:'Çeviri başarısız oldu. Lütfen tekrar dene.' },
+      error: { en:'Translation service is unavailable right now. Please try again shortly.', tr:'Çeviri servisi şu anda kullanılamıyor. Lütfen birazdan tekrar dene.' },
       done: { en:'Translated.', tr:'Çevrildi.' }
     };
     function currentLang(){ return root.getAttribute('data-lang') === 'tr' ? 'tr' : 'en'; }
@@ -190,18 +190,40 @@
       note.classList.toggle('form-note--error', !!isError);
     }
 
+    // Common short Turkish words/greetings that contain no Turkish-specific
+    // diacritics (ç,ğ,ı,ö,ü) and would otherwise be misdetected as English.
+    var TR_WORDS = /\b(selam|merhaba|naber|nasilsin|nasılsın|evet|hayir|hayır|tamam|lutfen|lütfen|tesekkur|teşekkür|tesekkurler|teşekkürler|iyiyim|gunaydin|günaydın|iyi|kotu|kötü|yardim|yardım)\b/i;
+
+    function detectLang(text){
+      if (/[çğıöüÇĞİÖÜ]/.test(text)) return 'tr';
+      if (TR_WORDS.test(text)) return 'tr';
+      return 'en';
+    }
+
+    // MyMemory's free/unauthenticated tier occasionally returns a quota or
+    // warning message INSIDE translatedText instead of a real translation
+    // (e.g. "MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS...").
+    // Treat that as a failure rather than displaying it as if it were the
+    // translated message.
+    function looksLikeApiWarning(s){
+      return /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE PAIR|IS AN INVALID TARGET LANGUAGE|AMBIGUOUS/i.test(s);
+    }
+
     translateBtn.addEventListener('click', function(){
       var text = messageEl.value.trim();
       if (!text) { showNote('empty', true); return; }
-      var srcLang = /[çğıöüÇĞİÖÜ]/.test(text) ? 'tr' : 'en';
+      var srcLang = detectLang(text);
       var targetLang = srcLang === 'tr' ? 'en' : 'tr';
       showNote('translating', false);
       translateBtn.disabled = true;
       fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + srcLang + '|' + targetLang)
-        .then(function(res){ return res.json(); })
+        .then(function(res){
+          if (!res.ok) throw new Error('http ' + res.status);
+          return res.json();
+        })
         .then(function(data){
           var translated = data && data.responseData && data.responseData.translatedText;
-          if (!translated) throw new Error('empty translation');
+          if (!translated || looksLikeApiWarning(translated)) throw new Error('bad translation response');
           messageEl.value = translated;
           showNote('done', false);
         })
