@@ -192,18 +192,6 @@
     }
     tick();
   })();
-
-  // TEMP DEV ONLY — image reference numbers, remove before launch
-  (function(){
-    var targets = document.querySelectorAll('.photo-backdrop, .photo-placeholder, .zig-graphic, .zig-front-card, .zig-photo, .hero-media img');
-    targets.forEach(function(el, i){
-      var host = el.tagName === 'IMG' ? el.parentElement : el;
-      var badge = document.createElement('span');
-      badge.className = 'dev-imgnum';
-      badge.textContent = String(i + 1);
-      host.appendChild(badge);
-    });
-  })();
 </script>
 </body>
 </html>
