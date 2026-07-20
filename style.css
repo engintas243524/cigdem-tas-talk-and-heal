@@ -393,7 +393,7 @@ nav.primary.open{
   font-size:clamp(1.8rem, 1.4rem + 2.8vw, 3.4rem);
   letter-spacing:0.14em;
   transform:scaleX(1.15);
-  color:var(--brand);
+  color:var(--ink);
   margin:0;
 }
 .hero-iam{
