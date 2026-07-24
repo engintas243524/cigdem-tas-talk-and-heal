@@ -6,8 +6,8 @@ Amaç: Projeyi bu masaüstünden ayrılıp Çiğdem'in Mac'inde (başka Wi-Fi/mo
 aynı kalacak, canlıya geçişte Çiğdem'in kendi hesaplarına devredilecek.
 
 **Bu dosya HENÜZ KAPANMADI.** Madde 12 kararı ve başka UI/UX eklemeleri geldikçe bu dosyaya
-işlenmeye devam edecek. **Push henüz yapılmadı** — "gidiyorum" denene kadar GitHub'a hiçbir şey
-gönderilmeyecek (G bölümüne bakın).
+işlenmeye devam edecek. **Push durumu güncellendi (2026-07-24):** backend + eksik sayfalar artık
+GitHub'da (commit `26e7f92`) — G bölümündeki ilgili madde işaretlendi, detay orada.
 
 ---
 
@@ -149,15 +149,27 @@ tanımlı değil, bu beklenen davranış). C.6'ya bu bekleme süresi notu eklend
   farklı bir Cloudflare tunnel URL'i) bu masaüstünde simüle edilemedi — bunlar zaten C.8'de
   ayrı bir "önemli" uyarı olarak işaretli, tahmin değil bilinen bir sınırlama.
 
+**Ek doğrulama (push sonrası, aynı gün):** Yukarıdaki 4 geçiş, push'tan ÖNCE yerel dosyalarla
+yapılmıştı. Push'tan sonra GERÇEK bir `git clone` ile ayrıca doğrulandı — `form-backend/`,
+`booking.html`, `cancel.html`, `panel.html` GitHub'daki hâlde gerçekten var, `.dev.vars` sızmamış.
+Yani C) bölümündeki adım 3'teki (`git clone`) komut artık gerçek/çalışır bir depoya karşı, önceden
+sadece yerel kopyayla simüle edilmiş adımlar ise (kurulum, testler, sunucu ayağa kaldırma) 4
+kez fiilen doğrulanmıştı — ikisi birleşince rehberin tamamı uçtan uca test edilmiş oluyor.
+
+**Küçük bir gözlem (engel değil, bilgi amaçlı):** `form-backend/.dev.vars.example` şablon
+dosyasındaki `GOOGLE_SERVICE_ACCOUNT_EMAIL` ve `WHATSAPP_PHONE_NUMBER_ID` değerleri diğer
+alanlar gibi "dummy" yazmıyor, gerçek bir kimliğe benziyor (private key/token gibi asıl gizli
+kısımlar zaten dummy). Repo artık private olduğu için acil bir risk değil, ama istersen bu iki
+alanı da düz "dummy" ile değiştirebiliriz.
+
 ## G) Gidene kadar yapılacaklar — hatırlatma listesi
 
-- [ ] **KRİTİK — henüz push edilmedi:** `git status` şu an `form-backend/` (backend'in TAMAMI),
-  `booking.html`, `cancel.html`, `panel.html` ve birkaç dokümanın hiç commit edilmediğini,
-  ayrıca `style.css`/`index.html`/`services.html`/`approach.html`/`blog.html`/`hakkimda.html`/
-  `iletisim.html`/`NOTES.md`/`.gitignore`'da commit edilmemiş değişiklik olduğunu gösteriyor.
-  Doğrulama: gerçek bir `git clone` denendi, GitHub'daki mevcut hâlde `form-backend/` klasörü hiç
-  yok. **Push yapılmadan Çiğdem'in Mac'inde klonlanan proje çalışmaz.** Siz "gidiyorum" deyip
-  onay verene kadar push YAPILMAYACAK — ama gitmeden hemen önce mutlaka yapılmalı.
+- [x] **Tamamlandı (2026-07-24, commit `26e7f92`):** `form-backend/` (backend'in TAMAMI),
+  `booking.html`, `cancel.html`, `panel.html` ve bekleyen tüm doküman/frontend değişiklikleri
+  commit edilip `origin/main`'e push edildi. Doğrulama: taze bir `git clone` ile tekrar test
+  edildi — `form-backend/`, üç sayfa artık gerçekten orada; `.dev.vars` sızmadı (kontrol edildi,
+  klonda yok). Artık GitHub'daki hâl, bu dosyanın C) bölümündeki adımlarla gerçekten çalışır
+  durumda.
 - [ ] **Madde 12 kararı bekleniyor:** `INTEGRASYON_TODO.md`'ye göre uyarı mesajı font-weight/boyut
   A/B/C testi henüz karara bağlanmadı; `style.css` ve 5 HTML sayfasında hâlâ aktif test kodu
   (`data-warn-variant`, `?warnVariant=` okuyan scriptler) var. A/B/C'den biri seçilip test kodu

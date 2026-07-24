@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=47">
+<link rel="stylesheet" href="style.css?v=48">
 </head>
 <body>
 
@@ -149,11 +149,6 @@
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
   var root = document.documentElement;
-  // Madde 12 (2026-07-24): 3-way font-weight/size comparison for the card/label text on this
-  // page, driven by ?warnVariant=a|b|c (see style.css's html[data-warn-variant] rules). Remove
-  // once the user has picked a variant.
-  var warnVariant = new URLSearchParams(location.search).get('warnVariant');
-  if (warnVariant) document.documentElement.setAttribute('data-warn-variant', warnVariant);
   var flags = document.querySelectorAll('.lang-flag');
   function setLang(lang){
     root.setAttribute('data-lang', lang);

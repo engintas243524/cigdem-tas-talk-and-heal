@@ -628,8 +628,8 @@ section.alt{ background:var(--surface); }
   padding:var(--space-3);
 }
 section.alt .service-card{ background:var(--paper); }
-.service-card h2{ font-size:1.05rem; margin-bottom:var(--space-1); }
-.service-card p{ color:var(--ink); font-size:0.92rem; margin:0; }
+.service-card h2{ font-size:1.05rem; font-weight:300; margin-bottom:var(--space-1); }
+.service-card p{ color:var(--ink); font-size:0.92rem; font-weight:300; margin:0; }
 
 /* Approach */
 .approach-list{
@@ -640,10 +640,11 @@ section.alt .service-card{ background:var(--paper); }
 }
 .approach-item h2{
   font-size:1.05rem;
+  font-weight:300;
   color:var(--ink);
   margin-bottom:var(--space-1);
 }
-.approach-item p{ color:var(--ink); font-size:0.92rem; }
+.approach-item p{ color:var(--ink); font-size:0.92rem; font-weight:300; }
 
 /* Cost & Info */
 .info-list{ display:grid; gap:var(--space-5); max-width:70ch; }
@@ -669,7 +670,7 @@ section.alt .service-card{ background:var(--paper); }
 }
 form.contact{ display:grid; gap:var(--space-2); }
 .field{ display:grid; gap:0.375rem; }
-.field label{ font-size:0.85rem; font-weight:200; }
+.field label{ font-size:0.85rem; font-weight:300; }
 .field input, .field textarea{
   font-family:var(--font-body);
   font-size:1rem;
@@ -682,65 +683,21 @@ form.contact{ display:grid; gap:var(--space-2); }
 .field textarea{ min-height:7.5rem; resize:vertical; }
 .form-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-2); }
 .form-note{
-  margin:0; font-size:0.85rem; color:var(--sage);
+  margin:0; font-size:0.85rem; font-weight:300; color:var(--sage);
 }
 .form-note--error{ color:var(--brand-deep); }
-/* Madde 12 (2026-07-23) — 3-way live comparison for warning-text emphasis, driven by
-   ?warnVariant=a|b|c (see booking.html). Base .form-note is unset font-weight (inherits body's
-   200) / font-size:0.85rem — a: weight+100, b: weight+200, c: same weight, size+1 unit (~1px). */
-html[data-warn-variant="a"] .form-note{ font-weight:300; }
-html[data-warn-variant="b"] .form-note{ font-weight:400; }
-html[data-warn-variant="c"] .form-note{ font-size:0.9125rem; }
-
-/* Madde 12 (2026-07-24) — extended to the full text set the user listed: Services/Blog cards,
-   Approach items, Contact labels/info, Booking section labels/fields/policy. Two base-weight
-   groups, since "+100/+200" is relative to each element's OWN current weight, not a flat value:
-   most of this text inherits body's 200 (untouched below); .section-label/.session-option-name
-   are already explicitly 400. Variant c keeps weight as-is and adds exactly 1px via calc() on
-   each selector's own current font-size (no manual rem conversion, so it can't drift out of sync
-   if a base size ever changes). */
-html[data-warn-variant="a"] :is(
-  .service-card h2, .service-card p, .approach-item h2, .approach-item p,
-  .contact-info h2, .contact-info p, .policy-box p, .checkbox-field, .field label,
-  .mode-pill span, .recurring-note p, .session-option-meta, .session-option-price,
-  .whatsapp-link
-){ font-weight:300; }
-html[data-warn-variant="a"] :is(.section-label, .session-option-name){ font-weight:500; }
-
-html[data-warn-variant="b"] :is(
-  .service-card h2, .service-card p, .approach-item h2, .approach-item p,
-  .contact-info h2, .contact-info p, .policy-box p, .checkbox-field, .field label,
-  .mode-pill span, .recurring-note p, .session-option-meta, .session-option-price,
-  .whatsapp-link
-){ font-weight:400; }
-html[data-warn-variant="b"] :is(.section-label, .session-option-name){ font-weight:600; }
-
-html[data-warn-variant="c"] .service-card h2{ font-size:calc(1.05rem + 1px); }
-html[data-warn-variant="c"] .service-card p{ font-size:calc(0.92rem + 1px); }
-html[data-warn-variant="c"] .approach-item h2{ font-size:calc(1.05rem + 1px); }
-html[data-warn-variant="c"] .approach-item p{ font-size:calc(0.92rem + 1px); }
-html[data-warn-variant="c"] .contact-info h2{ font-size:calc(1.05rem + 1px); }
-html[data-warn-variant="c"] .contact-info p{ font-size:calc(1rem + 1px); }
-html[data-warn-variant="c"] .policy-box p{ font-size:calc(0.92rem + 1px); }
-html[data-warn-variant="c"] .checkbox-field{ font-size:calc(0.9rem + 1px); }
-html[data-warn-variant="c"] .field label{ font-size:calc(0.85rem + 1px); }
-html[data-warn-variant="c"] .mode-pill span{ font-size:calc(0.88rem + 1px); }
-html[data-warn-variant="c"] .recurring-note p{ font-size:calc(0.78rem + 1px); }
-html[data-warn-variant="c"] .session-option-meta{ font-size:calc(0.85rem + 1px); }
-html[data-warn-variant="c"] .session-option-price{ font-size:calc(1.3rem + 1px); }
-html[data-warn-variant="c"] .whatsapp-link{ font-size:calc(1rem + 1px); }
-html[data-warn-variant="c"] .section-label{ font-size:calc(0.95rem + 1px); }
-html[data-warn-variant="c"] .session-option-name{ font-size:calc(1rem + 1px); }
 .contact-info{ display:grid; gap:var(--space-3); align-content:start; }
 .contact-info a{ text-decoration:underline; text-underline-offset:0.1875rem; }
-.contact-info h2{ font-size:1.05rem; }
+.contact-info h2{ font-size:1.05rem; font-weight:300; }
+.contact-info p{ font-weight:300; }
+.mode-pill span{ font-weight:300; }
 
 /* Booking */
 .field-group{ border:0; padding:0; margin:0 0 var(--space-4); max-width:70ch; }
 .section-label{
   font-family:var(--font-body);
   font-size:0.95rem;
-  font-weight:400;
+  font-weight:500;
   color:var(--ink);
   letter-spacing:0.02em;
   margin:0 0 var(--space-2);
@@ -787,9 +744,9 @@ html[data-warn-variant="c"] .session-option-name{ font-size:calc(1rem + 1px); }
 }
 .session-option input{ position:absolute; opacity:0; width:0; height:0; }
 .session-option-body{ display:grid; gap:0.25rem; }
-.session-option-name{ font-weight:400; color:var(--ink); }
-.session-option-meta{ font-size:0.85rem; color:var(--taupe); }
-.session-option-price{ font-size:1.3rem; color:var(--sage); margin-top:0.25rem; }
+.session-option-name{ font-weight:500; color:var(--ink); }
+.session-option-meta{ font-size:0.85rem; font-weight:300; color:var(--taupe); }
+.session-option-price{ font-size:1.3rem; font-weight:300; color:var(--sage); margin-top:0.25rem; }
 
 /* Weekly slot carousel (one week visible, swipe/arrow/dot navigation). Panel, nav
    buttons and selected chips reuse the site's real fabric-gradient recipes; chips are
@@ -921,23 +878,24 @@ html[data-warn-variant="c"] .session-option-name{ font-size:calc(1rem + 1px); }
   padding:var(--space-3);
   margin-bottom:var(--space-2);
 }
-.policy-box p{ margin:0 0 0.75em; font-size:0.92rem; color:var(--ink); }
+.policy-box p{ margin:0 0 0.75em; font-size:0.92rem; font-weight:300; color:var(--ink); }
 .policy-box p:last-child{ margin-bottom:0; }
 .checkbox-field{
   display:flex; align-items:flex-start; gap:0.6rem;
   font-size:0.9rem;
+  font-weight:300;
   cursor:pointer;
 }
 .checkbox-field input{ margin-top:0.2rem; flex:none; }
 .recurring-toggle{ margin-top:var(--space-3); }
 .recurring-note{ margin-top:var(--space-2); }
-.recurring-note p{ margin:0.35rem 0 0; font-size:0.78rem; color:var(--taupe); }
+.recurring-note p{ margin:0.35rem 0 0; font-size:0.78rem; font-weight:300; color:var(--taupe); }
 .recurring-note p:first-child{ margin-top:0; }
 
 .whatsapp-link{
   display:inline-flex; align-items:center; gap:0.5rem;
   margin-top:var(--space-2);
-  font-weight:200;
+  font-weight:300;
   text-decoration:none;
   color:var(--sage);
 }

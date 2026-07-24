@@ -1228,7 +1228,10 @@ güncellendiği kontrol edilecek.
 ## İlerleme Durumu (2026-07-24, compact/clear öncesi kayıt — kaldığımız yer)
 
 **12 maddelik liste durumu:** Madde 1-11 tamamlandı+onaylandı (hata günlüğü FE-01..FE-14, BE-21).
-**Madde 12 (font weight/boyut karşılaştırması) — KARAR BEKLENİYOR, henüz bitmedi.**
+**Madde 12 — TAMAMLANDI (2026-07-24).** Kullanıcı A varyantını seçti (`approach.html?warnVariant=a`
+üzerinden), 17 seçiciye kalıcı olarak yazıldı, test mekanizmasının tamamı (style.css'teki 23
+satır + 5 sayfadaki script'ler) kaldırıldı, cache-busting v47→v48, hata günlüğü FE-15 güncellendi.
+**12 maddelik liste tamamen bitti.**
 
 **Madde 12'nin tam kapsamı (kullanıcı netleştirdi):** Sadece uyarı mesajları değil, Madde 12'nin
 başında sayılan TÜM metinler: Services/Blog kartları (`.service-card h2/p`), Approach kartları

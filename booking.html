@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=47">
+<link rel="stylesheet" href="style.css?v=48">
 </head>
 <body>
 
@@ -367,23 +367,6 @@
       bookingNote.style.display = 'block';
       bookingNote.classList.toggle('form-note--error', !!isError);
     }
-
-    // Madde 12 (2026-07-23): 3-way warning-text comparison, purely for a live A/B/C decision — set
-    // by ?warnVariant=a|b|c (style.css has the matching html[data-warn-variant] rules) and, so the
-    // 3 links are instantly comparable with no manual interaction needed, auto-shows a real sample
-    // warning on load. Remove this block once the user has picked a variant.
-    (function(){
-      var v = new URLSearchParams(location.search).get('warnVariant');
-      if (!v) return;
-      document.documentElement.setAttribute('data-warn-variant', v);
-      showNote('needAck', true);
-      // The warning sits far down the page — scroll straight to it so the 3 links are actually
-      // comparable without first hunting for it. Late-loading webfonts/images can reflow the page
-      // taller after an early scroll, leaving the position stale — re-scroll a few times over the
-      // first second to land on the final settled position regardless of exact load timing.
-      function scrollToNote(){ bookingNote.scrollIntoView({ block: 'center' }); }
-      [0, 150, 400, 900].forEach(function(ms){ setTimeout(scrollToNote, ms); });
-    })();
 
     var SLOT_MAX_WEEKS = 10; // matches MAX_SESSION_COUNT — a recurring booking is one slot per week
     var DAY_MS = 86400000;
