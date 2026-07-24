@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cancel a Session — Talk &amp; Heal</title>
+<meta name="description" content="Review and confirm the cancellation of your Talk &amp; Heal session." />
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
+<link rel="stylesheet" href="style.css?v=47">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap header-row">
+    <a class="brand" href="index.html">
+      <img class="brand-heart" src="assets/heart-icon-3d.webp" alt="" aria-hidden="true">
+      <span class="brand-word">
+        <span class="brand-line1"><span class="w1">TALK</span><span class="amp">&amp;</span></span>
+        <span class="brand-line2">HEAL</span>
+      </span>
+    </a>
+
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <nav class="primary">
+      <a href="hakkimda.html"><span data-en>ABOUT</span><span data-tr>HAKKIMDA</span></a>
+      <a href="services.html"><span data-en>SERVICES</span><span data-tr>SERVİSLER</span></a>
+      <a href="approach.html"><span data-en>APPROACH</span><span data-tr>YAKLAŞIM</span></a>
+      <a href="blog.html"><span data-en>BLOG</span><span data-tr>BLOG</span></a>
+      <a href="iletisim.html"><span data-en>CONTACT</span><span data-tr>İLETİŞİM</span></a>
+      <a href="booking.html"><span data-en>BOOK A CONSULTATION</span><span data-tr>RANDEVU AL</span></a>
+    </nav>
+
+    <div class="header-actions">
+      <div class="lang-switch" role="group" aria-label="Language / Dil">
+        <button class="lang-flag" data-lang="en" type="button" aria-label="English">
+          <svg viewBox="0 0 60 36" aria-hidden="true">
+            <rect width="60" height="36" fill="#012169"/>
+            <path d="M0,0 L60,36 M60,0 L0,36" stroke="#fff" stroke-width="8"/>
+            <path d="M0,0 L60,36 M60,0 L0,36" stroke="#C8102E" stroke-width="4"/>
+            <path d="M30,0 V36 M0,18 H60" stroke="#fff" stroke-width="12"/>
+            <path d="M30,0 V36 M0,18 H60" stroke="#C8102E" stroke-width="6"/>
+          </svg>
+        </button>
+        <button class="lang-flag" data-lang="tr" type="button" aria-label="Türkçe">
+          <svg viewBox="0 0 60 40" aria-hidden="true">
+            <rect width="60" height="40" fill="#E30A17"/>
+            <circle cx="24" cy="20" r="10" fill="#fff"/>
+            <circle cx="27.5" cy="20" r="8" fill="#E30A17"/>
+            <polygon points="38.5,15.5 39.5,18.6 42.78,18.6 40.1,20.5 41.1,23.6 38.5,21.7 35.85,23.6 36.9,20.5 34.2,18.6 37.5,18.6" fill="#fff"/>
+          </svg>
+        </button>
+      </div>
+      <a class="btn btn-primary header-cta" href="booking.html">
+        <span data-en>Book a consultation</span><span data-tr>Randevu Al</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="page-intro-bg" aria-hidden="true"><div class="hero-bg"></div></div>
+
+  <section class="page-intro">
+    <div class="wrap">
+      <p class="eyebrow"><span data-en>Cancellation</span><span data-tr>İptal</span></p>
+      <h1><span data-en>Cancel your session</span><span data-tr>Randevunu İptal Et</span></h1>
+      <p class="lead"><span data-en>Review your booking and the refund below, then confirm the cancellation.</span><span data-tr>Aşağıdan randevunu ve iade tutarını gözden geçir, ardından iptali onayla.</span></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+
+      <p class="form-note" id="statusNote" role="status" aria-live="polite"></p>
+
+      <!-- Preview: shown once a valid link loads and the booking is not already cancelled -->
+      <div id="previewBox" hidden>
+        <fieldset class="field-group">
+          <legend class="section-label"><span data-en>Your booking</span><span data-tr>Randevun</span></legend>
+          <div class="policy-box">
+            <p><strong><span data-en>Appointment:</span><span data-tr>Randevu:</span></strong> <span id="apptText"></span></p>
+            <p id="remainingLine"><strong><span data-en>Sessions to cancel:</span><span data-tr>İptal edilecek seans:</span></strong> <span id="remainingText"></span></p>
+            <p><strong><span data-en>Refund:</span><span data-tr>İade:</span></strong> <span id="refundText"></span></p>
+          </div>
+        </fieldset>
+
+        <fieldset class="field-group">
+          <legend class="section-label"><span data-en>Reason (optional)</span><span data-tr>Neden (isteğe bağlı)</span></legend>
+          <div class="field">
+            <label for="reason"><span data-en>If you'd like, tell us why you're cancelling.</span><span data-tr>İstersen neden iptal ettiğini bize yazabilirsin.</span></label>
+            <textarea id="reason" name="reason" maxlength="450"></textarea>
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" type="button" id="confirmBtn">
+            <span data-en>Cancel my booking</span><span data-tr>Randevumu İptal Et</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>© <span id="year"></span> Talk &amp; Heal — Çiğdem Taş</span>
+    <span><span data-en>BACP Registered Psychotherapist</span><span data-tr>BACP Kayıtlı Psikoterapist</span></span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+  var root = document.documentElement;
+  var flags = document.querySelectorAll('.lang-flag');
+  function setLang(lang){
+    root.setAttribute('data-lang', lang);
+    root.setAttribute('lang', lang);
+    localStorage.setItem('talkandheal-lang', lang);
+    flags.forEach(function(btn){ btn.classList.toggle('active', btn.getAttribute('data-lang') === lang); });
+  }
+  setLang(localStorage.getItem('talkandheal-lang') || 'en');
+  flags.forEach(function(btn){
+    btn.addEventListener('click', function(){ setLang(btn.getAttribute('data-lang')); refreshDynamicText(); });
+  });
+
+  var menuBtn = document.getElementById('menuBtn');
+  var navPrimary = document.querySelector('nav.primary');
+  if (menuBtn && navPrimary) {
+    menuBtn.addEventListener('click', function(){
+      var isOpen = navPrimary.classList.toggle('open');
+      menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function(e){
+      if (navPrimary.classList.contains('open') && !navPrimary.contains(e.target) && !menuBtn.contains(e.target)) {
+        navPrimary.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  (function(){
+    // Same local-dev origin scheme as booking.html — replaced at deploy time with the real API host.
+    // TEMP (2026-07-23 multi-device test session, revert after): see booking.html note.
+    var API_BASE = window.location.hostname.indexOf('trycloudflare.com') !== -1
+      ? 'https://stanley-relate-trial-web.trycloudflare.com'
+      : 'http://' + window.location.hostname + ':8787';
+
+    var params = new URLSearchParams(window.location.search);
+    var sessionId = params.get('session') || '';
+    var token = params.get('token') || '';
+
+    var statusNote = document.getElementById('statusNote');
+    var previewBox = document.getElementById('previewBox');
+    var confirmBtn = document.getElementById('confirmBtn');
+    var apptText = document.getElementById('apptText');
+    var remainingLine = document.getElementById('remainingLine');
+    var remainingText = document.getElementById('remainingText');
+    var refundText = document.getElementById('refundText');
+    var reasonEl = document.getElementById('reason');
+
+    var preview = null; // the GET /cancel response, kept so language switch can re-render times
+
+    function currentLang(){ return root.getAttribute('data-lang') === 'tr' ? 'tr' : 'en'; }
+    function locale(){ return currentLang() === 'tr' ? 'tr-TR' : 'en-GB'; }
+
+    var STRINGS = {
+      loading: { en: 'Loading your booking…', tr: 'Randevun yükleniyor…' },
+      invalid: { en: 'This cancellation link is invalid or has expired. Please use the link from your confirmation email, or contact us.', tr: 'Bu iptal bağlantısı geçersiz ya da süresi dolmuş. Lütfen onay e-postandaki bağlantıyı kullan ya da bize ulaş.' },
+      notFound: { en: 'We could not find this booking.', tr: 'Bu randevuyu bulamadık.' },
+      already: { en: 'This booking has already been cancelled. If you have any questions, please contact us.', tr: 'Bu randevu zaten iptal edilmiş. Soruların olursa lütfen bize ulaş.' },
+      loadError: { en: 'Something went wrong loading your booking. Please try again shortly.', tr: 'Randevun yüklenirken bir şeyler ters gitti. Lütfen birazdan tekrar dene.' },
+      cancelling: { en: 'Cancelling your booking…', tr: 'Randevun iptal ediliyor…' },
+      cancelError: { en: 'We could not complete the cancellation. Please try again shortly or contact us.', tr: 'İptali tamamlayamadık. Lütfen birazdan tekrar dene ya da bize ulaş.' }
+    };
+
+    function setStatus(key, isError){
+      if (!key) { statusNote.style.display = 'none'; return; }
+      statusNote.textContent = typeof key === 'string' ? (STRINGS[key] ? STRINGS[key][currentLang()] : key) : key[currentLang()];
+      statusNote.style.display = 'block';
+      statusNote.classList.toggle('form-note--error', !!isError);
+    }
+
+    // GBP amount, e.g. 120 -> "£120", 87.5 -> "£87.50"
+    function money(gbp){
+      return '£' + (Number(gbp) % 1 === 0 ? String(gbp) : Number(gbp).toFixed(2));
+    }
+
+    function refreshDynamicText(){
+      if (!preview) return;
+      var fmt = { dateStyle: 'medium', timeStyle: 'short', timeZone: preview.clientTimeZone || 'Europe/London' };
+      apptText.textContent = new Date(preview.appointmentStartUtc).toLocaleString(locale(), fmt);
+      var n = (preview.remaining || []).length;
+      remainingText.textContent = String(n);
+      remainingLine.style.display = n > 0 ? '' : 'none';
+      var pct = preview.refundPercent;
+      refundText.textContent = money(preview.refundGBP) + (currentLang() === 'tr' ? ' (%' + pct + ')' : ' (' + pct + '%)');
+    }
+    // exposed so the language-flag listener above can re-render times/labels on switch
+    window.refreshDynamicText = refreshDynamicText;
+
+    if (!sessionId || !token) { setStatus('invalid', true); return; }
+
+    setStatus('loading', false);
+    fetch(API_BASE + '/cancel?session=' + encodeURIComponent(sessionId) + '&token=' + encodeURIComponent(token))
+      .then(function(res){ return res.json().then(function(data){ return { status: res.status, data: data }; }); })
+      .then(function(r){
+        if (r.status === 401) { setStatus('invalid', true); return; }
+        if (r.status === 404) { setStatus('notFound', true); return; }
+        if (r.status !== 200) { setStatus('loadError', true); return; }
+        preview = r.data;
+        if (preview.alreadyCancelled) { setStatus('already', false); return; }
+        setStatus(null);
+        refreshDynamicText();
+        previewBox.hidden = false;
+      })
+      .catch(function(){ setStatus('loadError', true); });
+
+    confirmBtn.addEventListener('click', function(){
+      confirmBtn.disabled = true;
+      setStatus('cancelling', false);
+      fetch(API_BASE + '/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: sessionId, token: token, reason: reasonEl.value.trim() })
+      })
+        .then(function(res){ return res.json().then(function(data){ return { status: res.status, data: data }; }); })
+        .then(function(r){
+          if (r.status !== 200) { setStatus('cancelError', true); confirmBtn.disabled = false; return; }
+          previewBox.hidden = true;
+          if (r.data.alreadyCancelled) { setStatus('already', false); return; }
+          var refund = money(r.data.refundGBP);
+          setStatus({
+            en: 'Your booking has been cancelled. A refund of ' + refund + ' has been issued to your original payment method — it may take a few days to appear.',
+            tr: 'Randevun iptal edildi. Ödeme yöntemine ' + refund + ' tutarında iade yapıldı — hesabına yansıması birkaç gün sürebilir.'
+          }, false);
+        })
+        .catch(function(){ setStatus('cancelError', true); confirmBtn.disabled = false; });
+    });
+  })();
+</script>
+</body>
+</html>

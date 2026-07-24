@@ -1,0 +1,22 @@
+/**
+ * Test-only copy of wrangler.jsonc, used solely by vitest.config.mts. Identical except it omits
+ * the "ai" binding: Workers AI has no local-emulation mode in @cloudflare/vitest-pool-workers, so
+ * declaring it here would force every test run to open a remote proxy session (requires
+ * `wrangler login`). Tests that exercise AI-dependent code (lib/summarize.ts) stub `env.AI`
+ * directly instead — see test/stripe-webhook.spec.ts. `wrangler dev`/deploy still use the real
+ * wrangler.jsonc, so production behavior is unaffected.
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "form-backend",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-03-10",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"observability": {
+		"enabled": true,
+	},
+	"upload_source_maps": true,
+	"triggers": {
+		"crons": ["*/15 * * * *"],
+	},
+}

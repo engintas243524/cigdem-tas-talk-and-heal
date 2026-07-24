@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="tr" data-lang="tr" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Not Paneli — Talk &amp; Heal</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=47">
+<style>
+  /* Standalone internal tool — deliberately does NOT carry the public site header/footer/nav.
+     Reuses only style.css's colour + font variables (Jost). Turkish-only (Çiğdem's own tool). */
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-body); margin: 0; }
+  .panel-wrap { max-width: 720px; margin: 0 auto; padding: var(--space-4) var(--space-3) var(--space-6); }
+  h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; margin: 0 0 var(--space-3); }
+  .hidden { display: none !important; }
+  label { display: block; font-size: 0.85rem; font-weight: 500; margin: 0 0 0.4rem; color: var(--taupe); }
+  input[type="text"], input[type="password"], input[type="search"], textarea {
+    width: 100%; box-sizing: border-box; font-family: var(--font-body); font-size: 1rem;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.7rem 0.85rem;
+  }
+  textarea { min-height: 220px; resize: vertical; line-height: 1.5; }
+  input:focus, textarea:focus { outline: 2px solid var(--sage); outline-offset: 1px; }
+  .row { display: flex; gap: 0.6rem; align-items: flex-start; }
+  .row .grow { flex: 1; }
+  .field { margin-bottom: var(--space-3); }
+  button { font-family: var(--font-body); cursor: pointer; border: none; border-radius: var(--radius-sm); }
+  .icon-btn {
+    flex: 0 0 auto; width: 48px; height: 48px; display: grid; place-items: center;
+    background: var(--surface); border: 1px solid var(--border); color: var(--ink); font-size: 1.3rem;
+  }
+  .icon-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: var(--space-2); }
+  .actions button { flex: 1 1 auto; min-width: 150px; padding: 0.8rem 1rem; font-size: 0.95rem; font-weight: 500; }
+  .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+  .btn-primary { background: var(--btn-cta); color: #fff; }
+  .btn-primary:disabled { background: var(--border); color: var(--taupe); cursor: not-allowed; }
+  .context-line { font-size: 0.85rem; color: var(--taupe); margin: 0 0 var(--space-2); min-height: 1.2em; }
+  .status { font-size: 0.9rem; margin-top: var(--space-2); min-height: 1.2em; }
+  .status.err { color: var(--brand-deep); }
+  .status.ok { color: var(--sage); }
+  /* Client picker */
+  .picker { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); margin-top: var(--space-2); }
+  .picker-list { max-height: 320px; overflow-y: auto; }
+  .client { border-top: 1px solid var(--border); padding: 0.6rem 0.85rem; }
+  .client:first-child { border-top: none; }
+  .client-name { font-weight: 600; font-size: 0.95rem; }
+  .client.cancelled .client-name::after { content: " (iptal)"; color: var(--brand-deep); font-weight: 400; font-size: 0.8rem; }
+  .sess { display: inline-block; margin: 0.35rem 0.4rem 0 0; padding: 0.3rem 0.6rem; font-size: 0.8rem;
+    border: 1px solid var(--border); border-radius: var(--radius-xs); background: var(--paper); }
+  .sess.done { opacity: 0.55; }
+  .muted { color: var(--taupe); font-size: 0.82rem; }
+</style>
+</head>
+<body>
+<div class="panel-wrap">
+
+  <!-- LOGIN -->
+  <section id="loginView">
+    <h1>Not Paneli</h1>
+    <div class="field">
+      <label for="pw">Panel parolası</label>
+      <input type="password" id="pw" autocomplete="current-password" />
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="loginBtn" type="button">Giriş</button>
+    </div>
+    <div class="status err" id="loginStatus"></div>
+  </section>
+
+  <!-- PANEL -->
+  <section id="panelView" class="hidden">
+    <h1>Seans Notu</h1>
+
+    <div class="field">
+      <label for="nameBox">Danışan (düzenlenebilir — yalnızca görüntü içindir)</label>
+      <div class="row">
+        <input type="text" id="nameBox" class="grow" />
+        <button class="icon-btn" id="pickBtn" type="button" title="Danışan ara" aria-label="Danışan ara">▾</button>
+      </div>
+    </div>
+
+    <!-- client picker (toggled by pickBtn) -->
+    <div class="picker hidden" id="picker">
+      <div style="padding:0.6rem">
+        <input type="search" id="clientSearch" placeholder="İsim ara..." />
+      </div>
+      <div class="picker-list" id="clientList"></div>
+    </div>
+
+    <p class="context-line" id="contextLine"></p>
+
+    <div class="field">
+      <label for="noteBox">Not</label>
+      <div class="row">
+        <textarea id="noteBox" class="grow" placeholder="Seans notunu buraya yazın ya da mikrofonla dikte edin..."></textarea>
+        <button class="icon-btn" id="micBtn" type="button" title="Sesli not (Chrome)" aria-label="Sesli not">🎤</button>
+      </div>
+      <p class="muted" id="micHint"></p>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" id="appendBtn" type="button">Eski nota ekle</button>
+      <button class="btn-secondary" id="replaceBtn" type="button">Eski not ile değiştir</button>
+      <button class="btn-primary" id="addBtn" type="button">Ekle</button>
+    </div>
+    <div class="status" id="panelStatus"></div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  // Same local-dev / tunnel origin scheme as booking.html + cancel.html.
+  var API_BASE = window.location.hostname.indexOf('trycloudflare.com') !== -1
+    ? 'https://stanley-relate-trial-web.trycloudflare.com'
+    : (window.location.protocol === 'file:' ? 'http://localhost:8787' : 'http://' + window.location.hostname + ':8787');
+
+  var token = sessionStorage.getItem('panelToken') || '';
+  var current = null; // { stripeSessionId, sessionIndex, name, note, submitted, isLastSession, appointmentStartUtc, clientTimeZone }
+
+  var el = function (id) { return document.getElementById(id); };
+  var loginView = el('loginView'), panelView = el('panelView');
+  var nameBox = el('nameBox'), noteBox = el('noteBox');
+  var addBtn = el('addBtn'), appendBtn = el('appendBtn'), replaceBtn = el('replaceBtn');
+  var contextLine = el('contextLine'), panelStatus = el('panelStatus');
+
+  function showPanel() { loginView.classList.add('hidden'); panelView.classList.remove('hidden'); }
+  function showLogin() { panelView.classList.add('hidden'); loginView.classList.remove('hidden'); }
+
+  function setStatus(elm, msg, kind) {
+    elm.textContent = msg || '';
+    elm.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function fmt(iso, tz) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleString('tr-TR', { timeZone: tz || 'Europe/London', dateStyle: 'medium', timeStyle: 'short' }); }
+    catch (e) { return iso; }
+  }
+
+  // Authenticated fetch — attaches the Bearer token; a 401 kicks back to the login view.
+  function authFetch(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, opts.headers || {});
+    return fetch(API_BASE + path, opts).then(function (r) {
+      if (r.status === 401) { token = ''; sessionStorage.removeItem('panelToken'); showLogin(); throw new Error('unauthorized'); }
+      return r;
+    });
+  }
+
+  // --- Login ---
+  el('loginBtn').addEventListener('click', function () {
+    var pw = el('pw').value;
+    setStatus(el('loginStatus'), '', '');
+    fetch(API_BASE + '/panel/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('bad');
+      return r.json();
+    }).then(function (data) {
+      token = data.token; sessionStorage.setItem('panelToken', token);
+      // Long-lived, same-origin flag every public page checks to (only) decide whether to show
+      // the "NOTES" nav link — cosmetic, never itself a credential; the panel still requires this
+      // same password on every visit regardless of this flag's presence.
+      localStorage.setItem('panelAccess', '1');
+      el('pw').value = ''; showPanel(); loadPending();
+    }).catch(function () { setStatus(el('loginStatus'), 'Parola hatalı.', 'err'); });
+  });
+  el('pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') el('loginBtn').click(); });
+
+  // --- Load a session context into the note box ---
+  function applyContext(ctx) {
+    current = ctx;
+    nameBox.value = ctx.name || '';
+    noteBox.value = ctx.note || '';
+    var parts = [];
+    parts.push((ctx.sessionIndex || 1) + '. seans');
+    if (ctx.appointmentStartUtc) parts.push(fmt(ctx.appointmentStartUtc, ctx.clientTimeZone));
+    parts.push(ctx.isLastSession ? 'son seans' : 'sonraki randevu var');
+    contextLine.textContent = parts.join(' · ');
+    // "Ekle" locks once used for this session (guard set); corrections go through append/replace.
+    addBtn.disabled = !!ctx.submitted;
+    addBtn.textContent = ctx.submitted ? 'Ekle (işlendi)' : 'Ekle';
+    setStatus(panelStatus, '', '');
+  }
+
+  function clearContext() {
+    current = null; contextLine.textContent = ''; addBtn.disabled = true;
+  }
+
+  function loadPending() {
+    clearContext();
+    setStatus(panelStatus, 'Yükleniyor...', '');
+    authFetch('/panel/pending').then(function (r) { return r.json(); }).then(function (data) {
+      if (data.pending) { applyContext(data.pending); }
+      else { setStatus(panelStatus, 'Kapatılmayı bekleyen seans yok. Danışan aramak için ok tuşunu kullanın.', ''); addBtn.disabled = true; }
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(panelStatus, 'Yüklenemedi.', 'err'); });
+  }
+
+  // --- Client picker ---
+  var picker = el('picker'), clientList = el('clientList'), clientSearch = el('clientSearch');
+  var allClients = [];
+
+  el('pickBtn').addEventListener('click', function () {
+    if (!picker.classList.contains('hidden')) { picker.classList.add('hidden'); return; }
+    picker.classList.remove('hidden');
+    authFetch('/panel/clients').then(function (r) { return r.json(); }).then(function (data) {
+      allClients = data.clients || []; renderClients('');
+    }).catch(function (e) { if (e.message !== 'unauthorized') clientList.innerHTML = '<div class="client muted">Liste yüklenemedi.</div>'; });
+  });
+
+  clientSearch.addEventListener('input', function () { renderClients(clientSearch.value); });
+
+  function renderClients(q) {
+    q = (q || '').toLocaleLowerCase('tr');
+    clientList.innerHTML = '';
+    var matches = allClients.filter(function (c) { return (c.name || '').toLocaleLowerCase('tr').indexOf(q) !== -1; });
+    if (!matches.length) { clientList.innerHTML = '<div class="client muted">Eşleşen danışan yok.</div>'; return; }
+    matches.forEach(function (c) {
+      var div = document.createElement('div');
+      div.className = 'client' + (c.cancelled ? ' cancelled' : '');
+      var nameEl = document.createElement('div'); nameEl.className = 'client-name'; nameEl.textContent = c.name;
+      div.appendChild(nameEl);
+      (c.sessions || []).forEach(function (s) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sess' + (s.submitted ? ' done' : '');
+        b.textContent = s.sessionIndex + '. seans' + (s.startUtc ? ' — ' + fmt(s.startUtc) : '') + (s.submitted ? ' ✓' : '');
+        b.addEventListener('click', function () { openSession(c.stripeSessionId, s.sessionIndex); });
+        div.appendChild(b);
+      });
+      clientList.appendChild(div);
+    });
+  }
+
+  function openSession(stripeSessionId, sessionIndex) {
+    setStatus(panelStatus, 'Yükleniyor...', '');
+    authFetch('/panel/note?stripeSessionId=' + encodeURIComponent(stripeSessionId) + '&sessionIndex=' + sessionIndex)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { applyContext(data.context); picker.classList.add('hidden'); })
+      .catch(function (e) { if (e.message !== 'unauthorized') setStatus(panelStatus, 'Not yüklenemedi.', 'err'); });
+  }
+
+  // --- Save (3 buttons) ---
+  function postNote(mode) {
+    if (!current) { setStatus(panelStatus, 'Önce bir danışan/seans seçin.', 'err'); return; }
+    return authFetch('/panel/note', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stripeSessionId: current.stripeSessionId, sessionIndex: current.sessionIndex, mode: mode, text: noteBox.value })
+    });
+  }
+
+  appendBtn.addEventListener('click', function () {
+    if (!confirm("Bu not Google Sheet'e gönderilecek. Devam etmek istiyor musunuz?")) return;
+    doSimple('append');
+  });
+  replaceBtn.addEventListener('click', function () {
+    if (!confirm("Bu not Google Sheet'e gönderilecek. Devam etmek istiyor musunuz?")) return;
+    doSimple('replace');
+  });
+  addBtn.addEventListener('click', function () {
+    if (!current) { setStatus(panelStatus, 'Önce bir danışan/seans seçin.', 'err'); return; }
+    var msg = current.isLastSession
+      ? "Bu not Google Sheet'e gönderilecek. Devam etmek istiyor musunuz?"
+      : "Bu not Google Sheet'e gönderilecek ve danışan bir sonraki randevu için bilgilendirilecek. Devam etmek istiyor musunuz?";
+    if (!confirm(msg)) return;
+    postNote('add').then(function (r) {
+      if (r.status === 409) { setStatus(panelStatus, 'Bu seans için not zaten işlendi. Düzeltme için "Eski nota ekle" / "Eski not ile değiştir" kullanın.', 'err'); addBtn.disabled = true; return; }
+      if (!r.ok) throw new Error('fail');
+      return r.json().then(function (data) {
+        current.submitted = true; addBtn.disabled = true; addBtn.textContent = 'Ekle (işlendi)';
+        setStatus(panelStatus, data.notified ? 'Kaydedildi. Danışana sonraki randevu bildirimi gönderildi.' : 'Kaydedildi.', 'ok');
+      });
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(panelStatus, 'Kaydedilemedi.', 'err'); });
+  });
+
+  function doSimple(mode) {
+    var req = postNote(mode);
+    if (!req) return;
+    req.then(function (r) {
+      if (!r.ok) throw new Error('fail');
+      setStatus(panelStatus, 'Kaydedildi.', 'ok');
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(panelStatus, 'Kaydedilemedi.', 'err'); });
+  }
+
+  // --- Voice note (native Web Speech API — Chrome) ---
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var micBtn = el('micBtn'), micHint = el('micHint');
+  if (!SR) {
+    micBtn.classList.add('hidden');
+    micHint.textContent = 'Sesli not için Google Chrome kullanın.';
+  } else {
+    var recog = new SR();
+    recog.lang = 'tr-TR'; recog.interimResults = true; recog.continuous = true;
+    var recognizing = false, before = '', after = '', committed = '';
+    micBtn.addEventListener('click', function () {
+      if (recognizing) { recog.stop(); return; }
+      var pos = noteBox.selectionStart != null ? noteBox.selectionStart : noteBox.value.length;
+      before = noteBox.value.slice(0, pos); after = noteBox.value.slice(pos); committed = '';
+      try { recog.start(); } catch (e) { /* already started */ }
+    });
+    recog.onstart = function () { recognizing = true; micBtn.classList.add('active'); micHint.textContent = 'Dinleniyor... konuşun (durdurmak için mikrofona tekrar dokunun).'; };
+    recog.onend = function () { recognizing = false; micBtn.classList.remove('active'); micHint.textContent = ''; };
+    recog.onerror = function () { micHint.textContent = 'Mikrofon hatası. İzin verildiğinden emin olun.'; };
+    recog.onresult = function (e) {
+      var interim = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) committed += t; else interim += t;
+      }
+      noteBox.value = before + committed + interim + after;
+    };
+  }
+
+  // Resume an existing session-token on reload.
+  if (token) { showPanel(); loadPending(); } else { showLogin(); }
+})();
+</script>
+</body>
+</html>

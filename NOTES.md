@@ -18,6 +18,27 @@
       içinde açıkça "TBD" etiketiyle işaretli, uydurma rakam konulmadı)
 - [ ] **İletişim formu servis endpoint'i** (Formspree veya tercih edilen servis) — sonraya bırakıldı
 
+## ⚠️ KRİTİK: WhatsApp / Calendar / E-posta entegrasyonları — TEST hesabı → GERÇEK hesap geçişi
+
+**Durum (2026-07-21):** WhatsApp, Calendar (randevu) ve E-posta entegrasyonları yapılacak.
+Geliştirme/test aşamasında bu 3 servis **Selen'e (proje sahibi) ait test hesaplarıyla**
+bağlanacak. Bunlar **kalıcı DEĞİL** — canlıya (production/yayın) almadan önce **Çiğdem Taş'ın
+kendi WhatsApp numarası, kendi Calendar hesabı, kendi e-posta adresiyle** değiştirilmesi
+ZORUNLU. Bu değişmeden siteyi yayına alma / müşteriyle paylaşma.
+
+- [ ] **WhatsApp:** şu an test numarası kullanılıyor → Çiğdem'in gerçek WhatsApp iş numarasıyla
+      değiştirilecek (mevcut placeholder zaten `wa.me/447000000000` idi, aşağıya güncel test
+      numarası da eklenecek).
+- [ ] **Calendar:** test hesabıyla kurulacak → Çiğdem'in kendi takvim hesabına (Google
+      Calendar/Calendly, hangisi seçilirse) bağlanacak şekilde değiştirilecek.
+- [ ] **E-posta:** test adresiyle kurulacak → Çiğdem'in gerçek iş e-postasıyla değiştirilecek
+      (mevcut placeholder: help@talkandheal.co.uk, bu da teyitli değil, değişebilir).
+
+**Yayına almadan önce (deploy/go-live) mutlaka:** yukarıdaki 3 madde tek tek kontrol edilip
+Çiğdem'in gerçek hesap bilgileriyle değiştirildiği teyit edilmeden `git push`/deploy YAPILMAYACAK.
+Bu kontrol her deploy öncesi hatırlatılacak (bkz. proje hafızası
+`project_cigdem_tas_talk_and_heal.md` ve `feedback` notu).
+
 ## DevTools rehberi — palet/font çekmek için (adım adım)
 1. https://www.wholenesscollectivetherapy.com/ adresini Chrome'da aç.
 2. Bir başlık yazısına (örn. büyük bir bölüm başlığı) sağ tıkla → **İncele / Inspect**.

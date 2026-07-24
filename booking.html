@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Book a Session — Talk &amp; Heal</title>
+<meta name="description" content="Choose a session type and time, and book securely online with Çiğdem Taş." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
+<link rel="stylesheet" href="style.css?v=47">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap header-row">
+    <a class="brand" href="index.html">
+      <img class="brand-heart" src="assets/heart-icon-3d.webp" alt="" aria-hidden="true">
+      <span class="brand-word">
+        <span class="brand-line1"><span class="w1">TALK</span><span class="amp">&amp;</span></span>
+        <span class="brand-line2">HEAL</span>
+      </span>
+    </a>
+
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <nav class="primary">
+      <a href="hakkimda.html"><span data-en>ABOUT</span><span data-tr>HAKKIMDA</span></a>
+      <a href="services.html"><span data-en>SERVICES</span><span data-tr>SERVİSLER</span></a>
+      <a href="approach.html"><span data-en>APPROACH</span><span data-tr>YAKLAŞIM</span></a>
+      <a href="blog.html"><span data-en>BLOG</span><span data-tr>BLOG</span></a>
+      <a href="iletisim.html"><span data-en>CONTACT</span><span data-tr>İLETİŞİM</span></a>
+      <a href="booking.html"><span data-en>BOOK A CONSULTATION</span><span data-tr>RANDEVU AL</span></a>
+      <a href="panel.html" id="panelNavLink" style="display:none"><span data-en>NOTES</span><span data-tr>NOT PANELİ</span></a>
+    </nav>
+
+    <div class="header-actions">
+      <div class="lang-switch" role="group" aria-label="Language / Dil">
+        <button class="lang-flag" data-lang="en" type="button" aria-label="English">
+          <svg viewBox="0 0 60 36" aria-hidden="true">
+            <rect width="60" height="36" fill="#012169"/>
+            <path d="M0,0 L60,36 M60,0 L0,36" stroke="#fff" stroke-width="8"/>
+            <path d="M0,0 L60,36 M60,0 L0,36" stroke="#C8102E" stroke-width="4"/>
+            <path d="M30,0 V36 M0,18 H60" stroke="#fff" stroke-width="12"/>
+            <path d="M30,0 V36 M0,18 H60" stroke="#C8102E" stroke-width="6"/>
+          </svg>
+        </button>
+        <button class="lang-flag" data-lang="tr" type="button" aria-label="Türkçe">
+          <svg viewBox="0 0 60 40" aria-hidden="true">
+            <rect width="60" height="40" fill="#E30A17"/>
+            <circle cx="24" cy="20" r="10" fill="#fff"/>
+            <circle cx="27.5" cy="20" r="8" fill="#E30A17"/>
+            <polygon points="38.5,15.5 39.5,18.6 42.78,18.6 40.1,20.5 41.1,23.6 38.5,21.7 35.85,23.6 36.9,20.5 34.2,18.6 37.5,18.6" fill="#fff"/>
+          </svg>
+        </button>
+      </div>
+      <a class="btn btn-primary header-cta" href="booking.html">
+        <span data-en>Book a consultation</span><span data-tr>Randevu Al</span>
+      </a>
+    </div>
+  </div>
+</header>
+<script>
+  if (localStorage.getItem('panelAccess') === '1') {
+    var panelNavLink = document.getElementById('panelNavLink');
+    if (panelNavLink) panelNavLink.style.display = '';
+  }
+</script>
+
+<main>
+  <div class="page-intro-bg" aria-hidden="true"><div class="hero-bg"></div></div>
+
+  <section class="page-intro">
+    <div class="wrap">
+      <p class="eyebrow"><span data-en>Booking</span><span data-tr>Randevu</span></p>
+      <h1><span data-en>Book your session</span><span data-tr>Randevunu Ayarla</span></h1>
+      <p class="lead"><span data-en>Choose a session type and an available time below, then pay securely online to confirm.</span><span data-tr>Aşağıdan bir seans türü ve uygun bir saat seç, ardından güvenli ödeme ile randevunu onayla.</span></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <form id="bookingForm" novalidate>
+
+        <fieldset class="field-group">
+          <legend class="section-label"><span data-en>1. Session type</span><span data-tr>1. Seans Türü</span></legend>
+
+          <div class="mode-toggles">
+            <div class="mode-toggle" role="group" aria-label="Individual or couple">
+              <label class="mode-pill">
+                <input type="radio" name="therapyMode" value="individual" checked>
+                <span data-en>Individual</span><span data-tr>Bireysel</span>
+              </label>
+              <label class="mode-pill">
+                <input type="radio" name="therapyMode" value="couple">
+                <span data-en>Couple</span><span data-tr>Çift</span>
+              </label>
+            </div>
+            <div class="mode-toggle" role="group" aria-label="Online or in person">
+              <label class="mode-pill">
+                <input type="radio" name="sessionMode" value="online" checked>
+                <span data-en>Online</span><span data-tr>Online</span>
+              </label>
+              <label class="mode-pill">
+                <input type="radio" name="sessionMode" value="inPerson">
+                <span data-en>In person</span><span data-tr>Yüz Yüze</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="session-options">
+            <label class="session-option">
+              <input type="radio" name="sessionType" value="standard" checked>
+              <span class="session-option-body">
+                <span class="session-option-name"><span data-en>Standard session</span><span data-tr>Standart Seans</span></span>
+                <span class="session-option-meta"><span data-en>50 minutes</span><span data-tr>50 dakika</span></span>
+                <span class="session-option-price" data-price-for="standard">£120</span>
+              </span>
+            </label>
+            <label class="session-option">
+              <input type="radio" name="sessionType" value="extended">
+              <span class="session-option-body">
+                <span class="session-option-name"><span data-en>Extended session</span><span data-tr>Uzatılmış Seans</span></span>
+                <span class="session-option-meta"><span data-en>80 minutes</span><span data-tr>80 dakika</span></span>
+                <span class="session-option-price" data-price-for="extended">£150</span>
+              </span>
+            </label>
+          </div>
+
+          <label class="checkbox-field recurring-toggle">
+            <input type="checkbox" id="recurringToggle">
+            <span><span data-en>Book multiple sessions (recurring)</span><span data-tr>Birden çok seans al (tekrarlayan)</span></span>
+          </label>
+          <div class="recurring-note" id="recurringNote" hidden>
+            <p><span data-en>You can select multiple sessions in the 'Choose a time' section below.</span><span data-tr>Aşağıdaki Saat Seç bölümünden birden çok seans seçebilirsiniz.</span></p>
+            <p><span data-en>There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.</span><span data-tr>Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.</span></p>
+            <p><span data-en>To book more than 10 sessions, please contact your therapist directly.</span><span data-tr>10 seanstan fazla seçim yapmak için terapistinizle görüşün.</span></p>
+            <p><span data-en>The day and time of your first session will apply to every following week — only that same day/time will be selectable in later weeks.</span><span data-tr>İlk seçtiğin seansın gün ve saati sonraki tüm haftalar için de geçerli olur — sonraki haftalarda yalnızca aynı gün/saat seçilebilir.</span></p>
+          </div>
+        </fieldset>
+
+        <fieldset class="field-group">
+          <legend class="section-label"><span data-en>2. Choose a time</span><span data-tr>2. Saat Seç</span></legend>
+          <p class="form-note" id="slotStatus" role="status" aria-live="polite"></p>
+          <div id="slotContainer"></div>
+        </fieldset>
+
+        <fieldset class="field-group">
+          <legend class="section-label"><span data-en>3. Your details</span><span data-tr>3. Bilgilerin</span></legend>
+
+          <div class="field">
+            <label for="name"><span data-en>First and Last Name</span><span data-tr>İsim ve Soyisim</span></label>
+            <input id="name" name="name" type="text" required>
+          </div>
+
+          <div class="field">
+            <label for="email"><span data-en>Email</span><span data-tr>E-posta</span></label>
+            <input id="email" name="email" type="email" required>
+          </div>
+
+          <div class="field">
+            <label for="phone"><span data-en>Phone (with country code)</span><span data-tr>Telefon (ülke koduyla)</span></label>
+            <input id="phone" name="phone" type="tel" placeholder="447911123456" required>
+            <p class="field-hint"><span data-en>Please enter digits only, with no leading + or 0 — your country code followed by your number (e.g. 447911123456 for the UK, 90537xxxxxxx for Turkey). This helps ensure your WhatsApp reminders reach you correctly.</span><span data-tr>Lütfen başında + veya 0 olmadan, yalnızca rakamlardan oluşacak şekilde giriniz — ülke kodunuz ve numaranız (örneğin İngiltere için 447911123456, Türkiye için 90537xxxxxxx gibi). Bu, WhatsApp bilgilendirmelerinin size doğru ulaşabilmesi için gereklidir.</span></p>
+          </div>
+
+          <div class="field">
+            <label for="summary"><span data-en>What would you like to talk about?</span><span data-tr>Ne hakkında konuşmak istersin?</span></label>
+            <textarea id="summary" name="summary" maxlength="1000" required></textarea>
+            <div class="field-below-row">
+              <p class="field-hint char-count" id="charCount"></p>
+              <button class="btn btn-ghost" type="button" id="translateBtn">
+                <span data-en>Translate</span><span data-tr>Çevir</span>
+              </button>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="field-group">
+          <legend class="section-label"><span data-en>4. Cancellation policy</span><span data-tr>4. İptal Politikası</span></legend>
+          <div class="policy-box">
+            <p id="policyText"><span data-en>You may cancel at any time. If you cancel <strong>at least 3 days</strong> before your next session, you will receive a <strong>full refund</strong>. If you cancel less than 3 days before, you will receive <strong>half of the amount</strong> back.</span><span data-tr>Randevunuzu istediğiniz zaman iptal edebilirsiniz. Bir sonraki seansınızdan <strong>en az 3 gün önce</strong> iptal ederseniz, ücretin <strong>tamamı iade edilir</strong>. 3 günden daha az bir süre kala iptal ederseniz, ücretin <strong>yarısı iade edilir</strong>.</span></p>
+            <p><span data-en>To cancel or reschedule, message us on <a href="https://wa.me/447000000000" target="_blank" rel="noopener">WhatsApp</a> or email <a href="mailto:help@talkandheal.co.uk">help@talkandheal.co.uk</a>.</span><span data-tr>İptal veya değişiklik için <a href="https://wa.me/447000000000" target="_blank" rel="noopener">WhatsApp</a>'tan yaz ya da <a href="mailto:help@talkandheal.co.uk">help@talkandheal.co.uk</a> adresine e-posta at.</span></p>
+          </div>
+          <label class="checkbox-field">
+            <input type="checkbox" id="cancellationAck" required>
+            <span><span data-en>I have read and agree to the cancellation policy above.</span><span data-tr>Yukarıdaki iptal politikasını okudum ve kabul ediyorum.</span></span>
+          </label>
+        </fieldset>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" id="submitBtn">
+            <span data-en>Continue to payment</span><span data-tr>Ödemeye Geç</span>
+          </button>
+        </div>
+        <p class="form-note" id="bookingNote" role="status" aria-live="polite" style="display:none;"></p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>© <span id="year"></span> Talk &amp; Heal — Çiğdem Taş</span>
+    <span><span data-en>BACP Registered Psychotherapist</span><span data-tr>BACP Kayıtlı Psikoterapist</span></span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+  var root = document.documentElement;
+  var flags = document.querySelectorAll('.lang-flag');
+  function setLang(lang){
+    root.setAttribute('data-lang', lang);
+    root.setAttribute('lang', lang);
+    localStorage.setItem('talkandheal-lang', lang);
+    flags.forEach(function(btn){ btn.classList.toggle('active', btn.getAttribute('data-lang') === lang); });
+  }
+  setLang(localStorage.getItem('talkandheal-lang') || 'en');
+  flags.forEach(function(btn){
+    btn.addEventListener('click', function(){ setLang(btn.getAttribute('data-lang')); });
+  });
+
+  var menuBtn = document.getElementById('menuBtn');
+  var navPrimary = document.querySelector('nav.primary');
+  if (menuBtn && navPrimary) {
+    menuBtn.addEventListener('click', function(){
+      var isOpen = navPrimary.classList.toggle('open');
+      menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function(e){
+      if (navPrimary.classList.contains('open') && !navPrimary.contains(e.target) && !menuBtn.contains(e.target)) {
+        navPrimary.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  (function(){
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) return;
+    var items = [];
+    document.querySelectorAll('.hero-bg-wrap, .zig-bg-wrap, .page-intro-bg').forEach(function(el){
+      items.push({ el: el, prop: '--px', current: 0, target: 0, active: false, rate: 0.4 });
+    });
+    if (!items.length) return;
+    var lastY = window.scrollY;
+    var max = 55;
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if (!entry.isIntersecting) return;
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].el === entry.target) items[i].active = true;
+          }
+        });
+      }, { threshold: 0.05 });
+      items.forEach(function(item){ io.observe(item.el); });
+    } else {
+      items.forEach(function(item){ item.active = true; });
+    }
+    function onScroll(){
+      var y = window.scrollY;
+      var delta = y - lastY;
+      lastY = y;
+      items.forEach(function(item){
+        if (!item.active) return;
+        item.target += delta * item.rate;
+        if (item.target > max) item.target = max;
+        if (item.target < -max) item.target = -max;
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    function tick(){
+      items.forEach(function(item){
+        item.current += (item.target - item.current) * 0.08;
+        item.el.style.setProperty(item.prop, item.current.toFixed(2) + 'px');
+      });
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+
+  // ---------- Booking flow ----------
+  (function(){
+    // Local-dev convenience: derive the Worker origin from whatever host served this page, so
+    // the same URL works via localhost AND via the Mac's LAN IP (phone-on-same-Wi-Fi QA — a
+    // hardcoded 'localhost' would resolve to the phone itself, not the Mac running the Worker).
+    // TBD: this whole scheme must be replaced at deploy time (Session 8, INTEGRASYON_TODO.md /
+    // plan doc) with the real production API origin (the deployed workers.dev / custom domain).
+    // TEMP (2026-07-23 multi-device test session, revert after): a Cloudflare quick tunnel can't
+    // reuse the ":8787" trick since the frontend/backend tunnels are unrelated hostnames.
+    var API_BASE = window.location.hostname.indexOf('trycloudflare.com') !== -1
+      ? 'https://stanley-relate-trial-web.trycloudflare.com'
+      : 'http://' + window.location.hostname + ':8787';
+
+    var form = document.getElementById('bookingForm');
+    var slotContainer = document.getElementById('slotContainer');
+    var slotStatus = document.getElementById('slotStatus');
+    var submitBtn = document.getElementById('submitBtn');
+    var bookingNote = document.getElementById('bookingNote');
+    var summaryEl = document.getElementById('summary');
+    var charCount = document.getElementById('charCount');
+    var recurringToggle = document.getElementById('recurringToggle');
+    var recurringNote = document.getElementById('recurringNote');
+    var recurring = false;
+    var selectedSlots = []; // ISO strings; 0-1 in single mode, 0-10 (one per week) in recurring mode
+    var lastFetchedSlots = []; // most recent /availability SlotDetail[] ({iso,status,holidayTitle?}), re-rendered on language switch
+
+    function currentLang(){ return root.getAttribute('data-lang') === 'tr' ? 'tr' : 'en'; }
+
+    // Slot dates/times are shown in the timezone + locale of the selected site language flag,
+    // not the visitor's OS default: EN → Europe/London (en-GB), TR → Europe/Istanbul (tr-TR).
+    function displayLocale(){ return currentLang() === 'tr' ? 'tr-TR' : 'en-GB'; }
+    function displayTimeZone(){ return currentLang() === 'tr' ? 'Europe/Istanbul' : 'Europe/London'; }
+
+    var STRINGS = {
+      loading: { en: 'Loading available times…', tr: 'Uygun saatler yükleniyor…' },
+      none: { en: 'No available times in the next two weeks — please check back soon or message us on WhatsApp.', tr: 'Önümüzdeki iki hafta içinde uygun saat yok — lütfen kısa süre sonra tekrar kontrol et ya da WhatsApp’tan yaz.' },
+      loadError: { en: 'Could not load available times. Please try again shortly.', tr: 'Uygun saatler yüklenemedi. Lütfen birazdan tekrar dene.' },
+      slotTaken: { en: 'That time was just taken by someone else — please pick another below.', tr: 'Bu saat az önce başkası tarafından alındı — lütfen aşağıdan başka bir saat seç.' },
+      genericError: { en: 'Something went wrong. Please try again shortly.', tr: 'Bir şeyler ters gitti. Lütfen birazdan tekrar dene.' },
+      needSlot: { en: 'Please choose a session type and a time above.', tr: 'Lütfen yukarıdan bir seans türü ve saat seç.' },
+      weekGap: { en: 'There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.', tr: 'Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.' },
+      needAck: { en: 'Please confirm you have read the cancellation policy.', tr: 'Lütfen iptal politikasını okuduğunu onayla.' },
+      redirecting: { en: 'Redirecting to secure payment…', tr: 'Güvenli ödeme sayfasına yönlendiriliyor…' },
+      translateEmpty: { en: 'Please write something first.', tr: 'Lütfen önce bir şeyler yaz.' },
+      translating: { en: 'Translating…', tr: 'Çevriliyor…' },
+      translateError: { en: 'Translation service is unavailable right now. Please try again shortly.', tr: 'Çeviri servisi şu anda kullanılamıyor. Lütfen birazdan tekrar dene.' },
+      translated: { en: 'Translated.', tr: 'Çevrildi.' }
+    };
+
+    // Display-only mirror of form-backend/src/config.ts's PRICING table — the server always
+    // recomputes and charges the authoritative price at booking time, this is just so the
+    // customer sees the right number before submitting.
+    var PRICING = {
+      online: { individual: { standard: 120, extended: 150 }, couple: { standard: 200, extended: 250 } },
+      inPerson: { individual: { standard: 140, extended: 175 }, couple: { standard: 350, extended: 425 } }
+    };
+
+    function updatePrices(){
+      var sessionMode = form.querySelector('input[name="sessionMode"]:checked').value;
+      var therapyMode = form.querySelector('input[name="therapyMode"]:checked').value;
+      var table = PRICING[sessionMode][therapyMode];
+      document.querySelectorAll('.session-option-price').forEach(function(el){
+        var sessionType = el.getAttribute('data-price-for');
+        el.textContent = '£' + table[sessionType];
+      });
+    }
+    document.querySelectorAll('input[name="sessionMode"], input[name="therapyMode"]').forEach(function(radio){
+      radio.addEventListener('change', updatePrices);
+    });
+    updatePrices();
+
+    function setSlotStatus(key, isError){
+      if (!key) { slotStatus.style.display = 'none'; return; }
+      slotStatus.textContent = STRINGS[key][currentLang()];
+      slotStatus.style.display = 'block';
+      slotStatus.classList.toggle('form-note--error', !!isError);
+    }
+
+    function showNote(key, isError){
+      bookingNote.textContent = STRINGS[key][currentLang()];
+      bookingNote.style.display = 'block';
+      bookingNote.classList.toggle('form-note--error', !!isError);
+    }
+
+    // Madde 12 (2026-07-23): 3-way warning-text comparison, purely for a live A/B/C decision — set
+    // by ?warnVariant=a|b|c (style.css has the matching html[data-warn-variant] rules) and, so the
+    // 3 links are instantly comparable with no manual interaction needed, auto-shows a real sample
+    // warning on load. Remove this block once the user has picked a variant.
+    (function(){
+      var v = new URLSearchParams(location.search).get('warnVariant');
+      if (!v) return;
+      document.documentElement.setAttribute('data-warn-variant', v);
+      showNote('needAck', true);
+      // The warning sits far down the page — scroll straight to it so the 3 links are actually
+      // comparable without first hunting for it. Late-loading webfonts/images can reflow the page
+      // taller after an early scroll, leaving the position stale — re-scroll a few times over the
+      // first second to land on the final settled position regardless of exact load timing.
+      function scrollToNote(){ bookingNote.scrollIntoView({ block: 'center' }); }
+      [0, 150, 400, 900].forEach(function(ms){ setTimeout(scrollToNote, ms); });
+    })();
+
+    var SLOT_MAX_WEEKS = 10; // matches MAX_SESSION_COUNT — a recurring booking is one slot per week
+    var DAY_MS = 86400000;
+
+    // ---- Week-carousel state (one week visible at a time; all weeks live in the DOM at
+    // once and are slid via translateX, so every slot input stays queryable and
+    // syncChipChecks/recurring selection keep working across navigation exactly as before). ----
+    var calCurrent = 0, calWeekCount = 0;
+    var calTrack = null, calViewport = null, calDotsEl = null;
+    var calRangeEl = null, calWeekOfEl = null, calPrevBtn = null, calNextBtn = null;
+    var calWeekStarts = []; // Date (local-noon Monday) per rendered week
+    var calDragging = false, calStartX = 0, calStartTranslate = 0, calVpWidth = 0;
+
+    function calUpdateHeader(){
+      if (!calWeekCount) return;
+      var tr = currentLang() === 'tr';
+      calWeekOfEl.textContent = (tr ? 'Hafta ' : 'Week ') + (calCurrent + 1) + ' / ' + calWeekCount;
+      var ws = calWeekStarts[calCurrent];
+      var we = new Date(ws); we.setDate(we.getDate() + 4);
+      var fmt = { day: 'numeric', month: 'short', timeZone: displayTimeZone() };
+      calRangeEl.textContent = ws.toLocaleDateString(displayLocale(), fmt) + ' – ' + we.toLocaleDateString(displayLocale(), fmt);
+      calDotsEl.querySelectorAll('.slot-dot').forEach(function(dot, i){ dot.classList.toggle('is-active', i === calCurrent); });
+      calPrevBtn.disabled = calCurrent === 0;
+      calNextBtn.disabled = calCurrent === calWeekCount - 1;
+    }
+    function calRender(withTransition){
+      if (!calTrack) return;
+      calTrack.classList.toggle('dragging', !withTransition);
+      calTrack.style.transform = 'translateX(' + (-calCurrent * 100) + '%)';
+      calUpdateHeader();
+    }
+    function calGoTo(idx){
+      calCurrent = Math.max(0, Math.min(calWeekCount - 1, idx));
+      calRender(true);
+    }
+    function calPointerDown(x){
+      if (!calWeekCount) return;
+      calDragging = true; calStartX = x; calVpWidth = calViewport.clientWidth;
+      calStartTranslate = -calCurrent * 100; calTrack.classList.add('dragging');
+    }
+    function calPointerMove(x){
+      if (!calDragging) return;
+      var d = ((x - calStartX) / calVpWidth) * 100;
+      calTrack.style.transform = 'translateX(' + (calStartTranslate + d) + '%)';
+    }
+    function calPointerUp(x){
+      if (!calDragging) return;
+      calDragging = false;
+      var d = ((x - calStartX) / calVpWidth) * 100;
+      calTrack.classList.remove('dragging');
+      if (d < -12 && calCurrent < calWeekCount - 1) calCurrent++;
+      else if (d > 12 && calCurrent > 0) calCurrent--;
+      calRender(true);
+    }
+    // Global drag/keyboard listeners attached once — they read the mutable cal* state, so
+    // they keep working after each re-render swaps in fresh nodes.
+    window.addEventListener('mousemove', function(e){ calPointerMove(e.clientX); });
+    window.addEventListener('mouseup', function(e){ calPointerUp(e.clientX); });
+    window.addEventListener('keydown', function(e){
+      if (!calWeekCount) return;
+      var t = e.target;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return; // don't hijack arrows while typing
+      if (e.key === 'ArrowLeft') calGoTo(calCurrent - 1);
+      else if (e.key === 'ArrowRight') calGoTo(calCurrent + 1);
+    });
+
+    var NAV_SVG = {
+      prev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+      next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>'
+    };
+
+    // Monday-of-week key (browser-local time, matching the rest of this display, which is
+    // already locale/timezone-naive — see the day-label formatting below).
+    function mondayKey(d){
+      var m = new Date(d);
+      var day = m.getDay(); // 0=Sun..6=Sat
+      m.setDate(m.getDate() + (day === 0 ? -6 : 1 - day));
+      return m.toDateString();
+    }
+
+    // Reflect selectedSlots onto whichever chips are currently rendered (handles the
+    // single-mode swap and the recurring one-per-week replacement, incl. re-render after
+    // "Show more weeks").
+    function syncChipChecks(){
+      var inputs = slotContainer.querySelectorAll('input[name="slot"]');
+      for (var i = 0; i < inputs.length; i++) {
+        inputs[i].checked = selectedSlots.indexOf(inputs[i].value) !== -1;
+      }
+    }
+
+    function handleSlotChange(iso){
+      if (!recurring) { selectedSlots = [iso]; syncChipChecks(); return; }
+      var idx = selectedSlots.indexOf(iso);
+      var lockedBefore = selectedSlots.length > 0;
+      if (idx !== -1) {
+        selectedSlots.splice(idx, 1); // toggle off
+      } else {
+        // one slot per week: drop any existing pick in the same Mon-Sun week, then add this one
+        var wk = mondayKey(new Date(iso));
+        selectedSlots = selectedSlots.filter(function(s){ return mondayKey(new Date(s)) !== wk; });
+        selectedSlots.push(iso);
+      }
+      // Madde 6: the weekday+time lock (see slotKey/renderSlots) is only baked into chips at
+      // render time — re-render whenever the lock could have just engaged (first pick) or
+      // released (last pick removed) so every other week's chips reflect it immediately.
+      if (lastFetchedSlots.length && (lockedBefore !== (selectedSlots.length > 0))) {
+        renderSlots(lastFetchedSlots);
+      } else {
+        syncChipChecks();
+      }
+    }
+
+    recurringToggle.addEventListener('change', function(){
+      recurring = recurringToggle.checked;
+      recurringNote.hidden = !recurring;
+      if (!recurring) {
+        selectedSlots = []; // clean slate when leaving recurring mode
+        // Re-render (not just syncChipChecks) in case the Madde 6 weekday+time lock had already
+        // turned some chips into non-interactive "locked" divs — those need to become real
+        // checkboxes again now that the rule no longer applies.
+        if (lastFetchedSlots.length) renderSlots(lastFetchedSlots); else syncChipChecks();
+      }
+    });
+
+    // Madde 6: a recurring booking is meant to be the SAME weekday+time every week, not just "one
+    // pick per week". Fixed to Europe/London (the actual business timezone) rather than
+    // displayTimeZone() so the lock is stable across the EN/TR flag switch. Once a first slot is
+    // selected, every other week's chips are restricted to this exact weekday+hour combination.
+    function slotKey(iso){
+      var parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', hour: '2-digit', hour12: false }).formatToParts(new Date(iso));
+      var byType = {};
+      parts.forEach(function(p){ byType[p.type] = p.value; });
+      return byType.weekday + '-' + byType.hour;
+    }
+
+    // Same Monday-of-week key OR a gap wider than one week between consecutive picks is invalid —
+    // mirrors validateConsecutiveWeeks() server-side (booking.ts) for instant client-side feedback.
+    function hasWeekGap(sortedIsos){
+      for (var i = 1; i < sortedIsos.length; i++) {
+        var prevWk = new Date(mondayKey(new Date(sortedIsos[i - 1])));
+        var curWk = new Date(mondayKey(new Date(sortedIsos[i])));
+        var days = (curWk.getTime() - prevWk.getTime()) / 86400000;
+        if (days === 0 || days > 7) return true;
+      }
+      return false;
+    }
+
+    function renderSlots(slotDetails){
+      if (!slotDetails.length) {
+        slotContainer.innerHTML = ''; calTrack = null; calWeekCount = 0;
+        setSlotStatus('none', false); return;
+      }
+      setSlotStatus(null);
+
+      // Bucket slot details into calendar days, then days into Mon-Sun weeks — same browser-local
+      // keying as the recurring/gap logic (mondayKey), so week grouping stays consistent.
+      var dayGroups = {};
+      var slotsByWeek = {};
+      var weekOrder = [];
+      slotDetails.forEach(function(detail){
+        var d = new Date(detail.iso);
+        var dateKey = d.toDateString();
+        if (!dayGroups[dateKey]) dayGroups[dateKey] = [];
+        dayGroups[dateKey].push(detail);
+        var weekKey = mondayKey(d);
+        if (!slotsByWeek[weekKey]) { slotsByWeek[weekKey] = true; weekOrder.push(weekKey); }
+      });
+      weekOrder = weekOrder.slice(0, SLOT_MAX_WEEKS);
+
+      // Build the carousel shell fresh each render (also runs on language switch — cheap, and
+      // lets every label re-localize). calCurrent is preserved by the caller across re-renders.
+      slotContainer.innerHTML = '';
+      var cal = document.createElement('div'); cal.className = 'slot-cal';
+
+      var head = document.createElement('div'); head.className = 'slot-cal-head';
+      calPrevBtn = document.createElement('button');
+      calPrevBtn.type = 'button'; calPrevBtn.className = 'slot-cal-nav';
+      calPrevBtn.innerHTML = NAV_SVG.prev;
+      calPrevBtn.setAttribute('aria-label', currentLang() === 'tr' ? 'Önceki hafta' : 'Previous week');
+      calPrevBtn.addEventListener('click', function(){ calGoTo(calCurrent - 1); });
+      var title = document.createElement('div'); title.className = 'slot-cal-title';
+      calWeekOfEl = document.createElement('div'); calWeekOfEl.className = 'slot-cal-week-of';
+      calRangeEl = document.createElement('div'); calRangeEl.className = 'slot-cal-range';
+      title.appendChild(calWeekOfEl); title.appendChild(calRangeEl);
+      calNextBtn = document.createElement('button');
+      calNextBtn.type = 'button'; calNextBtn.className = 'slot-cal-nav';
+      calNextBtn.innerHTML = NAV_SVG.next;
+      calNextBtn.setAttribute('aria-label', currentLang() === 'tr' ? 'Sonraki hafta' : 'Next week');
+      calNextBtn.addEventListener('click', function(){ calGoTo(calCurrent + 1); });
+      head.appendChild(calPrevBtn); head.appendChild(title); head.appendChild(calNextBtn);
+
+      calViewport = document.createElement('div'); calViewport.className = 'slot-viewport';
+      calTrack = document.createElement('div'); calTrack.className = 'slot-track';
+      calViewport.appendChild(calTrack);
+
+      var timeFmt = { hour: '2-digit', minute: '2-digit', timeZone: displayTimeZone() };
+      var headDowFmt = { weekday: 'short', timeZone: displayTimeZone() };
+      var headDomFmt = { day: 'numeric', timeZone: displayTimeZone() };
+
+      calWeekStarts = [];
+      weekOrder.forEach(function(weekKey){
+        var weekStart = new Date(weekKey); weekStart.setHours(12, 0, 0, 0); // local-noon anchor: DST/TZ-safe
+        calWeekStarts.push(weekStart);
+
+        var weekEl = document.createElement('div'); weekEl.className = 'slot-week';
+        for (var col = 0; col < 5; col++) { // Mon–Fri (server only ever offers weekdays 1–5)
+          var colDate = new Date(weekStart); colDate.setDate(colDate.getDate() + col);
+          var dayEl = document.createElement('div'); dayEl.className = 'slot-day';
+
+          var headEl = document.createElement('div'); headEl.className = 'slot-day-head';
+          headEl.innerHTML = '<span class="dow">' + colDate.toLocaleDateString(displayLocale(), headDowFmt) +
+            '</span><span class="dom">' + colDate.toLocaleDateString(displayLocale(), headDomFmt) + '</span>';
+          dayEl.appendChild(headEl);
+
+          var listEl = document.createElement('div'); listEl.className = 'slot-day-list';
+          var details = dayGroups[colDate.toDateString()] || [];
+          // UK bank holiday: the day still renders its (now-reserved) chips, but a single always-
+          // visible (no hover) label above them names the holiday once, instead of repeating it on
+          // every chip. Holiday-status slots come from an all-day busy placeholder on the Calendar.
+          var holiday = details.find(function(dt){ return dt.status === 'holiday'; });
+          if (holiday) {
+            var holEl = document.createElement('div');
+            holEl.className = 'slot-day-holiday';
+            holEl.textContent = holiday.holidayTitle;
+            listEl.appendChild(holEl);
+          }
+          details.forEach(function(detail, i){
+            var iso = detail.iso;
+            // Visual lunch-break gap: any jump wider than 90 min between consecutive chips
+            // (the real 11:00→14:00 straddle is a 3h jump) — data-driven, timezone-independent.
+            if (i > 0 && (new Date(iso).getTime() - new Date(details[i - 1].iso).getTime()) > 5400000) {
+              var gap = document.createElement('div'); gap.className = 'slot-gap'; listEl.appendChild(gap);
+            }
+            var timeText = new Date(iso).toLocaleTimeString(displayLocale(), timeFmt);
+            // Madde 6: once a first recurring slot is picked, every OTHER weekday+time is locked —
+            // rendered the same muted/non-interactive way as a genuinely reserved slot, just with
+            // a different tooltip explaining why.
+            var lockedToOtherDay = recurring && selectedSlots.length > 0 && slotKey(iso) !== slotKey(selectedSlots[0]);
+            if (detail.status !== 'available' || lockedToOtherDay) {
+              var taken = document.createElement('div');
+              taken.className = 'slot-chip slot-chip--reserved';
+              taken.textContent = timeText;
+              if (lockedToOtherDay) taken.title = currentLang() === 'tr'
+                ? 'Yalnızca ilk seçtiğin gün/saat sonraki haftalarda seçilebilir.'
+                : 'Only your first session\'s day/time can be selected in later weeks.';
+              listEl.appendChild(taken);
+              return;
+            }
+            var id = 'slot-' + iso.replace(/[^0-9]/g, '');
+            var chip = document.createElement('label');
+            chip.className = 'slot-chip'; chip.setAttribute('for', id);
+            var input = document.createElement('input');
+            input.type = 'checkbox'; input.name = 'slot'; input.id = id; input.value = iso;
+            if (selectedSlots.indexOf(iso) !== -1) input.checked = true;
+            input.addEventListener('change', function(){ handleSlotChange(iso); });
+            var timeEl = document.createElement('span');
+            timeEl.textContent = timeText;
+            chip.appendChild(input); chip.appendChild(timeEl);
+            listEl.appendChild(chip);
+          });
+          dayEl.appendChild(listEl);
+          weekEl.appendChild(dayEl);
+        }
+        calTrack.appendChild(weekEl);
+      });
+
+      calDotsEl = document.createElement('div'); calDotsEl.className = 'slot-dots';
+      weekOrder.forEach(function(_, i){
+        var dot = document.createElement('button');
+        dot.type = 'button'; dot.className = 'slot-dot';
+        dot.setAttribute('aria-label', (currentLang() === 'tr' ? 'Hafta ' : 'Week ') + (i + 1));
+        dot.addEventListener('click', function(){ calGoTo(i); });
+        calDotsEl.appendChild(dot);
+      });
+
+      // Pointer/touch drag lives on the freshly-created viewport each render; move/up are global.
+      calViewport.addEventListener('mousedown', function(e){ calPointerDown(e.clientX); });
+      calViewport.addEventListener('touchstart', function(e){ calPointerDown(e.touches[0].clientX); }, { passive: true });
+      calViewport.addEventListener('touchmove', function(e){ calPointerMove(e.touches[0].clientX); }, { passive: true });
+      calViewport.addEventListener('touchend', function(e){ calPointerUp(e.changedTouches[0].clientX); });
+
+      cal.appendChild(head); cal.appendChild(calViewport); cal.appendChild(calDotsEl);
+      slotContainer.appendChild(cal);
+
+      calWeekCount = weekOrder.length;
+      if (calCurrent > calWeekCount - 1) calCurrent = calWeekCount - 1;
+      if (calCurrent < 0) calCurrent = 0;
+      calRender(false); // position without animation; keeps current week across re-render
+    }
+
+    function fetchSlots(sessionType){
+      selectedSlots = [];
+      lastFetchedSlots = [];
+      calCurrent = 0; // fresh availability starts on week 1 (language switch preserves the week)
+      slotContainer.innerHTML = '';
+      setSlotStatus('loading', false);
+      fetch(API_BASE + '/availability?sessionType=' + encodeURIComponent(sessionType))
+        .then(function(res){ if (!res.ok) throw new Error('http ' + res.status); return res.json(); })
+        .then(function(data){
+          lastFetchedSlots = data.slots || [];
+          renderSlots(lastFetchedSlots);
+        })
+        .catch(function(){ setSlotStatus('loadError', true); });
+    }
+
+    document.querySelectorAll('input[name="sessionType"]').forEach(function(radio){
+      radio.addEventListener('change', function(){ if (radio.checked) fetchSlots(radio.value); });
+    });
+    var initialType = document.querySelector('input[name="sessionType"]:checked');
+    if (initialType) fetchSlots(initialType.value);
+
+    // Re-render already-shown slot labels when the language flag changes, so times/dates follow the
+    // newly selected zone/locale. setLang (its flag listener is registered earlier, at the top of
+    // this script) has already updated data-lang by the time this fires. selectedSlots is untouched,
+    // and renderSlots restores each chip's checked state from it — syncChipChecks re-asserts it.
+    flags.forEach(function(btn){
+      btn.addEventListener('click', function(){ if (lastFetchedSlots.length) { renderSlots(lastFetchedSlots); syncChipChecks(); } });
+    });
+
+    if (summaryEl && charCount) {
+      var maxLen = summaryEl.getAttribute('maxlength');
+      function updateCount(){ charCount.textContent = summaryEl.value.length + ' / ' + maxLen; }
+      summaryEl.addEventListener('input', updateCount);
+      updateCount();
+    }
+
+    // Translate button: translate the "what would you like to talk about" field
+    // via our own backend's /translate proxy (Google's keyless gtx endpoint sends
+    // no CORS headers, so a direct browser fetch always fails silently with
+    // "Failed to fetch" — the backend does the request server-side instead),
+    // into whichever language the page's own flag toggle is currently showing.
+    (function(){
+      var translateBtn = document.getElementById('translateBtn');
+      if (!translateBtn || !summaryEl) return;
+
+      translateBtn.addEventListener('click', function(){
+        var text = summaryEl.value.trim();
+        if (!text) { showNote('translateEmpty', true); return; }
+        var targetLang = currentLang();
+        showNote('translating', false);
+        translateBtn.disabled = true;
+        fetch(API_BASE + '/translate?sl=auto&tl=' + targetLang + '&q=' + encodeURIComponent(text))
+          .then(function(res){
+            if (!res.ok) throw new Error('http ' + res.status);
+            return res.json();
+          })
+          .then(function(data){
+            // Google returns [[[translatedSegment, originalSegment, ...], ...], ...].
+            // Join every segment's translated text (index 0) in order; segments
+            // already carry their own trailing spacing, so join with ''.
+            var segments = data && data[0];
+            if (!segments || !segments.length) throw new Error('bad translation response');
+            var translated = segments.map(function(seg){ return seg[0]; }).join('');
+            if (!translated) throw new Error('bad translation response');
+            summaryEl.value = translated;
+            if (charCount) charCount.textContent = summaryEl.value.length + ' / ' + summaryEl.getAttribute('maxlength');
+            showNote('translated', false);
+          })
+          .catch(function(){
+            showNote('translateError', true);
+          })
+          .finally(function(){
+            translateBtn.disabled = false;
+          });
+      });
+    })();
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+
+      var sessionType = form.querySelector('input[name="sessionType"]:checked');
+      if (!sessionType || selectedSlots.length < 1) { showNote('needSlot', true); return; }
+      if (!document.getElementById('cancellationAck').checked) { showNote('needAck', true); return; }
+      if (!form.reportValidity()) return;
+
+      var slots = selectedSlots.slice().sort(); // ascending ISO order, matches server-side sort
+      if (hasWeekGap(slots)) { showNote('weekGap', true); return; } // no-op for single slot
+
+      var payload = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        summary: summaryEl.value.trim(),
+        sessionType: sessionType.value,
+        therapyMode: form.querySelector('input[name="therapyMode"]:checked').value,
+        sessionMode: form.querySelector('input[name="sessionMode"]:checked').value,
+        slotStartUtcs: slots,
+        cancellationAck: true
+      };
+
+      submitBtn.disabled = true;
+      showNote('redirecting', false);
+
+      fetch(API_BASE + '/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(function(res){
+          return res.json().then(function(data){ return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function(result){
+          if (!result.ok) {
+            if (result.status === 409) {
+              showNote('slotTaken', true);
+              fetchSlots(sessionType.value);
+            } else {
+              showNote('genericError', true);
+            }
+            submitBtn.disabled = false;
+            return;
+          }
+          window.location.href = result.data.url;
+        })
+        .catch(function(){
+          showNote('genericError', true);
+          submitBtn.disabled = false;
+        });
+    });
+  })();
+</script>
+</body>
+</html>

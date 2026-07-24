@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
 
@@ -32,6 +32,8 @@
       <a href="approach.html"><span data-en>APPROACH</span><span data-tr>YAKLAŞIM</span></a>
       <a href="blog.html"><span data-en>BLOG</span><span data-tr>BLOG</span></a>
       <a href="iletisim.html"><span data-en>CONTACT</span><span data-tr>İLETİŞİM</span></a>
+      <a href="booking.html"><span data-en>BOOK A CONSULTATION</span><span data-tr>RANDEVU AL</span></a>
+      <a href="panel.html" id="panelNavLink" style="display:none"><span data-en>NOTES</span><span data-tr>NOT PANELİ</span></a>
     </nav>
 
     <div class="header-actions">
@@ -54,19 +56,25 @@
           </svg>
         </button>
       </div>
-      <a class="btn btn-primary header-cta" href="iletisim.html">
+      <a class="btn btn-primary header-cta" href="booking.html">
         <span data-en>Book a consultation</span><span data-tr>Randevu Al</span>
       </a>
     </div>
   </div>
 </header>
+<script>
+  if (localStorage.getItem('panelAccess') === '1') {
+    var panelNavLink = document.getElementById('panelNavLink');
+    if (panelNavLink) panelNavLink.style.display = '';
+  }
+</script>
 
 <main>
   <div class="page-intro-bg" aria-hidden="true"><div class="hero-bg"></div></div>
 
   <section class="page-intro">
     <div class="wrap">
-      <p class="eyebrow"><span data-en>About Çiğdem</span><span data-tr>Çiğdem Hakkında</span></p>
+      <p class="eyebrow"><span data-en>About Cigdem</span><span data-tr>Çiğdem Hakkında</span></p>
       <a href="index.html#hakkimda" style="text-decoration:none; color:inherit;">
         <h1><span data-en>Twenty years of sitting with difficult things.</span><span data-tr>Zor şeylerle birlikte oturmanın yirmi yılı.</span></h1>
       </a>
@@ -76,11 +84,11 @@
   <section>
     <div class="wrap about-grid">
       <div class="photo-placeholder" style="display:flex;">
-        <span data-en>Photo of Çiğdem coming soon</span><span data-tr>Çiğdem'in fotoğrafı yakında eklenecek</span>
+        <span data-en>Photo of Cigdem coming soon</span><span data-tr>Çiğdem'in fotoğrafı yakında eklenecek</span>
       </div>
       <div>
         <p>
-          <span data-en>Çiğdem trained across existential-phenomenological therapy, cognitive behavioural therapy (CBT) and Acceptance &amp; Commitment Therapy (ACT), and has worked in clinical and organisational settings in both London and Istanbul. She works with people navigating anxiety, depression, relationship strain, trauma, and the particular disorientation of living between two cultures.</span>
+          <span data-en>Cigdem trained across existential-phenomenological therapy, cognitive behavioural therapy (CBT) and Acceptance &amp; Commitment Therapy (ACT), and has worked in clinical and organisational settings in both London and Istanbul. She works with people navigating anxiety, depression, relationship strain, trauma, and the particular disorientation of living between two cultures.</span>
           <span data-tr>Çiğdem; varoluşçu-fenomenolojik terapi, bilişsel davranışçı terapi (BDT) ve Kabul ve Kararlılık Terapisi (ACT) alanlarında eğitim aldı; hem Londra hem İstanbul'da klinik ve kurumsal ortamlarda çalıştı. Kaygı, depresyon, ilişki zorlukları, travma ve iki kültür arasında yaşamanın getirdiği kendine özgü yönelim kaybıyla baş eden kişilerle çalışıyor.</span>
         </p>
         <div class="quote-block">
@@ -128,6 +136,12 @@
     menuBtn.addEventListener('click', function(){
       var isOpen = navPrimary.classList.toggle('open');
       menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function(e){
+      if (navPrimary.classList.contains('open') && !navPrimary.contains(e.target) && !menuBtn.contains(e.target)) {
+        navPrimary.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
     });
   }
 

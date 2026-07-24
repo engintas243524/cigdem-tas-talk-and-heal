@@ -2,3 +2,7 @@
 .gstack/
 .claude/
 talk-and-heal-hata-gunlugu/
+API/
+node_modules/
+.wrangler/
+.dev.vars

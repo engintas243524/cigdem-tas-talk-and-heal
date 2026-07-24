@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
 
@@ -32,6 +32,8 @@
       <a href="approach.html"><span data-en>APPROACH</span><span data-tr>YAKLAŞIM</span></a>
       <a href="blog.html"><span data-en>BLOG</span><span data-tr>BLOG</span></a>
       <a href="iletisim.html"><span data-en>CONTACT</span><span data-tr>İLETİŞİM</span></a>
+      <a href="booking.html"><span data-en>BOOK A CONSULTATION</span><span data-tr>RANDEVU AL</span></a>
+      <a href="panel.html" id="panelNavLink" style="display:none"><span data-en>NOTES</span><span data-tr>NOT PANELİ</span></a>
     </nav>
 
     <div class="header-actions">
@@ -54,12 +56,18 @@
           </svg>
         </button>
       </div>
-      <a class="btn btn-primary header-cta" href="iletisim.html">
+      <a class="btn btn-primary header-cta" href="booking.html">
         <span data-en>Book a consultation</span><span data-tr>Randevu Al</span>
       </a>
     </div>
   </div>
 </header>
+<script>
+  if (localStorage.getItem('panelAccess') === '1') {
+    var panelNavLink = document.getElementById('panelNavLink');
+    if (panelNavLink) panelNavLink.style.display = '';
+  }
+</script>
 
 <main>
   <div class="page-intro-bg" aria-hidden="true"><div class="hero-bg"></div></div>
@@ -141,6 +149,11 @@
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
   var root = document.documentElement;
+  // Madde 12 (2026-07-24): 3-way font-weight/size comparison for the card/label text on this
+  // page, driven by ?warnVariant=a|b|c (see style.css's html[data-warn-variant] rules). Remove
+  // once the user has picked a variant.
+  var warnVariant = new URLSearchParams(location.search).get('warnVariant');
+  if (warnVariant) document.documentElement.setAttribute('data-warn-variant', warnVariant);
   var flags = document.querySelectorAll('.lang-flag');
   function setLang(lang){
     root.setAttribute('data-lang', lang);
@@ -172,40 +185,34 @@
       note.classList.toggle('form-note--error', !!isError);
     }
 
-    // Common short Turkish words/greetings that contain no Turkish-specific
-    // diacritics (ç,ğ,ı,ö,ü) and would otherwise be misdetected as English.
-    var TR_WORDS = /\b(selam|merhaba|naber|nasilsin|nasılsın|evet|hayir|hayır|tamam|lutfen|lütfen|tesekkur|teşekkür|tesekkurler|teşekkürler|iyiyim|gunaydin|günaydın|iyi|kotu|kötü|yardim|yardım)\b/i;
-
-    function detectLang(text){
-      if (/[çğıöüÇĞİÖÜ]/.test(text)) return 'tr';
-      if (TR_WORDS.test(text)) return 'tr';
-      return 'en';
-    }
-
-    // MyMemory's free/unauthenticated tier occasionally returns a quota or
-    // warning message INSIDE translatedText instead of a real translation
-    // (e.g. "MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS...").
-    // Treat that as a failure rather than displaying it as if it were the
-    // translated message.
-    function looksLikeApiWarning(s){
-      return /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE PAIR|IS AN INVALID TARGET LANGUAGE|AMBIGUOUS/i.test(s);
-    }
+    // TEMP (2026-07-23 multi-device test session, revert after): tunnel origin,
+    // same scheme as booking.html/cancel.html.
+    var API_BASE = window.location.hostname.indexOf('trycloudflare.com') !== -1
+      ? 'https://brad-substances-development-filter.trycloudflare.com'
+      : 'http://' + window.location.hostname + ':8787';
 
     translateBtn.addEventListener('click', function(){
       var text = messageEl.value.trim();
       if (!text) { showNote('empty', true); return; }
-      var srcLang = detectLang(text);
-      var targetLang = srcLang === 'tr' ? 'en' : 'tr';
+      var targetLang = currentLang();
       showNote('translating', false);
       translateBtn.disabled = true;
-      fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) + '&langpair=' + srcLang + '|' + targetLang)
+      // Proxied through our own backend — Google's keyless gtx endpoint sends no
+      // CORS headers, so a direct browser fetch always fails silently with
+      // "Failed to fetch"; the backend does the request server-side instead.
+      fetch(API_BASE + '/translate?sl=auto&tl=' + targetLang + '&q=' + encodeURIComponent(text))
         .then(function(res){
           if (!res.ok) throw new Error('http ' + res.status);
           return res.json();
         })
         .then(function(data){
-          var translated = data && data.responseData && data.responseData.translatedText;
-          if (!translated || looksLikeApiWarning(translated)) throw new Error('bad translation response');
+          // Google returns [[[translatedSegment, originalSegment, ...], ...], ...].
+          // Join every segment's translated text (index 0) in order; segments
+          // already carry their own trailing spacing, so join with ''.
+          var segments = data && data[0];
+          if (!segments || !segments.length) throw new Error('bad translation response');
+          var translated = segments.map(function(seg){ return seg[0]; }).join('');
+          if (!translated) throw new Error('bad translation response');
           messageEl.value = translated;
           showNote('done', false);
         })
@@ -224,6 +231,12 @@
     menuBtn.addEventListener('click', function(){
       var isOpen = navPrimary.classList.toggle('open');
       menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    document.addEventListener('click', function(e){
+      if (navPrimary.classList.contains('open') && !navPrimary.contains(e.target) && !menuBtn.contains(e.target)) {
+        navPrimary.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      }
     });
   }
 

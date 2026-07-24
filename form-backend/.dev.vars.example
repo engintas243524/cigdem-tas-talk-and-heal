@@ -1,0 +1,21 @@
+# Copy to .dev.vars for local `wrangler dev` (already gitignored, never commit real values).
+# Real secrets in production go via `wrangler secret put <NAME>`, never in wrangler.jsonc.
+
+GOOGLE_SERVICE_ACCOUNT_EMAIL=talk-and-heal-backend@talk-and-heal-503117.iam.gserviceaccount.com
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nDUMMY\n-----END PRIVATE KEY-----\n"
+GOOGLE_CALENDAR_ID=dummy-calendar-id@group.calendar.google.com
+GOOGLE_SHEET_ID=dummy-sheet-id
+STRIPE_SECRET_KEY=sk_test_dummy
+STRIPE_WEBHOOK_SECRET=whsec_dummy
+WHATSAPP_ACCESS_TOKEN=dummy-token
+WHATSAPP_PHONE_NUMBER_ID=1238686782662234
+WHATSAPP_VERIFY_TOKEN=choose-any-random-string
+SELEN_WHATSAPP_NUMBER=447000000000
+SELEN_NOTIFICATION_EMAIL=selen@example.com
+RESEND_API_KEY=re_dummy
+# HMAC key for signing cancellation links (Session 13). Generate with: openssl rand -hex 32
+CANCEL_LINK_SECRET=dummy-cancel-link-secret
+# Madde 5 control panel. PANEL_PASSWORD is the single shared login password (plain compare).
+# PANEL_TOKEN_SECRET is the HMAC key for the login session token — generate with: openssl rand -hex 32
+PANEL_PASSWORD=choose-a-panel-password
+PANEL_TOKEN_SECRET=dummy-panel-token-secret
