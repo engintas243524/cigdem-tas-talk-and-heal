@@ -372,12 +372,22 @@ nav.primary.open{
 .hero-name{
   font-family:'WindSong', cursive;
   font-weight:500;
-  font-size:clamp(3.6rem, 2.4rem + 2.2vw, 6rem);
+  /* Pure-vw scaling (no rem floor added on) so the font shrinks all the way down on
+     narrow phones instead of pinning at a fixed size — the old 3.6rem floor never
+     actually shrank below that on any phone width, which combined with scaleX below
+     is what caused the one-line overflow. Bounds tuned so pre-transform text width
+     (measured empirically) stays under container-width/1.15 from 320px through
+     desktop; re-check with real device widths if the name/copy ever changes. */
+  font-size:clamp(2.6rem, 12.8vw, 6rem);
   letter-spacing:0.06em;
   transform:scaleX(1.15);
   color:var(--ink);
   line-height:1.15;
   margin:0;
+  min-width:0;
+  /* Kept on one line (side-by-side, not stacked) — the font-size clamp above is what
+     keeps it from overflowing on narrow phones, not wrapping. */
+  white-space:nowrap;
 }
 .hero-media{
   position:relative;
@@ -686,6 +696,22 @@ form.contact{ display:grid; gap:var(--space-2); }
   margin:0; font-size:0.85rem; font-weight:300; color:var(--sage);
 }
 .form-note--error{ color:var(--brand-deep); }
+
+/* ---------- Voice input (booking summary field + panel note dictation) ---------- */
+.mic-btn{
+  width:2.75rem; height:2.75rem; padding:0; flex:0 0 auto;
+  border-radius:999px;
+}
+.mic-btn.recording{ background:var(--brand); color:#fff; border-color:var(--brand); }
+.mic-btn .mic-wave{ display:none; align-items:flex-end; justify-content:center; gap:0.15rem; width:1.1rem; height:1rem; }
+.mic-btn.recording .mic-icon{ display:none; }
+.mic-btn.recording .mic-wave{ display:flex; }
+.mic-wave span{ display:block; width:0.16rem; height:0.25rem; background:currentColor; border-radius:999px; animation:mic-wave-bounce 0.9s ease-in-out infinite; }
+.mic-wave span:nth-child(2){ animation-delay:0.15s; }
+.mic-wave span:nth-child(3){ animation-delay:0.3s; }
+.mic-wave span:nth-child(4){ animation-delay:0.45s; }
+@keyframes mic-wave-bounce{ 0%, 100%{ height:0.25rem; } 50%{ height:1rem; } }
+
 .contact-info{ display:grid; gap:var(--space-3); align-content:start; }
 .contact-info a{ text-decoration:underline; text-underline-offset:0.1875rem; }
 .contact-info h2{ font-size:1.05rem; font-weight:300; }

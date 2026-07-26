@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=48">
+<link rel="stylesheet" href="style.css?v=53">
 </head>
 <body>
 
@@ -141,7 +141,7 @@
 
 <footer class="site">
   <div class="wrap">
-    <span>© <span id="year"></span> Talk &amp; Heal — Çiğdem Taş</span>
+    <span>© <span id="year"></span> Talk &amp; Heal — <span data-en>Cigdem Tas</span><span data-tr>Çiğdem Taş</span></span>
     <span><span data-en>BACP Registered Psychotherapist</span><span data-tr>BACP Kayıtlı Psikoterapist</span></span>
   </div>
 </footer>
@@ -179,6 +179,7 @@
       note.style.display = 'block';
       note.classList.toggle('form-note--error', !!isError);
     }
+    function otherLang(l){ return l === 'tr' ? 'en' : 'tr'; }
 
     // TEMP (2026-07-23 multi-device test session, revert after): tunnel origin,
     // same scheme as booking.html/cancel.html.
@@ -186,28 +187,40 @@
       ? 'https://brad-substances-development-filter.trycloudflare.com'
       : 'http://' + window.location.hostname + ':8787';
 
-    translateBtn.addEventListener('click', function(){
-      var text = messageEl.value.trim();
-      if (!text) { showNote('empty', true); return; }
-      var targetLang = currentLang();
-      showNote('translating', false);
-      translateBtn.disabled = true;
-      // Proxied through our own backend — Google's keyless gtx endpoint sends no
-      // CORS headers, so a direct browser fetch always fails silently with
-      // "Failed to fetch"; the backend does the request server-side instead.
-      fetch(API_BASE + '/translate?sl=auto&tl=' + targetLang + '&q=' + encodeURIComponent(text))
+    // Proxied through our own backend — Google's keyless gtx endpoint sends no
+    // CORS headers, so a direct browser fetch always fails silently with
+    // "Failed to fetch"; the backend does the request server-side instead.
+    // Google echoes text back unchanged when it's already in the requested target
+    // language — that read as "Translate does nothing". Retries once into the other
+    // language whenever the response's detected source language (data[2]) matches
+    // what we asked for, so the button always produces an actual translation
+    // regardless of which language the visitor typed in.
+    function requestTranslation(text, tl){
+      return fetch(API_BASE + '/translate?sl=auto&tl=' + tl + '&q=' + encodeURIComponent(text))
         .then(function(res){
           if (!res.ok) throw new Error('http ' + res.status);
           return res.json();
         })
         .then(function(data){
-          // Google returns [[[translatedSegment, originalSegment, ...], ...], ...].
+          // Google returns [[[translatedSegment, originalSegment, ...], ...], ..., detectedSourceLang, ...].
           // Join every segment's translated text (index 0) in order; segments
           // already carry their own trailing spacing, so join with ''.
           var segments = data && data[0];
           if (!segments || !segments.length) throw new Error('bad translation response');
           var translated = segments.map(function(seg){ return seg[0]; }).join('');
           if (!translated) throw new Error('bad translation response');
+          if (data[2] === tl) return requestTranslation(text, otherLang(tl));
+          return translated;
+        });
+    }
+
+    translateBtn.addEventListener('click', function(){
+      var text = messageEl.value.trim();
+      if (!text) { showNote('empty', true); return; }
+      showNote('translating', false);
+      translateBtn.disabled = true;
+      requestTranslation(text, currentLang())
+        .then(function(translated){
           messageEl.value = translated;
           showNote('done', false);
         })

@@ -127,7 +127,19 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 		// double-message the client (see plan doc idempotency ordering).
 		const existingRow = await getRow(env, rowNumber!);
 		if (!existingRow.confirmationSentAt) {
-			await sendTemplate(env, md.phone, WHATSAPP_TEMPLATES.bookingConfirmation, [md.name, appointment, locationFor(md.sessionMode)]);
+			// Isolated in its own try/catch — same reasoning as the email isolation just below: an
+			// uncaught failure here (e.g. the WhatsApp API/WABA rejecting the send) would throw all the
+			// way to the outer catch, turning the whole cascade into a 500 even though Calendar/Sheets
+			// already succeeded above. That 500 makes Stripe retry the same webhook forever, and since
+			// the guard below is never reached, steps 5/6 (notifying Selen of the new booking) never
+			// fire either — Selen would never learn about a booking just because the client's own
+			// WhatsApp channel is broken. Swallow + log instead, matching the email isolation's guard
+			// semantics: attempted, not necessarily delivered.
+			try {
+				await sendTemplate(env, md.phone, WHATSAPP_TEMPLATES.bookingConfirmation, [md.name, appointment, locationFor(md.sessionMode)]);
+			} catch (err) {
+				console.error(`Client confirmation WhatsApp failed for ${stripeSessionId}:`, err);
+			}
 			// Client email carries the HMAC-signed cancel link. Deliberately isolated in its own
 			// try/catch: while Resend stays in sandbox mode (EMAIL_FROM's onboarding address can only
 			// send to Selen's own verified address, see config.ts), this WILL fail for any real
@@ -149,24 +161,39 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 			await writeCellMirrored(env, existingRow, rowNumber!, 'confirmationSentAt', new Date().toISOString());
 		}
 
-		// 5. Notify Selen — new booking (WhatsApp + email).
-		await sendTemplate(env, env.SELEN_WHATSAPP_NUMBER, WHATSAPP_TEMPLATES.newBookingNotice, [
-			md.name ?? '',
-			`${md.email ?? ''} / ${md.phone ?? ''}`,
-			appointmentLabel,
-			summary,
-		]);
-		await sendEmail(
-			env,
-			env.SELEN_NOTIFICATION_EMAIL,
-			'New Talk and Heal booking',
-			`New booking from ${md.name}.\nContact: ${md.email} / ${md.phone}\nAppointment: ${appointmentLabel}\nSummary: ${summary}`,
-		);
+		// 5. Notify Selen — new booking (WhatsApp + email). Each channel isolated (same reasoning as
+		// the client-confirmation isolation above): a broken WhatsApp channel must never swallow the
+		// email notification, or vice versa, and neither should turn an already-successful
+		// Calendar/Sheets booking into a 500 that Stripe retries forever.
+		try {
+			await sendTemplate(env, env.SELEN_WHATSAPP_NUMBER, WHATSAPP_TEMPLATES.newBookingNotice, [
+				md.name ?? '',
+				`${md.email ?? ''} / ${md.phone ?? ''}`,
+				appointmentLabel,
+				summary,
+			]);
+		} catch (err) {
+			console.error(`Selen new-booking WhatsApp failed for ${stripeSessionId}:`, err);
+		}
+		try {
+			await sendEmail(
+				env,
+				env.SELEN_NOTIFICATION_EMAIL,
+				'New Talk and Heal booking',
+				`New booking from ${md.name}.\nContact: ${md.email} / ${md.phone}\nAppointment: ${appointmentLabel}\nSummary: ${summary}`,
+			);
+		} catch (err) {
+			console.error(`Selen new-booking email failed for ${stripeSessionId}:`, err);
+		}
 
 		// 6. Notify Selen — client confirmation was sent (reuses the same template as the cron
 		// reminder-sent notice, per INTEGRASYON_TODO.md's "Varsayım" note — the user grouped both
 		// the post-payment and day-before messages under one "WhatsApp hatırlatma" notification).
-		await sendTemplate(env, env.SELEN_WHATSAPP_NUMBER, WHATSAPP_TEMPLATES.reminderSentNotice, [md.name ?? '', appointmentLabel]);
+		try {
+			await sendTemplate(env, env.SELEN_WHATSAPP_NUMBER, WHATSAPP_TEMPLATES.reminderSentNotice, [md.name ?? '', appointmentLabel]);
+		} catch (err) {
+			console.error(`Selen confirmation-sent WhatsApp failed for ${stripeSessionId}:`, err);
+		}
 
 		return new Response('OK', { status: 200 });
 	} catch (err) {

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=48">
+<link rel="stylesheet" href="style.css?v=53">
 </head>
 <body>
 
@@ -169,10 +169,16 @@
           <div class="field">
             <label for="summary"><span data-en>What would you like to talk about?</span><span data-tr>Ne hakkında konuşmak istersin?</span></label>
             <textarea id="summary" name="summary" maxlength="1000" required></textarea>
+            <p class="form-note" id="translateNote" role="status" aria-live="polite" style="display:none;"></p>
+            <p class="form-note" id="micHint" role="status" aria-live="polite" style="display:none;"></p>
             <div class="field-below-row">
               <p class="field-hint char-count" id="charCount"></p>
               <button class="btn btn-ghost" type="button" id="translateBtn">
                 <span data-en>Translate</span><span data-tr>Çevir</span>
+              </button>
+              <button class="btn btn-ghost mic-btn" type="button" id="micBtn" aria-label="Voice input / Sesli giriş">
+                <span class="mic-icon" aria-hidden="true">🎤</span>
+                <span class="mic-wave" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
               </button>
             </div>
           </div>
@@ -204,7 +210,7 @@
 
 <footer class="site">
   <div class="wrap">
-    <span>© <span id="year"></span> Talk &amp; Heal — Çiğdem Taş</span>
+    <span>© <span id="year"></span> Talk &amp; Heal — <span data-en>Cigdem Tas</span><span data-tr>Çiğdem Taş</span></span>
     <span><span data-en>BACP Registered Psychotherapist</span><span data-tr>BACP Kayıtlı Psikoterapist</span></span>
   </div>
 </footer>
@@ -330,7 +336,11 @@
       translateEmpty: { en: 'Please write something first.', tr: 'Lütfen önce bir şeyler yaz.' },
       translating: { en: 'Translating…', tr: 'Çevriliyor…' },
       translateError: { en: 'Translation service is unavailable right now. Please try again shortly.', tr: 'Çeviri servisi şu anda kullanılamıyor. Lütfen birazdan tekrar dene.' },
-      translated: { en: 'Translated.', tr: 'Çevrildi.' }
+      translated: { en: 'Translated.', tr: 'Çevrildi.' },
+      micListening: { en: 'Listening… speak now (tap the mic again to stop).', tr: 'Dinleniyor… konuş (durdurmak için mikrofona tekrar dokun).' },
+      micError: { en: 'Microphone error. Please check your browser permissions.', tr: 'Mikrofon hatası. Lütfen tarayıcı izinlerini kontrol et.' },
+      micUnsupported: { en: 'Voice input needs Google Chrome.', tr: 'Sesli giriş için Google Chrome gerekir.' },
+      micTooQuiet: { en: "Having trouble hearing you — please speak a bit louder.", tr: 'Sesini net duyamıyoruz — lütfen biraz daha yüksek sesle konuş.' }
     };
 
     // Display-only mirror of form-backend/src/config.ts's PRICING table — the server always
@@ -700,37 +710,193 @@
     // into whichever language the page's own flag toggle is currently showing.
     (function(){
       var translateBtn = document.getElementById('translateBtn');
-      if (!translateBtn || !summaryEl) return;
+      var translateNote = document.getElementById('translateNote');
+      if (!translateBtn || !summaryEl || !translateNote) return;
 
-      translateBtn.addEventListener('click', function(){
-        var text = summaryEl.value.trim();
-        if (!text) { showNote('translateEmpty', true); return; }
-        var targetLang = currentLang();
-        showNote('translating', false);
-        translateBtn.disabled = true;
-        fetch(API_BASE + '/translate?sl=auto&tl=' + targetLang + '&q=' + encodeURIComponent(text))
+      function showTranslateNote(key, isError){
+        translateNote.textContent = STRINGS[key][currentLang()];
+        translateNote.style.display = 'block';
+        translateNote.classList.toggle('form-note--error', !!isError);
+      }
+
+      function otherLang(l){ return l === 'tr' ? 'en' : 'tr'; }
+
+      // Google echoes text back unchanged when it's already in the requested target
+      // language (e.g. Turkish page + Turkish input both targeting 'tr') — that read as
+      // "Translate does nothing". requestTranslation retries once into the other language
+      // whenever the response's detected source language (data[2]) matches what we asked
+      // for, so the button always produces an actual translation regardless of which
+      // language the visitor typed in.
+      function requestTranslation(text, tl){
+        return fetch(API_BASE + '/translate?sl=auto&tl=' + tl + '&q=' + encodeURIComponent(text))
           .then(function(res){
             if (!res.ok) throw new Error('http ' + res.status);
             return res.json();
           })
           .then(function(data){
-            // Google returns [[[translatedSegment, originalSegment, ...], ...], ...].
+            // Google returns [[[translatedSegment, originalSegment, ...], ...], ..., detectedSourceLang, ...].
             // Join every segment's translated text (index 0) in order; segments
             // already carry their own trailing spacing, so join with ''.
             var segments = data && data[0];
             if (!segments || !segments.length) throw new Error('bad translation response');
             var translated = segments.map(function(seg){ return seg[0]; }).join('');
             if (!translated) throw new Error('bad translation response');
+            if (data[2] === tl) return requestTranslation(text, otherLang(tl));
+            return translated;
+          });
+      }
+
+      translateBtn.addEventListener('click', function(){
+        var text = summaryEl.value.trim();
+        if (!text) { showTranslateNote('translateEmpty', true); return; }
+        showTranslateNote('translating', false);
+        translateBtn.disabled = true;
+        requestTranslation(text, currentLang())
+          .then(function(translated){
             summaryEl.value = translated;
             if (charCount) charCount.textContent = summaryEl.value.length + ' / ' + summaryEl.getAttribute('maxlength');
-            showNote('translated', false);
+            showTranslateNote('translated', false);
           })
           .catch(function(){
-            showNote('translateError', true);
+            showTranslateNote('translateError', true);
           })
           .finally(function(){
             translateBtn.disabled = false;
           });
+      });
+    })();
+
+    // Voice input for the "what would you like to talk about" field, native Web Speech API
+    // (Chrome only — no server round-trip, no dependency). Dictation language always matches
+    // the page's current EN/TR flag (displayLocale()) so English and Turkish get equal-quality
+    // recognition instead of one being forced through the other's language model.
+    (function(){
+      var micBtn = document.getElementById('micBtn');
+      var micHint = document.getElementById('micHint');
+      if (!micBtn || !summaryEl || !micHint) return;
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { micBtn.style.display = 'none'; return; }
+
+      function showMicHint(key, isError){
+        micHint.textContent = STRINGS[key][currentLang()];
+        micHint.style.display = 'block';
+        micHint.classList.toggle('form-note--error', !!isError);
+      }
+
+      // Live "speak louder" warning: SpeechRecognition itself exposes no volume/confidence
+      // signal, so a second getUserMedia stream feeds an AnalyserNode purely to watch input
+      // level while recognition runs. autoGainControl/noiseSuppression/echoCancellation are
+      // explicitly OFF on this stream — the browser's default AGC quietly boosts low input
+      // back up before it reaches the AnalyserNode, which is why the warning never fired on
+      // genuinely quiet speech: the volume was being auto-corrected out from under us.
+      // ponytail: fixed RMS threshold, not per-device calibrated — mic gain still varies by
+      // hardware even with AGC off; revisit with a noise-floor sample if it misfires.
+      var QUIET_RMS = 0.02, QUIET_HOLD_MS = 1200;
+      function startVolumeMonitor(onLow, onOk){
+        return navigator.mediaDevices.getUserMedia({
+          audio: { autoGainControl: false, noiseSuppression: false, echoCancellation: false }
+        }).then(function(stream){
+          var ctx = new (window.AudioContext || window.webkitAudioContext)();
+          var source = ctx.createMediaStreamSource(stream);
+          var analyser = ctx.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+          var data = new Uint8Array(analyser.fftSize);
+          var quietSince = null, raf;
+          (function tick(){
+            analyser.getByteTimeDomainData(data);
+            var sum = 0;
+            for (var i = 0; i < data.length; i++) { var v = (data[i] - 128) / 128; sum += v * v; }
+            var rms = Math.sqrt(sum / data.length);
+            if (rms < QUIET_RMS) {
+              if (quietSince == null) quietSince = Date.now();
+              else if (Date.now() - quietSince > QUIET_HOLD_MS) onLow();
+            } else {
+              quietSince = null;
+              onOk();
+            }
+            raf = requestAnimationFrame(tick);
+          })();
+          return { stop: function(){
+            cancelAnimationFrame(raf);
+            stream.getTracks().forEach(function(t){ t.stop(); });
+            ctx.close();
+          }};
+        });
+      }
+
+      // continuous:true was the root cause of the worse bugs (text randomly overwritten,
+      // a stray English fragment bleeding into a freshly-started Turkish recording): Chrome
+      // keeps one long-lived internal multi-utterance buffer under continuous mode that's
+      // known to silently drop low-confidence stretches and occasionally deliver a late
+      // event after the session has moved on. Instead, each utterance gets its own brand-new
+      // SpeechRecognition instance (continuous:false) chained by restarting on every onend —
+      // looks the same to the visitor (near-instant restart), but there's no shared internal
+      // buffer left to get corrupted, and no stale object whose delayed event could land in
+      // the wrong session.
+      var recording = false, stoppedByUser = false;
+      var volMonitor = null, isQuiet = false;
+      var activeRecog = null;  // instance the "stop" click should act on
+      var currentSession = 0;  // bumped on every (re)start; a stray late event checks this and bails
+
+      function onVolLow(){ if (!isQuiet) { isQuiet = true; showMicHint('micTooQuiet', true); } }
+      function onVolOk(){ if (isQuiet) { isQuiet = false; showMicHint('micListening', false); } }
+
+      function beginSession(before, after, lang){
+        currentSession++;
+        var mySession = currentSession;
+        var committed = '';
+        var r = new SR();
+        r.lang = lang;
+        r.interimResults = true;
+        r.continuous = false;
+        activeRecog = r;
+
+        r.onstart = function(){
+          if (mySession !== currentSession) return;
+          recording = true;
+          micBtn.classList.add('recording');
+          showMicHint('micListening', false);
+        };
+        r.onresult = function(e){
+          if (mySession !== currentSession) return;
+          var interim = '';
+          for (var i = e.resultIndex; i < e.results.length; i++) {
+            var t = e.results[i][0].transcript;
+            if (e.results[i].isFinal) committed += t; else interim += t;
+          }
+          summaryEl.value = before + committed + interim + after;
+          if (charCount) charCount.textContent = summaryEl.value.length + ' / ' + summaryEl.getAttribute('maxlength');
+        };
+        r.onerror = function(e){
+          if (mySession !== currentSession) return;
+          var fatal = { 'not-allowed': 1, 'audio-capture': 1, 'service-not-allowed': 1 };
+          if (fatal[e.error]) { stoppedByUser = true; showMicHint('micError', true); }
+        };
+        r.onend = function(){
+          if (mySession !== currentSession) return;
+          recording = false;
+          micBtn.classList.remove('recording');
+          if (stoppedByUser) {
+            micHint.style.display = 'none';
+            if (volMonitor) { volMonitor.stop(); volMonitor = null; }
+            isQuiet = false;
+            return;
+          }
+          // Fold whatever's already in the textarea back in as the next utterance's prefix —
+          // always the true current text, never a possibly-stale local variable.
+          beginSession(summaryEl.value, '', lang);
+        };
+
+        try { r.start(); } catch (e) { /* fresh instance — should never already be started */ }
+      }
+
+      micBtn.addEventListener('click', function(){
+        if (recording) { stoppedByUser = true; if (activeRecog) activeRecog.stop(); return; }
+        stoppedByUser = false;
+        var pos = summaryEl.selectionStart != null ? summaryEl.selectionStart : summaryEl.value.length;
+        beginSession(summaryEl.value.slice(0, pos), summaryEl.value.slice(pos), displayLocale());
+        if (!volMonitor) { startVolumeMonitor(onVolLow, onVolOk).then(function(m){ volMonitor = m; }).catch(function(){}); }
       });
     })();
 

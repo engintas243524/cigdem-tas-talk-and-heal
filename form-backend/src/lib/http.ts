@@ -7,7 +7,7 @@
 const ALLOWED_ORIGINS = [
 	'https://talkandheal.co.uk',
 	'http://localhost:5173',
-	'http://192.168.1.102:5173',
+	'http://192.168.1.27:5173',
 	'https://guam-serial-unlimited-labs.trycloudflare.com',
 ];
 
