@@ -395,8 +395,8 @@ describe('POST /cancel', () => {
 		// "3 Seans" tab (sessionCount>1) = 16 PUTs. cancelledAt must NOT be among them — the booking
 		// as a whole is still live.
 		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(16);
-		// activeSessionCount = 3 populated sessions - 1 just cancelled = 2 (column BR, per SHEET_COLUMNS).
-		const activeCountWrite = calls.find((c) => c.method === 'PUT' && c.url.includes('BR2'));
+		// activeSessionCount = 3 populated sessions - 1 just cancelled = 2 (column AX, per SHEET_COLUMNS).
+		const activeCountWrite = calls.find((c) => c.method === 'PUT' && c.url.includes('AX2'));
 		expect(activeCountWrite?.body).toBe('{"values":[["2"]]}');
 	});
 

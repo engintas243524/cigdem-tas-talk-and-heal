@@ -123,12 +123,17 @@ export const SHEET_COLUMNS = [
 	'stripeRefundId',
 	'refundPercent',
 	'refundAmount',
-	...SESSION_NOTE_COLUMNS,
-	// Extend-only rule (see comment above SESSION_NOTE_COLUMNS): any new column must be appended at
-	// the very end, never inserted mid-array — doing that once (2026-07-27) shifted every column
-	// after the insertion point by one, silently misaligning the live Sheet's already-written
-	// sessionNote/session2Note/... header+data with what the code then wrote under those names.
+	// A column CAN be inserted next to the data it's related to, not just appended at the end —
+	// but doing so means the array index (and therefore the live Sheet's column letter) of every
+	// column after the insertion point shifts by one. That only stays safe if the live Sheet's
+	// already-written columns are migrated to match, in the same move: use the Sheets API's native
+	// `insertDimension` (shifts existing data/formatting for you, no manual cell copying) on every
+	// affected tab (Sayfa1 + every "{N} Seans" mirror), THEN update this array — never the other way
+	// around, and never just reorder the array and hope ensureHeaderRow's extend-only self-healing
+	// catches up (it only ever appends missing labels, it never rewrites a header cell that already
+	// has something in it, so a stale label left behind by an old insertion never fixes itself).
 	'activeSessionCount',
+	...SESSION_NOTE_COLUMNS,
 ] as const;
 
 // Human-readable Turkish header text for the real Google Sheet — Selen reads this sheet directly,
@@ -179,8 +184,8 @@ export const SHEET_COLUMN_LABELS: Record<(typeof SHEET_COLUMNS)[number], string>
 	stripeRefundId: 'Stripe İşlem No (İade)',
 	refundPercent: 'İade Oranı (%)',
 	refundAmount: 'İade Tutarı (GBP)',
+	activeSessionCount: 'İptal Sonrası Kalan Seans Sayısı',
 	...SESSION_NOTE_LABELS,
-	activeSessionCount: 'Aktif Seans Sayısı',
 };
 
 // Reminder is sent the day before the appointment, at this local hour in the client's

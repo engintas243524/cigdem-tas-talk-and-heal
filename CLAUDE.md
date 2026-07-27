@@ -64,7 +64,21 @@ hand-edit the header row's meaning without updating both `SHEET_COLUMNS` and
 `SHEET_COLUMN_LABELS` together** — they must stay in lockstep or the visible Sheet and the code's
 idea of column order silently diverge (this has happened once, see the error log's BE-18).
 `lib/sheets.ts` has the only column-letter-arithmetic (A, B, ... Z, AA, AB, ...) — do not
-reimplement it elsewhere. Every session slot (1..`MAX_SESSION_COUNT`) gets its own trio/quad of
+reimplement it elsewhere.
+
+**A new column may be inserted next to the data it's related to — it does not have to be appended
+at the end.** (Decided 2026-07-27 after a second incident: appending-only avoids a migration, but
+scatters related columns and defeats readable statistics later.) Inserting mid-array shifts the
+live Sheet's column letter for every key after the insertion point, so the ONLY safe order is: (1)
+run the Sheets API's native `insertDimension` (batchUpdate) on the live tab FIRST — every affected
+tab, Sayfa1 and every mirror — which shifts existing data/formatting for you, no manual cell
+copying; (2) verify cell-by-cell that the shifted tab now matches what you expect; (3) only then
+update `SHEET_COLUMNS`/`SHEET_COLUMN_LABELS` to match. Never reorder the code first and assume
+`ensureHeaderRow`'s extend-only self-healing will catch up — it only ever appends a label for a
+column that has none, it never rewrites a header cell that already holds something, so a stale
+label left at an old position never fixes itself (this exact mistake caused BE-18 twice).
+
+Every session slot (1..`MAX_SESSION_COUNT`) gets its own trio/quad of
 columns following one naming convention: session 1's fields are unprefixed
 (`appointmentStartUtc`, `reminderDueUtc`, `reminderSentAt`, `sessionNote`,
 `sessionNoteSubmittedAt`), sessions 2-10 are `session2StartUtc`...`session10NoteSubmittedAt`. Match

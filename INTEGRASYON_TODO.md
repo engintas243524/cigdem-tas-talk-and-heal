@@ -2249,3 +2249,40 @@ salt-görüntüleme amaçlı yeni bir sütun eklendi:
   `activeSessionCount`'ın gerçek değerini (3 seanstan 1'i iptal → 2) doğruluyor. `tsc`/`prettier`
   temiz, tam suite 124/124 yeşil.
 
+## Karar — sütunlar hem sağdan hem soldan (ilişkili veriye bitişik) büyüyebilir; `activeSessionCount` AX'e taşındı (2026-07-27)
+
+**Bulunan gerçek bug:** Yukarıdaki "sona ekle" düzeltmesinden sonra kullanıcı canlı Sheet'te başlığın
+hâlâ eski/yanlış metni ("10. Seans Notu İşlendi") gösterdiğini fark etti. Kök neden:
+`ensureHeaderRow` "extend-only" — sadece EKSİK başlık hücrelerini dolduruyor, zaten dolu bir başlık
+hücresini asla güncellemiyor. Sütun daha önce (bug döneminde) `sessionNote`'un yerini alıp dizinin
+sonuna taşınınca, o eski hücrede kalan yanlış etiket kendiliğinden hiç düzelmedi ve düzelmeyecekti.
+
+**Kullanıcının kararı (birebir gerekçe):** "sütunlar sağdan ve soldan büyüyebilir ve yanına ilişkili
+veri için sütun alabilir" — test aşamasında olduğumuz için mevcut not verisinin önemi yok, asıl
+önemli olan ileride de çıkabilecek bu ihtiyaç için ilişkili sütuna bitişik ekleme + var olan veriyi
+kaybetmeden kayabilme yeteneği, ayrıca veri-başlık tutarlılığının ileride istatistik/analiz için
+kritik olması (yanlış başlık → yanlış istatistik → yanlış aksiyon/yatırım riski).
+
+**Uygulanan (ekleme mid-array + canlı veri migrasyonu, manuel hücre taşıma değil):**
+- `activeSessionCount` artık `refundAmount`'ın hemen ardından, `SESSION_NOTE_COLUMNS`'tan önce (AX),
+  etiketi "İptal Sonrası Kalan Seans Sayısı" (`config.ts`).
+- Canlı Sheet'te (Sayfa1 + `3/4/5/6/10 Seans` sekmeleri) Google Sheets API'nin native
+  `insertDimension` (batchUpdate) çağrısıyla AX konumuna gerçek bir sütun eklendi — bu, o
+  konumdaki ve sonrasındaki TÜM veriyi (gerçek bir test seans notu dahil) Sheets'in kendi
+  mekanizmasıyla güvenle sağa kaydırdı, elle hücre kopyalama YAPILMADI (manuel taşımanın kendisi
+  hataya açık — Sayfa1'in ızgara genişliği (86) şema genişliğinden (70) fazla olduğu için ilk
+  denemede eski `activeSessionCount` değeri (Devrim'in "2"si) yanlış sütuna kopyalanmıştı, ikinci
+  geçişte doğru konuma taşınıp doğrulandı).
+- Her sekmede migrasyon sonrası başlık satırı (`AX1:BR1`) ve örnek veri satırları hücre hücre
+  okunup beklenenle karşılaştırıldı (`IDENTICAL`/`matches expected: true`), sadece o zaman kod
+  değişikliği (`config.ts`) yapıldı — asla önce kod, sonra "self-healing hallederim" varsayımıyla
+  değil.
+- `test/cancel.spec.ts`'teki `AX2`/`BR2` referansı yeni konuma göre güncellendi. `tsc`/`prettier`
+  temiz, tam suite 125/125 yeşil.
+
+**Kalıcı ilke (CLAUDE.md'ye de yansıtılmalı):** Bir sütun ilişkili olduğu veriye bitişik eklenebilir,
+sadece sona eklenmek zorunda değil — ama bunu yaparken (1) ÖNCE canlı Sheet'i native `insertDimension`
+ile migrate et (her etkilenen sekmede), (2) hücre hücre doğrula, (3) ANCAK ONDAN SONRA kod
+(`SHEET_COLUMNS`) güncellensin. Sırayı asla tersine çevirme — kodu önce değiştirip "extend-only
+self-healing nasılsa düzeltir" varsaymak tam olarak bu bug'ın kendisiydi.
+
