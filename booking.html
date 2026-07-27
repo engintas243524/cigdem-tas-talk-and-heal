@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=53">
+<link rel="stylesheet" href="style.css?v=87">
 </head>
 <body>
 
@@ -31,7 +31,6 @@
       <a href="services.html"><span data-en>SERVICES</span><span data-tr>SERVİSLER</span></a>
       <a href="approach.html"><span data-en>APPROACH</span><span data-tr>YAKLAŞIM</span></a>
       <a href="blog.html"><span data-en>BLOG</span><span data-tr>BLOG</span></a>
-      <a href="iletisim.html"><span data-en>CONTACT</span><span data-tr>İLETİŞİM</span></a>
       <a href="booking.html"><span data-en>BOOK A CONSULTATION</span><span data-tr>RANDEVU AL</span></a>
       <a href="panel.html" id="panelNavLink" style="display:none"><span data-en>NOTES</span><span data-tr>NOT PANELİ</span></a>
     </nav>
@@ -137,7 +136,7 @@
             <p><span data-en>You can select multiple sessions in the 'Choose a time' section below.</span><span data-tr>Aşağıdaki Saat Seç bölümünden birden çok seans seçebilirsiniz.</span></p>
             <p><span data-en>There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.</span><span data-tr>Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.</span></p>
             <p><span data-en>To book more than 10 sessions, please contact your therapist directly.</span><span data-tr>10 seanstan fazla seçim yapmak için terapistinizle görüşün.</span></p>
-            <p><span data-en>The day and time of your first session will apply to every following week — only that same day/time will be selectable in later weeks.</span><span data-tr>İlk seçtiğin seansın gün ve saati sonraki tüm haftalar için de geçerli olur — sonraki haftalarda yalnızca aynı gün/saat seçilebilir.</span></p>
+            <p><span data-en>The day(s) and time(s) you pick in your first week will apply to every following week — only those same day/times will be selectable in later weeks.</span><span data-tr>İlk hafta seçtiğiniz gün ve saat(ler) sonraki tüm haftalar için de geçerli olur — sonraki haftalarda yalnızca bu gün/saatler seçilebilir.</span></p>
           </div>
         </fieldset>
 
@@ -187,8 +186,8 @@
         <fieldset class="field-group">
           <legend class="section-label"><span data-en>4. Cancellation policy</span><span data-tr>4. İptal Politikası</span></legend>
           <div class="policy-box">
-            <p id="policyText"><span data-en>You may cancel at any time. If you cancel <strong>at least 3 days</strong> before your next session, you will receive a <strong>full refund</strong>. If you cancel less than 3 days before, you will receive <strong>half of the amount</strong> back.</span><span data-tr>Randevunuzu istediğiniz zaman iptal edebilirsiniz. Bir sonraki seansınızdan <strong>en az 3 gün önce</strong> iptal ederseniz, ücretin <strong>tamamı iade edilir</strong>. 3 günden daha az bir süre kala iptal ederseniz, ücretin <strong>yarısı iade edilir</strong>.</span></p>
-            <p><span data-en>To cancel or reschedule, message us on <a href="https://wa.me/447000000000" target="_blank" rel="noopener">WhatsApp</a> or email <a href="mailto:help@talkandheal.co.uk">help@talkandheal.co.uk</a>.</span><span data-tr>İptal veya değişiklik için <a href="https://wa.me/447000000000" target="_blank" rel="noopener">WhatsApp</a>'tan yaz ya da <a href="mailto:help@talkandheal.co.uk">help@talkandheal.co.uk</a> adresine e-posta at.</span></p>
+            <p id="policyText"><span data-en>You may cancel at any time. Each session is judged on its own notice period: if you cancel <strong>at least 72 hours</strong> before that session, you will receive a <strong>full refund</strong> for it. If you cancel less than 72 hours before, <strong>no refund</strong> will be given for that session.</span><span data-tr>Randevunuzu istediğiniz zaman iptal edebilirsiniz. Her seans kendi süresine göre değerlendirilir: bir seansı <strong>en az 72 saat önce</strong> iptal ederseniz, o seansın ücretinin <strong>tamamı iade edilir</strong>. 72 saatten daha az bir süre kala iptal ederseniz, o seans için <strong>iade yapılmaz</strong>.</span></p>
+            <p><span data-en>To cancel or reschedule, check the confirmation email we send you after payment.</span><span data-tr>İptal ve değişiklik için size gönderilen ilk bilgilendirme mailinizi kontrol edin.</span></p>
           </div>
           <label class="checkbox-field">
             <input type="checkbox" id="cancellationAck" required>
@@ -313,7 +312,7 @@
     var recurringToggle = document.getElementById('recurringToggle');
     var recurringNote = document.getElementById('recurringNote');
     var recurring = false;
-    var selectedSlots = []; // ISO strings; 0-1 in single mode, 0-10 (one per week) in recurring mode
+    var selectedSlots = []; // ISO strings; 0-1 in single mode, 0-10 in recurring mode (any weekly pattern, see referencePattern)
     var lastFetchedSlots = []; // most recent /availability SlotDetail[] ({iso,status,holidayTitle?}), re-rendered on language switch
 
     function currentLang(){ return root.getAttribute('data-lang') === 'tr' ? 'tr' : 'en'; }
@@ -331,6 +330,7 @@
       genericError: { en: 'Something went wrong. Please try again shortly.', tr: 'Bir şeyler ters gitti. Lütfen birazdan tekrar dene.' },
       needSlot: { en: 'Please choose a session type and a time above.', tr: 'Lütfen yukarıdan bir seans türü ve saat seç.' },
       weekGap: { en: 'There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.', tr: 'Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.' },
+      selectionTrimmed: { en: 'Your previously selected time(s) are not available for this session type — please choose again.', tr: 'Daha önce seçtiğiniz saat(ler) bu seans türü için uygun değil — lütfen tekrar seçin.' },
       needAck: { en: 'Please confirm you have read the cancellation policy.', tr: 'Lütfen iptal politikasını okuduğunu onayla.' },
       redirecting: { en: 'Redirecting to secure payment…', tr: 'Güvenli ödeme sayfasına yönlendiriliyor…' },
       translateEmpty: { en: 'Please write something first.', tr: 'Lütfen önce bir şeyler yaz.' },
@@ -378,7 +378,7 @@
       bookingNote.classList.toggle('form-note--error', !!isError);
     }
 
-    var SLOT_MAX_WEEKS = 10; // matches MAX_SESSION_COUNT — a recurring booking is one slot per week
+    var SLOT_MAX_WEEKS = 10; // calendar lookahead cap — a booking can hit MAX_SESSION_COUNT well before 10 weeks now that a week can hold more than one session
     var DAY_MS = 86400000;
 
     // ---- Week-carousel state (one week visible at a time; all weeks live in the DOM at
@@ -467,44 +467,11 @@
       }
     }
 
-    function handleSlotChange(iso){
-      if (!recurring) { selectedSlots = [iso]; syncChipChecks(); return; }
-      var idx = selectedSlots.indexOf(iso);
-      var lockedBefore = selectedSlots.length > 0;
-      if (idx !== -1) {
-        selectedSlots.splice(idx, 1); // toggle off
-      } else {
-        // one slot per week: drop any existing pick in the same Mon-Sun week, then add this one
-        var wk = mondayKey(new Date(iso));
-        selectedSlots = selectedSlots.filter(function(s){ return mondayKey(new Date(s)) !== wk; });
-        selectedSlots.push(iso);
-      }
-      // Madde 6: the weekday+time lock (see slotKey/renderSlots) is only baked into chips at
-      // render time — re-render whenever the lock could have just engaged (first pick) or
-      // released (last pick removed) so every other week's chips reflect it immediately.
-      if (lastFetchedSlots.length && (lockedBefore !== (selectedSlots.length > 0))) {
-        renderSlots(lastFetchedSlots);
-      } else {
-        syncChipChecks();
-      }
-    }
-
-    recurringToggle.addEventListener('change', function(){
-      recurring = recurringToggle.checked;
-      recurringNote.hidden = !recurring;
-      if (!recurring) {
-        selectedSlots = []; // clean slate when leaving recurring mode
-        // Re-render (not just syncChipChecks) in case the Madde 6 weekday+time lock had already
-        // turned some chips into non-interactive "locked" divs — those need to become real
-        // checkboxes again now that the rule no longer applies.
-        if (lastFetchedSlots.length) renderSlots(lastFetchedSlots); else syncChipChecks();
-      }
-    });
-
-    // Madde 6: a recurring booking is meant to be the SAME weekday+time every week, not just "one
-    // pick per week". Fixed to Europe/London (the actual business timezone) rather than
-    // displayTimeZone() so the lock is stable across the EN/TR flag switch. Once a first slot is
-    // selected, every other week's chips are restricted to this exact weekday+hour combination.
+    // Madde 6 (generalized): a recurring booking's weekly pattern comes from whichever weekday+hour
+    // combinations the client picks in their FIRST (earliest) week — any number, even several on
+    // the same day. Every later week may only reuse patterns from that set. Fixed to Europe/London
+    // (the actual business timezone) rather than displayTimeZone() so the pattern is stable across
+    // the EN/TR flag switch.
     function slotKey(iso){
       var parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', hour: '2-digit', hour12: false }).formatToParts(new Date(iso));
       var byType = {};
@@ -512,14 +479,67 @@
       return byType.weekday + '-' + byType.hour;
     }
 
-    // Same Monday-of-week key OR a gap wider than one week between consecutive picks is invalid —
-    // mirrors validateConsecutiveWeeks() server-side (booking.ts) for instant client-side feedback.
+    // The current reference week (earliest week with a pick) and the set of weekday+hour patterns
+    // it established — null when nothing is selected yet. Recomputed fresh from selectedSlots
+    // wherever needed rather than cached, since it's cheap (selectedSlots caps at 10) and this way
+    // there's exactly one place that defines "what's the reference pattern right now".
+    function referencePattern(){
+      if (!selectedSlots.length) return null;
+      var withDates = selectedSlots.map(function(iso){ return { iso: iso, date: new Date(iso) }; });
+      var earliest = withDates.reduce(function(a, b){ return b.date < a.date ? b : a; });
+      var refWeek = mondayKey(earliest.date);
+      var patterns = {};
+      withDates.forEach(function(s){ if (mondayKey(s.date) === refWeek) patterns[slotKey(s.iso)] = true; });
+      return { weekKey: refWeek, patterns: patterns };
+    }
+
+    // Drops any pick that no longer fits the current reference pattern — e.g. the client unchecked
+    // a first-week slot a later week depended on, or removed the earliest week so a new one takes
+    // over. One filter step handles growth, shrinkage and reference-week changes uniformly.
+    function recomputeSelection(){
+      var ref = referencePattern();
+      if (!ref) return;
+      selectedSlots = selectedSlots.filter(function(iso){
+        return mondayKey(new Date(iso)) === ref.weekKey || ref.patterns[slotKey(iso)];
+      });
+    }
+
+    function handleSlotChange(iso){
+      if (!recurring) { selectedSlots = [iso]; syncChipChecks(); return; }
+      var idx = selectedSlots.indexOf(iso);
+      if (idx !== -1) selectedSlots.splice(idx, 1); else selectedSlots.push(iso);
+      recomputeSelection();
+      // The pattern lock (see referencePattern/renderSlots) can change on ANY toggle now, not just
+      // first-pick/last-pick-removed — always re-render rather than tracking when it might have
+      // flipped.
+      if (lastFetchedSlots.length) renderSlots(lastFetchedSlots); else syncChipChecks();
+    }
+
+    recurringToggle.addEventListener('change', function(){
+      recurring = recurringToggle.checked;
+      recurringNote.hidden = !recurring;
+      if (!recurring) {
+        selectedSlots = []; // clean slate when leaving recurring mode
+        // Re-render (not just syncChipChecks) in case the pattern lock had already turned some
+        // chips into non-interactive "locked" divs — those need to become real checkboxes again
+        // now that the rule no longer applies.
+        if (lastFetchedSlots.length) renderSlots(lastFetchedSlots); else syncChipChecks();
+      }
+    });
+
+    // Gap check only — mirrors the gap portion of validateConsecutiveWeeks() server-side for
+    // instant client feedback. Pattern validity itself needs no client mirror: renderSlots already
+    // renders an out-of-pattern chip as non-interactive, so that class of bad input can't reach
+    // submit in the first place.
     function hasWeekGap(sortedIsos){
-      for (var i = 1; i < sortedIsos.length; i++) {
-        var prevWk = new Date(mondayKey(new Date(sortedIsos[i - 1])));
-        var curWk = new Date(mondayKey(new Date(sortedIsos[i])));
-        var days = (curWk.getTime() - prevWk.getTime()) / 86400000;
-        if (days === 0 || days > 7) return true;
+      var weekKeys = [];
+      sortedIsos.forEach(function(iso){
+        var wk = mondayKey(new Date(iso));
+        if (weekKeys.indexOf(wk) === -1) weekKeys.push(wk);
+      });
+      for (var i = 1; i < weekKeys.length; i++) {
+        var days = (new Date(weekKeys[i]).getTime() - new Date(weekKeys[i - 1]).getTime()) / 86400000;
+        if (days > 7) return true;
       }
       return false;
     }
@@ -530,6 +550,7 @@
         setSlotStatus('none', false); return;
       }
       setSlotStatus(null);
+      var ref = recurring ? referencePattern() : null;
 
       // Bucket slot details into calendar days, then days into Mon-Sun weeks — same browser-local
       // keying as the recurring/gap logic (mondayKey), so week grouping stays consistent.
@@ -611,17 +632,17 @@
               var gap = document.createElement('div'); gap.className = 'slot-gap'; listEl.appendChild(gap);
             }
             var timeText = new Date(iso).toLocaleTimeString(displayLocale(), timeFmt);
-            // Madde 6: once a first recurring slot is picked, every OTHER weekday+time is locked —
-            // rendered the same muted/non-interactive way as a genuinely reserved slot, just with
-            // a different tooltip explaining why.
-            var lockedToOtherDay = recurring && selectedSlots.length > 0 && slotKey(iso) !== slotKey(selectedSlots[0]);
+            // Madde 6 (generalized): outside the reference week, only chips matching one of its
+            // patterns stay selectable — rendered the same muted/non-interactive way as a
+            // genuinely reserved slot, just with a different tooltip explaining why.
+            var lockedToOtherDay = ref && mondayKey(new Date(iso)) !== ref.weekKey && !ref.patterns[slotKey(iso)];
             if (detail.status !== 'available' || lockedToOtherDay) {
               var taken = document.createElement('div');
               taken.className = 'slot-chip slot-chip--reserved';
               taken.textContent = timeText;
               if (lockedToOtherDay) taken.title = currentLang() === 'tr'
-                ? 'Yalnızca ilk seçtiğin gün/saat sonraki haftalarda seçilebilir.'
-                : 'Only your first session\'s day/time can be selected in later weeks.';
+                ? 'Sonraki haftalarda yalnızca ilk hafta seçtiğin gün/saatler seçilebilir.'
+                : 'Only your first week\'s day/times can be selected in later weeks.';
               listEl.appendChild(taken);
               return;
             }
@@ -667,8 +688,13 @@
       calRender(false); // position without animation; keeps current week across re-render
     }
 
-    function fetchSlots(sessionType){
-      selectedSlots = [];
+    // preserveSelection: switching sessionType (Standard <-> Extended) used to silently wipe
+    // every already-picked recurring slot with no warning — a real booking went through for the
+    // wrong date because of this. Now the previous picks are kept if they're still available
+    // under the new session type, and the user is told if any had to be dropped.
+    function fetchSlots(sessionType, preserveSelection){
+      var previousSelection = preserveSelection ? selectedSlots.slice() : [];
+      if (!preserveSelection) selectedSlots = [];
       lastFetchedSlots = [];
       calCurrent = 0; // fresh availability starts on week 1 (language switch preserves the week)
       slotContainer.innerHTML = '';
@@ -677,13 +703,21 @@
         .then(function(res){ if (!res.ok) throw new Error('http ' + res.status); return res.json(); })
         .then(function(data){
           lastFetchedSlots = data.slots || [];
+          if (previousSelection.length > 0) {
+            var stillAvailable = lastFetchedSlots
+              .filter(function(d){ return d.status === 'available'; })
+              .map(function(d){ return d.iso; });
+            selectedSlots = previousSelection.filter(function(iso){ return stillAvailable.indexOf(iso) !== -1; });
+            recomputeSelection(); // in case the availability change also broke the recurring pattern
+            if (selectedSlots.length < previousSelection.length) showNote('selectionTrimmed', true);
+          }
           renderSlots(lastFetchedSlots);
         })
         .catch(function(){ setSlotStatus('loadError', true); });
     }
 
     document.querySelectorAll('input[name="sessionType"]').forEach(function(radio){
-      radio.addEventListener('change', function(){ if (radio.checked) fetchSlots(radio.value); });
+      radio.addEventListener('change', function(){ if (radio.checked) fetchSlots(radio.value, true); });
     });
     var initialType = document.querySelector('input[name="sessionType"]:checked');
     if (initialType) fetchSlots(initialType.value);

@@ -12,11 +12,21 @@
       bize ait değil; benzer hissi orijinal kodla ürettim.
 - [x] **Logo:** çerçevesiz sürüm onaylandı, `assets/logo-clean-candidate.png` olarak kullanımda.
 - [ ] **WhatsApp numarası:** `index.html` içinde `wa.me/447000000000` placeholder — gerçek numarayı ver.
-- [ ] **Fotoğraf** (Çiğdem'in gerçek fotoğrafı — sonra eklenecek)
+- [x] **Fotoğraf** (Çiğdem'in gerçek fotoğrafı) — `index.html` hero bölümü, `index.html` #hakkimda
+      About teaser'ı VE `hakkimda.html`'deki 3 story-photo çerçevesinin hepsi gerçek fotoğraflarla
+      dolduruldu (2026-07-26): `cigdem-hero-photo.png`, `cigdem-about-teaser.png`,
+      `cigdem-about-childhood.png`, `cigdem-about-park.png`, `cigdem-about-training.png`. Servisler
+      (`services-window-teaser.png`), Yaklaşım (`approach-tree-teaser.jpg`) ve Blog
+      (`blog-quill-teaser.png`, 2026-07-26) teaser fotoğrafları da eklendi — `index.html`'deki
+      tüm "Photo coming soon" placeholder'ları bitti (#iletisim teaser'ı zaten tamamen
+      kaldırılmıştı, bkz. INTEGRASYON_TODO.md).
 - [x] **E-posta:** şimdilik help@talkandheal.co.uk kullanılıyor (teyitli, sonra değişebilir)
 - [ ] **Fiyat & Bilgi sayfası gerçek verisi** (Ücretler/Ödeme/İptal Politikası — `pricing.html`
       içinde açıkça "TBD" etiketiyle işaretli, uydurma rakam konulmadı)
-- [ ] **İletişim formu servis endpoint'i** (Formspree veya tercih edilen servis) — sonraya bırakıldı
+- [x] **İletişim formu** — `iletisim.html` bağımsız sayfası (Formspree placeholder'lı contact
+      formu) 2026-07-26'da kullanıcı isteğiyle tamamen kaldırıldı, artık Formspree endpoint'ine
+      gerek yok. Çiğdem'e ulaşmanın tek yolu booking akışı (randevu formu + iptal sayfasındaki
+      WhatsApp/e-posta).
 
 ## ⚠️ KRİTİK: WhatsApp / Calendar / E-posta entegrasyonları — TEST hesabı → GERÇEK hesap geçişi
 

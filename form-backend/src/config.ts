@@ -52,7 +52,8 @@ export const WHATSAPP_TEMPLATES = {
 	reminder: 'randevu_hatirlatma_danisan',
 	newBookingNotice: 'yeni_randevu_bildirimi',
 	reminderSentNotice: 'hatirlatma_gonderildi_bildirimi',
-	// TBD (booking-system-expansion plan, Session 13): not yet drafted/submitted to Meta.
+	// Created and approved on Meta's side 2026-07-22 (confirmed live in WhatsApp Manager
+	// 2026-07-27) — this comment used to say "not yet drafted/submitted", which was stale.
 	cancellationConfirmed: 'iptal_onay_danisan',
 	cancellationNotice: 'iptal_bildirimi_selen',
 } as const;
@@ -123,6 +124,11 @@ export const SHEET_COLUMNS = [
 	'refundPercent',
 	'refundAmount',
 	...SESSION_NOTE_COLUMNS,
+	// Extend-only rule (see comment above SESSION_NOTE_COLUMNS): any new column must be appended at
+	// the very end, never inserted mid-array — doing that once (2026-07-27) shifted every column
+	// after the insertion point by one, silently misaligning the live Sheet's already-written
+	// sessionNote/session2Note/... header+data with what the code then wrote under those names.
+	'activeSessionCount',
 ] as const;
 
 // Human-readable Turkish header text for the real Google Sheet — Selen reads this sheet directly,
@@ -174,6 +180,7 @@ export const SHEET_COLUMN_LABELS: Record<(typeof SHEET_COLUMNS)[number], string>
 	refundPercent: 'İade Oranı (%)',
 	refundAmount: 'İade Tutarı (GBP)',
 	...SESSION_NOTE_LABELS,
+	activeSessionCount: 'Aktif Seans Sayısı',
 };
 
 // Reminder is sent the day before the appointment, at this local hour in the client's
@@ -189,6 +196,19 @@ export const BOOKING_PAGE_URL = 'https://talkandheal.co.uk/booking';
 // Client-facing cancellation page (Session 13). The HMAC-signed cancel link in the confirmation
 // email points here: `${CANCEL_PAGE_URL}?session=<id>&token=<hmac>`.
 export const CANCEL_PAGE_URL = 'https://talkandheal.co.uk/cancel';
+
+// Fixed dropdown options for Çiğdem's manual/override cancellation in the panel (2026-07-26) — the
+// override exists for extreme circumstances where the automatic <72h-forfeits-everything policy
+// shouldn't apply. 'Diğer' requires a typed detail (panel.html shows a text field for it); every
+// other value is used as-is as the Sheets `cancellationReason` cell.
+export const CANCELLATION_OVERRIDE_REASONS = [
+	'Ağır hastalık',
+	'Vefat',
+	'Doğum',
+	'Kaza / Hastane yatışı',
+	'Ailevi acil durum',
+	'Diğer',
+] as const;
 
 // Used in the WhatsApp {{3}} Location field for online bookings.
 export const SESSION_LOCATION = 'Online — a video call link will be shared separately';

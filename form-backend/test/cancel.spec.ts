@@ -33,12 +33,12 @@ function rowArray(row: SheetRow): string[] {
 describe('computeRefund', () => {
 	const now = new Date();
 
-	// Re-decided rule (2026-07-23): the tier is recomputed at cancellation time from hours-until
-	// the soonest still-upcoming session — NOT read from the stale booking-time `policyTier`
-	// column — and the resulting rate applies uniformly to every remaining session, regardless of
-	// how many remain. This replaces Session 13's separate "3+ remaining" special case.
+	// Re-decided rule (2026-07-26): each remaining session is judged on ITS OWN notice period,
+	// independent of its position (1st/2nd/.../Xth) and independent of every other remaining
+	// session — not one shared rate derived from the soonest session and applied to all. Same day,
+	// second policy change: under 72h now forfeits the FULL amount (0%), not 50%.
 
-	it('plenty of notice on the soonest remaining session (>=72h): full refund, any session count', () => {
+	it('plenty of notice on every remaining session (>=72h): full refund, any session count', () => {
 		// priceGBP is the per-session price (see refund.ts unit-price note): £120 each.
 		const row = makeRow({
 			sessionCount: '3',
@@ -55,22 +55,37 @@ describe('computeRefund', () => {
 		expect(result.refundPercent).toBe(100);
 	});
 
-	it('short notice on the soonest remaining session (<24h): 50% refund, even with 3+ remaining', () => {
-		// Same shape as the case above, except the soonest remaining session is now imminent —
-		// this is the exact scenario that used to always forfeit the soonest 100% regardless of
-		// notice; now it follows the same tier rule as every other case.
+	it('short notice on every remaining session (<72h each): 0% refund, even with 3+ remaining', () => {
 		const row = makeRow({
 			sessionCount: '3',
 			priceGBP: '120',
 			policyTier: '72', // stale booking-time value — must be ignored
+			appointmentStartUtc: futureHours(10),
+			session2StartUtc: futureHours(15),
+			session3StartUtc: futureHours(20),
+		});
+		const result = computeRefund(row, now);
+		expect(result.remaining.length).toBe(3);
+		expect(result.refundGBP).toBe(0); // all 3 forfeit fully — under 72h notice
+		expect(result.refundPercent).toBe(0);
+	});
+
+	it('mixed notice across remaining sessions: each judged independently, not by the soonest', () => {
+		// The soonest session (10h out) is short-notice; the other two (7 and 14 days out) are not.
+		// Under the old "one rate for all" rule this whole cancellation would have forfeited 100%
+		// across the board; the corrected rule only forfeits the session that's actually short-notice.
+		const row = makeRow({
+			sessionCount: '3',
+			priceGBP: '120',
+			policyTier: '72',
 			appointmentStartUtc: futureHours(10),
 			session2StartUtc: future(7),
 			session3StartUtc: future(14),
 		});
 		const result = computeRefund(row, now);
 		expect(result.remaining.length).toBe(3);
-		expect(result.refundGBP).toBe(180); // 3 * 120 * 0.5
-		expect(result.refundPercent).toBe(50);
+		expect(result.refundGBP).toBe(240); // 120*0 + 120*1.0 + 120*1.0
+		expect(result.refundPercent).toBe(67); // 240/360 rounded
 	});
 
 	it('1 remaining, plenty of notice (>=72h): full refund', () => {
@@ -83,7 +98,7 @@ describe('computeRefund', () => {
 	it('regression: stale booking-time policyTier=72 must not override a real short-notice cancellation', () => {
 		// Exactly the bug report: a 2-session package booked far in advance (policyTier locked in
 		// as 72 at booking time), session 1 already attended (past), and the client cancels the
-		// remaining session with only ~11 hours' notice. Must be 50%, not the stale 100%.
+		// remaining session with only ~11 hours' notice. Must forfeit fully, not the stale 100%.
 		const row = makeRow({
 			sessionCount: '2',
 			priceGBP: '120',
@@ -93,11 +108,11 @@ describe('computeRefund', () => {
 		});
 		const result = computeRefund(row, now);
 		expect(result.remaining.length).toBe(1);
-		expect(result.refundGBP).toBe(60);
-		expect(result.refundPercent).toBe(50);
+		expect(result.refundGBP).toBe(0);
+		expect(result.refundPercent).toBe(0);
 	});
 
-	it('2 remaining, borderline notice (~60h, between 48 and 72): 50% refund', () => {
+	it('2 remaining, one borderline (~60h, under 72) one far out: only the borderline one forfeits', () => {
 		const row = makeRow({
 			sessionCount: '2',
 			priceGBP: '120',
@@ -106,8 +121,8 @@ describe('computeRefund', () => {
 			session2StartUtc: future(9),
 		});
 		const result = computeRefund(row, now);
-		expect(result.refundGBP).toBe(120); // 2 * 120 * 0.5
-		expect(result.refundPercent).toBe(50);
+		expect(result.refundGBP).toBe(120); // 120*0 (60h session) + 120*1.0 (9-day session)
+		expect(result.refundPercent).toBe(50); // 120/240 rounded
 	});
 
 	it('no future sessions: nothing to refund', () => {
@@ -164,16 +179,17 @@ function stubApis(row: SheetRow, failWhatsApp = false) {
 	return calls;
 }
 
-async function getCancel(token: string) {
-	return handleCancelGet(new Request(`http://example.com/cancel?session=${SESSION_ID}&token=${token}`), env);
+async function getCancel(token: string, sessions?: string) {
+	const qs = sessions ? `&sessions=${sessions}` : '';
+	return handleCancelGet(new Request(`http://example.com/cancel?session=${SESSION_ID}&token=${token}${qs}`), env);
 }
 
-async function postCancel(token: string, reason?: string) {
+async function postCancel(token: string, reason?: string, sessionIndexes?: number[]) {
 	return handleCancelPost(
 		new Request('http://example.com/cancel', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ session: SESSION_ID, token, reason }),
+			body: JSON.stringify({ session: SESSION_ID, token, reason, sessionIndexes }),
 		}),
 		env,
 	);
@@ -209,6 +225,32 @@ describe('GET /cancel', () => {
 		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/refunds'))).toBe(false);
 		expect(calls.some((c) => c.method === 'PUT')).toBe(false);
 		expect(calls.some((c) => c.url.includes('graph.facebook.com'))).toBe(false);
+	});
+
+	it('lists every remaining session individually, and narrows the refund to a chosen subset', async () => {
+		const row = makeRow({
+			stripeSessionId: SESSION_ID,
+			name: 'Ada',
+			sessionCount: '3',
+			priceGBP: '120',
+			policyTier: '72',
+			appointmentStartUtc: future(7),
+			session2StartUtc: future(14),
+			session3StartUtc: future(21),
+			clientTimeZone: 'Europe/London',
+		});
+		stubApis(row);
+		const token = await signCancelToken(env, SESSION_ID);
+
+		const all = await getCancel(token);
+		const allData = (await all.json()) as { sessions: { index: number; startUtc: string }[]; refundGBP: number };
+		expect(allData.sessions.length).toBe(3);
+		expect(allData.refundGBP).toBe(360); // every remaining session, ample notice
+
+		const subset = await getCancel(token, '2');
+		const subsetData = (await subset.json()) as { sessions: { index: number }[]; refundGBP: number };
+		expect(subsetData.sessions.length).toBe(3); // full list still returned, for checkbox rendering
+		expect(subsetData.refundGBP).toBe(120); // refund narrowed to just session 2
 	});
 });
 
@@ -273,9 +315,9 @@ describe('POST /cancel', () => {
 		// The parts that actually matter still went through despite the WhatsApp failure.
 		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/refunds'))).toBe(true);
 		expect(calls.filter((c) => c.url.includes('/calendar/v3') && c.method === 'DELETE').length).toBe(1);
-		// cancellationReason/stripeRefundId/refundPercent/refundAmount/cancelledAt + the 3 cleared
-		// session-1 columns (appointmentStartUtc/reminderDueUtc/reminderSentAt) = 8 writeCell calls.
-		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(8);
+		// cancellationReason/stripeRefundId/refundPercent/refundAmount/activeSessionCount/cancelledAt +
+		// the 3 cleared session-1 columns (appointmentStartUtc/reminderDueUtc/reminderSentAt) = 9 writes.
+		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(9);
 	});
 
 	it('is idempotent: an already-cancelled row does not refund or notify again', async () => {
@@ -323,5 +365,55 @@ describe('POST /cancel', () => {
 		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/refunds'))).toBe(false); // Stripe rejects a 0 refund
 		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/checkout/sessions'))).toBe(false); // not even retrieved
 		expect(calls.filter((c) => c.url.includes('graph.facebook.com')).length).toBe(2); // still notified
+	});
+
+	it('cancels only the chosen sessions, leaving the booking (and the other sessions) live', async () => {
+		const row = makeRow({
+			stripeSessionId: SESSION_ID,
+			name: 'Ada',
+			phone: '447911123456',
+			sessionCount: '3',
+			priceGBP: '120',
+			policyTier: '72',
+			appointmentStartUtc: future(7),
+			session2StartUtc: future(14),
+			session3StartUtc: future(21),
+			clientTimeZone: 'Europe/London',
+		});
+		const calls = stubApis(row);
+		const token = await signCancelToken(env, SESSION_ID);
+
+		const response = await postCancel(token, 'schedule conflict', [2]);
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { cancelled: boolean; refundGBP: number };
+		expect(data.cancelled).toBe(true);
+		expect(data.refundGBP).toBe(120); // just session 2's price, ample notice
+
+		expect(calls.filter((c) => c.url.includes('/calendar/v3') && c.method === 'DELETE').length).toBe(1);
+		// Partial cancellation: cancellationReason/stripeRefundId/refundPercent/refundAmount/
+		// activeSessionCount (5) + session 2's 3 cleared columns = 8 fields, each mirrored to the
+		// "3 Seans" tab (sessionCount>1) = 16 PUTs. cancelledAt must NOT be among them — the booking
+		// as a whole is still live.
+		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(16);
+		// activeSessionCount = 3 populated sessions - 1 just cancelled = 2 (column BR, per SHEET_COLUMNS).
+		const activeCountWrite = calls.find((c) => c.method === 'PUT' && c.url.includes('BR2'));
+		expect(activeCountWrite?.body).toBe('{"values":[["2"]]}');
+	});
+
+	it('rejects a sessionIndexes selection that includes an already-past/invalid session', async () => {
+		const row = makeRow({
+			stripeSessionId: SESSION_ID,
+			name: 'Ada',
+			sessionCount: '2',
+			priceGBP: '120',
+			policyTier: '72',
+			appointmentStartUtc: past(1), // session 1 already happened
+			session2StartUtc: future(7),
+		});
+		stubApis(row);
+		const token = await signCancelToken(env, SESSION_ID);
+
+		const response = await postCancel(token, undefined, [1, 2]);
+		expect(response.status).toBe(400);
 	});
 });

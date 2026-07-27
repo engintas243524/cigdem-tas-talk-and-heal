@@ -104,6 +104,7 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 				sessionMode: md.sessionMode ?? '',
 				priceGBP: md.priceGBP ?? '',
 				sessionCount: md.sessionCount ?? '1',
+				activeSessionCount: md.sessionCount ?? '1', // decremented as sessions are individually cancelled
 				policyTier: md.policyTier ?? '',
 				appointmentStartUtc: firstSession.startUtc,
 				clientTimeZone: md.clientTimeZone ?? '',
@@ -153,7 +154,9 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 					env,
 					md.email,
 					'Your Talk and Heal booking is confirmed',
-					`Hi ${md.name},\n\nYour booking is confirmed.\nAppointment: ${appointmentLabel}\n${locationFor(md.sessionMode)}\n\nIf you need to cancel, use this secure link (any refund is calculated automatically from our cancellation policy):\n${cancelUrl}\n\nWarm wishes,\nTalk and Heal`,
+					`Hi ${md.name},\n\nYour booking is confirmed.\nAppointment: ${appointmentLabel}\n${locationFor(md.sessionMode)}\n\n` +
+						`Cancellation policy: you may cancel at any time. If you cancel at least 72 hours before a session, you'll receive a full refund for it. If you cancel less than 72 hours before, no refund will be given for that session.\n\n` +
+						`To cancel or change your booking, use this secure link:\n${cancelUrl}\n\nWarm wishes,\nTalk and Heal`,
 				);
 			} catch (err) {
 				console.error(`Client confirmation email failed for ${stripeSessionId}:`, err);

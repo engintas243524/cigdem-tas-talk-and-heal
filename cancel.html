@@ -10,7 +10,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=53">
+<link rel="stylesheet" href="style.css?v=87">
+<style>
+  #sessionsList label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 400; color: var(--ink); margin: 0.3rem 0; }
+  #sessionsList input[type="checkbox"] { width: auto; }
+</style>
 </head>
 <body>
 
@@ -32,7 +36,6 @@
       <a href="services.html"><span data-en>SERVICES</span><span data-tr>SERVİSLER</span></a>
       <a href="approach.html"><span data-en>APPROACH</span><span data-tr>YAKLAŞIM</span></a>
       <a href="blog.html"><span data-en>BLOG</span><span data-tr>BLOG</span></a>
-      <a href="iletisim.html"><span data-en>CONTACT</span><span data-tr>İLETİŞİM</span></a>
       <a href="booking.html"><span data-en>BOOK A CONSULTATION</span><span data-tr>RANDEVU AL</span></a>
     </nav>
 
@@ -66,7 +69,7 @@
 <main>
   <div class="page-intro-bg" aria-hidden="true"><div class="hero-bg"></div></div>
 
-  <section class="page-intro">
+  <section class="page-intro" id="introSection">
     <div class="wrap">
       <p class="eyebrow"><span data-en>Cancellation</span><span data-tr>İptal</span></p>
       <h1><span data-en>Cancel your session</span><span data-tr>Randevunu İptal Et</span></h1>
@@ -85,9 +88,13 @@
           <legend class="section-label"><span data-en>Your booking</span><span data-tr>Randevun</span></legend>
           <div class="policy-box">
             <p><strong><span data-en>Appointment:</span><span data-tr>Randevu:</span></strong> <span id="apptText"></span></p>
-            <p id="remainingLine"><strong><span data-en>Sessions to cancel:</span><span data-tr>İptal edilecek seans:</span></strong> <span id="remainingText"></span></p>
             <p><strong><span data-en>Refund:</span><span data-tr>İade:</span></strong> <span id="refundText"></span></p>
           </div>
+        </fieldset>
+
+        <fieldset class="field-group" id="sessionsGroup" hidden>
+          <legend class="section-label"><span data-en>Which sessions would you like to cancel?</span><span data-tr>Hangi seansları iptal etmek istersin?</span></legend>
+          <div class="field" id="sessionsList"></div>
         </fieldset>
 
         <fieldset class="field-group">
@@ -98,11 +105,19 @@
           </div>
         </fieldset>
 
+        <fieldset class="field-group">
+          <legend class="section-label"><span data-en>Cancellation policy</span><span data-tr>İptal Politikası</span></legend>
+          <div class="policy-box">
+            <p><span data-en>Each session is judged on its own notice period: if you cancel <strong>at least 72 hours</strong> before that session, you will receive a <strong>full refund</strong> for it. If you cancel less than 72 hours before, <strong>no refund</strong> will be given for that session.</span><span data-tr>Her seans kendi süresine göre değerlendirilir: bir seansı <strong>en az 72 saat önce</strong> iptal ederseniz, o seansın ücretinin <strong>tamamı iade edilir</strong>. 72 saatten daha az bir süre kala iptal ederseniz, o seans için <strong>iade yapılmaz</strong>.</span></p>
+          </div>
+        </fieldset>
+
         <div class="form-actions">
           <button class="btn btn-primary" type="button" id="confirmBtn">
             <span data-en>Cancel my booking</span><span data-tr>Randevumu İptal Et</span>
           </button>
         </div>
+        <p class="form-note" id="actionNote" role="status" aria-live="polite"></p>
       </div>
 
     </div>
@@ -158,14 +173,16 @@
     var sessionId = params.get('session') || '';
     var token = params.get('token') || '';
 
+    var introSection = document.getElementById('introSection');
     var statusNote = document.getElementById('statusNote');
+    var actionNote = document.getElementById('actionNote');
     var previewBox = document.getElementById('previewBox');
     var confirmBtn = document.getElementById('confirmBtn');
     var apptText = document.getElementById('apptText');
-    var remainingLine = document.getElementById('remainingLine');
-    var remainingText = document.getElementById('remainingText');
     var refundText = document.getElementById('refundText');
     var reasonEl = document.getElementById('reason');
+    var sessionsGroup = document.getElementById('sessionsGroup');
+    var sessionsList = document.getElementById('sessionsList');
 
     var preview = null; // the GET /cancel response, kept so language switch can re-render times
 
@@ -182,11 +199,16 @@
       cancelError: { en: 'We could not complete the cancellation. Please try again shortly or contact us.', tr: 'İptali tamamlayamadık. Lütfen birazdan tekrar dene ya da bize ulaş.' }
     };
 
-    function setStatus(key, isError){
-      if (!key) { statusNote.style.display = 'none'; return; }
-      statusNote.textContent = typeof key === 'string' ? (STRINGS[key] ? STRINGS[key][currentLang()] : key) : key[currentLang()];
-      statusNote.style.display = 'block';
-      statusNote.classList.toggle('form-note--error', !!isError);
+    // `target` defaults to the top-of-page note (initial load states: loading/invalid/already/etc.
+    // — shown before the form even renders). The confirm click handler passes `actionNote` instead
+    // for the in-progress/error states, so "Cancelling…"/errors appear right under the button the
+    // client just pressed, not back at the top of a page they've scrolled away from.
+    function setStatus(key, isError, target){
+      target = target || statusNote;
+      if (!key) { target.style.display = 'none'; return; }
+      target.textContent = typeof key === 'string' ? (STRINGS[key] ? STRINGS[key][currentLang()] : key) : key[currentLang()];
+      target.style.display = 'block';
+      target.classList.toggle('form-note--error', !!isError);
     }
 
     // GBP amount, e.g. 120 -> "£120", 87.5 -> "£87.50"
@@ -194,18 +216,79 @@
       return '£' + (Number(gbp) % 1 === 0 ? String(gbp) : Number(gbp).toFixed(2));
     }
 
-    function refreshDynamicText(){
-      if (!preview) return;
-      var fmt = { dateStyle: 'medium', timeStyle: 'short', timeZone: preview.clientTimeZone || 'Europe/London' };
-      apptText.textContent = new Date(preview.appointmentStartUtc).toLocaleString(locale(), fmt);
-      var n = (preview.remaining || []).length;
-      remainingText.textContent = String(n);
-      remainingLine.style.display = n > 0 ? '' : 'none';
-      var pct = preview.refundPercent;
-      refundText.textContent = money(preview.refundGBP) + (currentLang() === 'tr' ? ' (%' + pct + ')' : ' (' + pct + '%)');
+    // Only rendered/used when there's more than one remaining session — a single-session booking
+    // keeps the old one-click "cancel my booking" behaviour with no checkboxes at all. NONE checked
+    // by default (2026-07-27, found confusing live): a client landing on the page must actively pick
+    // which sessions to cancel — the "everything pre-selected, a refund total already computed
+    // before you've touched anything" default looked like a decision had already been made for them.
+    // Same reasoning as the panel's own override picker (see lib/refund.ts computeOverrideRefund).
+    function renderSessions(sessions){
+      if (sessions.length <= 1) { sessionsGroup.hidden = true; sessionsList.innerHTML = ''; return; }
+      sessionsGroup.hidden = false;
+      sessionsList.innerHTML = sessions.map(function(s){
+        var fmt = { dateStyle: 'medium', timeStyle: 'short', timeZone: preview.clientTimeZone || 'Europe/London' };
+        var label = new Date(s.startUtc).toLocaleString(locale(), fmt);
+        return '<label><input type="checkbox" class="session-check" value="' + s.index + '"> ' + label + '</label>';
+      }).join('');
+      sessionsList.querySelectorAll('.session-check').forEach(function(box){
+        box.addEventListener('change', onSelectionChange);
+      });
+    }
+
+    // undefined = "every remaining session" (single-session booking, no checkboxes rendered)
+    function checkedIndexes(){
+      if (sessionsGroup.hidden) return undefined;
+      return Array.prototype.slice.call(sessionsList.querySelectorAll('.session-check:checked')).map(function(box){ return Number(box.value); });
+    }
+
+    var NO_SELECTION = {
+      en: 'Select the session(s) you’d like to cancel above to see the appointment and refund.',
+      tr: 'Randevu ve iade bilgisini görmek için yukarıdan iptal etmek istediğin seans(lar)ı seç.'
+    };
+
+    function onSelectionChange(){
+      var indexes = checkedIndexes();
+      if (indexes && indexes.length === 0) {
+        confirmBtn.disabled = true;
+        apptText.textContent = '';
+        refundText.textContent = NO_SELECTION[currentLang()];
+        return;
+      }
+      confirmBtn.disabled = false;
+      fetchPreview(indexes);
+    }
+
+    // Refetches the refund preview for the given subset of session indexes (undefined = all).
+    // Never touches the checkbox list itself — only refund/appointment text is recomputed.
+    // `requestSeq` guards against out-of-order responses: toggling two checkboxes quickly fires two
+    // overlapping fetches, and without this a slower, STALE response can land after the newer one
+    // and silently overwrite the displayed refund with the wrong (previous) selection's numbers —
+    // found via screenshot: displayed refund still matched the pre-toggle state while the actual
+    // POST (which reads the checkboxes fresh at click time) had already computed the correct one.
+    var requestSeq = 0;
+    function fetchPreview(indexes){
+      var thisSeq = ++requestSeq;
+      var qs = '?session=' + encodeURIComponent(sessionId) + '&token=' + encodeURIComponent(token) +
+        (indexes && indexes.length ? '&sessions=' + indexes.join(',') : '');
+      return fetch(API_BASE + '/cancel' + qs)
+        .then(function(res){ return res.json().then(function(data){ return { status: res.status, data: data }; }); })
+        .then(function(r){
+          if (thisSeq !== requestSeq) return; // a newer request already landed, ignore this stale one
+          if (r.status !== 200) { setStatus('loadError', true); return; }
+          preview = r.data;
+          var fmt = { dateStyle: 'medium', timeStyle: 'short', timeZone: preview.clientTimeZone || 'Europe/London' };
+          apptText.textContent = new Date(preview.appointmentStartUtc).toLocaleString(locale(), fmt);
+          var pct = preview.refundPercent;
+          refundText.textContent = money(preview.refundGBP) + (currentLang() === 'tr' ? ' (%' + pct + ')' : ' (' + pct + '%)');
+        });
     }
     // exposed so the language-flag listener above can re-render times/labels on switch
-    window.refreshDynamicText = refreshDynamicText;
+    window.refreshDynamicText = function(){
+      if (!preview) return;
+      var indexes = checkedIndexes();
+      if (indexes && indexes.length === 0) { refundText.textContent = NO_SELECTION[currentLang()]; return; }
+      fetchPreview(indexes);
+    };
 
     if (!sessionId || !token) { setStatus('invalid', true); return; }
 
@@ -219,31 +302,51 @@
         preview = r.data;
         if (preview.alreadyCancelled) { setStatus('already', false); return; }
         setStatus(null);
-        refreshDynamicText();
+        renderSessions(preview.sessions || []);
+        if (!sessionsGroup.hidden) {
+          // Multiple sessions: nothing is pre-selected (see renderSessions), so there's nothing to
+          // preview yet and nothing to confirm until the client actually picks something.
+          confirmBtn.disabled = true;
+          apptText.textContent = '';
+          refundText.textContent = NO_SELECTION[currentLang()];
+        } else {
+          var fmt = { dateStyle: 'medium', timeStyle: 'short', timeZone: preview.clientTimeZone || 'Europe/London' };
+          apptText.textContent = new Date(preview.appointmentStartUtc).toLocaleString(locale(), fmt);
+          var pct = preview.refundPercent;
+          refundText.textContent = money(preview.refundGBP) + (currentLang() === 'tr' ? ' (%' + pct + ')' : ' (' + pct + '%)');
+        }
         previewBox.hidden = false;
       })
       .catch(function(){ setStatus('loadError', true); });
 
     confirmBtn.addEventListener('click', function(){
+      var indexes = checkedIndexes();
+      if (indexes && indexes.length === 0) return;
       confirmBtn.disabled = true;
-      setStatus('cancelling', false);
+      setStatus('cancelling', false, actionNote);
       fetch(API_BASE + '/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session: sessionId, token: token, reason: reasonEl.value.trim() })
+        body: JSON.stringify({ session: sessionId, token: token, reason: reasonEl.value.trim(), sessionIndexes: indexes })
       })
         .then(function(res){ return res.json().then(function(data){ return { status: res.status, data: data }; }); })
         .then(function(r){
-          if (r.status !== 200) { setStatus('cancelError', true); confirmBtn.disabled = false; return; }
+          if (r.status !== 200) { setStatus('cancelError', true, actionNote); confirmBtn.disabled = false; return; }
           previewBox.hidden = true;
           if (r.data.alreadyCancelled) { setStatus('already', false); return; }
+          introSection.hidden = true;
           var refund = money(r.data.refundGBP);
+          var pct = r.data.refundPercent;
           setStatus({
-            en: 'Your booking has been cancelled. A refund of ' + refund + ' has been issued to your original payment method — it may take a few days to appear.',
-            tr: 'Randevun iptal edildi. Ödeme yöntemine ' + refund + ' tutarında iade yapıldı — hesabına yansıması birkaç gün sürebilir.'
+            en: 'Your booking has been cancelled. A refund of ' + refund + ' (' + pct + '%) has been issued to your original payment method. ' +
+              'Under our cancellation policy, sessions cancelled 72 hours or more before their start time are refunded in full; sessions cancelled with less than 72 hours’ notice are not refunded — this is reflected in the amount above. ' +
+              'It may take a few days for the refund to appear in your account, depending on your bank’s own refund process — please contact your bank directly if you have questions about the timing.',
+            tr: 'Randevun iptal edildi. Ödeme yöntemine ' + refund + ' (%' + pct + ') tutarında iade yapıldı. ' +
+              'İptal politikamıza göre, randevu saatine 72 saat veya daha fazla kalan seanslarda ücret tam olarak iade edilir; 72 saatten az kala iptal edilen seanslarda ise iade yapılmaz — yukarıdaki tutar buna göre hesaplandı. ' +
+              'İadenin hesabına yansıması birkaç gün sürebilir, bu süre bankanın kendi iade sürecine bağlıdır — yansıma süresiyle ilgili sorularınız için doğrudan bankanızla iletişime geçebilirsiniz.'
           }, false);
         })
-        .catch(function(){ setStatus('cancelError', true); confirmBtn.disabled = false; });
+        .catch(function(){ setStatus('cancelError', true, actionNote); confirmBtn.disabled = false; });
     });
   })();
 </script>

@@ -45,9 +45,12 @@ function stubSheetsAndWhatsapp(rows: SheetRow[], opts: { failOn?: string } = {})
 		if (url.includes('sheets.googleapis.com')) {
 			// Madde 7 mirror: spreadsheet metadata probe (ensureSheetTab). Report the "{N} Seans" tabs
 			// as already present so the mirror path just finds the row and writes it.
-			if (url.includes('?fields=sheets.properties.title')) {
+			if (url.includes('fields=sheets.properties')) {
 				const titles = ['Sayfa1', ...Array.from({ length: 9 }, (_, i) => `${i + 2} Seans`)];
-				return new Response(JSON.stringify({ sheets: titles.map((title) => ({ properties: { title } })) }), { status: 200 });
+				const sheets = titles.map((title, i) => ({
+					properties: { sheetId: i, title, gridProperties: { columnCount: SHEET_COLUMNS.length } },
+				}));
+				return new Response(JSON.stringify({ sheets }), { status: 200 });
 			}
 			if (init?.method === 'PUT') {
 				const range = decodeURIComponent(new URL(url).pathname.split('/values/')[1] ?? '');

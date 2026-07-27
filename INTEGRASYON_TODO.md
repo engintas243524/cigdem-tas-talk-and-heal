@@ -1312,3 +1312,940 @@ bekleniyordu.
 kullanıcı onayı beklenen eksikliği (form-backend + 3 HTML sayfası + değişiklikler GitHub'da yok)
 tamamlama = ŞİMDİ commit+push etme talimatı olarak yorumlandı — kullanıcı daha önce "ben gidiyorum
 deyince push edeceğiz" demişti, bu mesaj o onayı veriyor.
+
+## Kullanıcı isteği — "Hakkımda" (About) sayfa içeriği + kalıcı içerik ekleme süreci (2026-07-26, birebir metin)
+
+**Bağlam:** Bu istek hem şu anki somut içeriği (Türkçe + İngilizce About/Hakkımda metni) hem de
+BUNDAN SONRAKİ tüm bölüm içeriği eklemeleri için kalıcı bir SÜREÇ tanımlıyor ("unutma" dedi) — bu
+yüzden CLAUDE.md'nin "Çok Maddeli İsteklerin Kalıcı Kaydı" kuralına göre ham metin burada birebir
+saklanıyor.
+
+Kullanıcının verdiği ham içerik (Türkçe About metni + İngilizce About metni, birebir):
+
+```
+# Cigdem ile Tanışın
+
+Çocukken tedavisi mümkün olmayan bir hayalperest ve biraz da asiydim. Günlük hayatın ağır gerçekliklerinden kaçmak için İstanbul'daki çatımıza gizlice çıkar, dans eder, şarkı söyler ve hayali kalabalıklara görkemli konuşmalar yapardım. Aşağıda ise evi geleneksel türkülerle doldurur, güvenli, yaratıcı ve inatla bağımsız bir iç dünya yaratırdım. O çatı benim ilk sahnemdi—bana kendi ayaklarım üzerinde sağlam durmayı, cesur adımlar atmayı ve özgürce gülmeyi öğretti.
+
+## Hikayenin Başladığı Yer
+
+Hayatımın çalışmasının kıvılcımı, çocukluk evimin canlı, kaotik ve güzel ortamında tam anlamıyla gerçekleşti. Büyürken, ailemizin karmaşık mücadelelerini yakından gözlemledim. Aynı zamanda, Kürtçe ve Türkçe'nin ayrı dünyalarını ve ana dillerini sürekli birbirine bağlayarak, devasa yeni bir şehirde kendi yerimizi bulmaya çalışırken canlı, çok kültürlü bir gerçekliğin içinde yol alıyordum.
+İlk "klinik pratiğim" ben henüz bir genç bile olmadan başladı. Ailemiz komşuları ziyarete gittiğinde, kardeşlerim, ablalarım ve kuzenlerim mutfaktaki yuvarlak masamızın etrafında toplanırdı. Kalbim tamamen açık bir şekilde, en derin sırlarını ve sorunlarını paylaşırken onları dinlerdim. Terapinin o devasa dünyasını oyun zamanıma çekiyordum, ilk destek grubumu yönettiğimin farkında bile değildim. Yıllar sonra gelen akademik eğitim ve dereceler, sadece bu neşeli çocukluk temelinin üzerine inşa edildi.
+Genç bir kız olarak, bu çember büyüdü. Arkadaşlar ve yetişkinler bana içlerini dökmeyi doğal olarak kolay buluyorlardı. Bu empati zamanla insan haklarına ömür boyu sürecek bir bağlılığa dönüştü ve beni kadınların ve çocukların güvenliği, onuru ve hakları için ateşli bir şekilde savunuculuk yapmaya yöneltti.
+
+## İki Dünyaya Bir Giriş
+
+İlgi alanlarım sonunda psikoloji, felsefe ve yaratıcılık üzerine resmi üniversite eğitimine dönüştü—bu yola nasıl girdiğimi bile gizli tutmuştum! Ama 1999'da, üniversitenin daha ilk yılımdayken, İstanbul'u vuran yıkıcı bir deprem, yönümü sonsuza dek şekillendirdi.
+Felaketin ardından, yoğun travma araştırmalarına adım attım ve kısa sürede bir duvara çarptım: okumam gereken en güncel çalışmaların hepsi İngilizce yazılmıştı. Doyumsuz merakımın peşinden giderek, dili öğrenmek için Londra'ya tek yön bilet aldım. Tek yıl olması gereken şey, inanılmaz 23 yıllık bir maceraya dönüştü ve bu tarihi şehir benim ikinci evim oldu.
+Londra'da yol almak, insan deneyimlerinin hem içeriden dışarıya hem de dışarıdan içeriye şekillendiğini bana öğretti. İki kıtayı fiziksel olarak birbirine bağlayan Boğaziçi Köprüsü'ne dair çocukluk bakışım, kariyerim için mükemmel bir plan haline geldi. Taban seviyesindeki mülteci örgütlerinden hayır kurumlarına, NHS'ten üniversitelere ve Harley Street dahil özel muayenehanelere kadar renkli bir deneyim dokusu topladım.
+
+## Yeni Bir Bölüm & Hayatın Çeşitli Hikayeleri
+
+Kariyerimi inşa ederken, en derin ve en ödüllendirici rolümü de üstlendim: kızıma tek başına anne olmak. Londra gibi hızlı tempolu bir metropolde bir çocuk yetiştirmek, temellendirici, neşeli bir topluluk yaratmanın hayati önemini bana öğretti.
+Pandemi vurup dünya kilitlendiğinde, "ev" her şeyin merkezi haline geldi. O ayları müvekkillerimin yoğun deneyimlerini dinleyerek geçirirken, kolektif durgunluk beklenmedik bir hediye de getirdi. Uzun süredir gömülü aile sırları gün yüzüne çıktı ve bana derin bir yeni kendini anlama düzeyi kazandırdı. Soyut aile tarihini gerçek, yaşanmış deneyimime bağladı ve bana ortak insani tuhaflıklarımızın farklılıklarımızdan çok daha büyük olduğunu kanıtladı.
+27 yıllık yolculuğum boyunca, travma çalışması temel uzmanlığım haline geldi, ancak bu tek odak noktam değil. İnsan hayatları zengin bir mozaiktir ve hikayelerimiz her zaman acıda takılıp kalmaz. Pratiğim, varoluşsal kavşaklardan kültürel geçişlere, ilişki dinamiklerine ve bizi biz yapan harika bir şekilde çeşitli, bazen mizahi anlatılara kadar insan deneyiminin tüm yelpazesine adanmıştır.
+
+## Mekanın Özü & Araçlarım
+
+İnsan hikayelerinin gerçek çeşitliliğine saygı göstermek için, herkese uyan tek bir yaklaşıma inanmıyorum. Klinik tarzım derinden canlıdır, sanat, yazı ve yoğun enerjiyi odaklanmış bir mevcudiyete kanalize etmeyi bana öğreten Flamenko dansının ham mekaniğine olan derin ilgimden beslenir.
+Hikayelerimiz fiziksel benliklerimizde yaşadığı için, somatik (beden merkezli) çalışma ve EMDR, pratiğimde fiziksel bedeni hafifletmek için gerekli araçlardır. Aynı zamanda, seanslarımı varoluşsal ve fenomenolojik felsefe, somatik ifade ve psikodinamik yaklaşımlar gibi derinden yansıtıcı çerçevelere dayandırarak, geçmişimizin anlam arayışımızı nasıl şekillendirdiğini keşfediyorum. Modern günlük hayatta yol almaya yardımcı olmak için, BDT (Bilişsel Davranışçı Terapi) ve KKT (Kabul ve Kararlılık Terapisi) gibi yapılandırılmış, eylem odaklı yöntemleri sorunsuzca entegre ediyorum.
+Özünde, çalışmam varoluşunuzla ve acınızla oturmak, derin öz-keşif için güvenli, enerjik bir kap tutmakla ilgilidir. Gerçekten duyarak, tanıklık ederek ve bağ kurarak, en özgün benliğinizi keşfetmenizde ve kabul etmenizde size destek oluyorum. Bu radikal dürüstlük alanını yaratmak, acıdan iyileşmenin tam özüdür. Terapi odasında, sınırlar yumuşar ve genellikle kimin kimi iyileştirdiği güzel bir şekilde belirsizleşir.
+
+## Zamansız Yolculuk
+
+Genç bir terapistken, otorite yansıtmak için "yaşlı, bilge bir kadın" gibi görünmeyi çaresizce istiyordum. Şimdi hayatımın bu olgun bölümünde gerçekten yer alırken, hâlâ o idealize edilmiş, ciddi figür gibi hissetmediğimi fark edip gülümsüyorum. Sahip olduğum şey, insan hikayelerinin muhteşem çeşitliliğine karşı derin bir saygı.
+Terapist olmanın güzel yanı, hayatın her aşamasına yayılmasıdır. Sizi sonsuza dek genç ve meraklı tutan sürekli bir öğrenme yolculuğudur. Yeni dijital araçları kullanmaya adım attığım ve sonra onlardan geri çekildiğim bu yeni yapay zeka çağında bile, pratiğimin özü değişmez kalıyor. Terapi, derinden dokunaklı, insan-insana bir pratiktir ve asla sona ermeyecektir.
+İçimde, hâlâ insanları anlamak isteyen, derinden hayal kuran ve o hayalleri gerçeğe dönüştürmek isteyen o meraklı çocuğum. Zamanla, o gizli çocukluk yuvarlak masası benimle birlikte büyüdü. Bugün, bu mahrem pratik benim evim—insan varoluşu için en iyi mekanlardan biri. Boğaz'ın iki dünya arasında dans edişini izleyerek, enerjim yettiği sürece bu yolda acele etmeden, yavaşça yürümeye kararlıyım.
+
+Hikayemin içinden benimle birlikte yürüdüğünüz için teşekkür ederim.
+
+---
+
+# Meet Cigdem
+
+As a child, I was an incurable dreamer and a bit of a rebel. To escape the heavy realities of daily life, I would sneak up to our roof in Istanbul to dance, sing, and give grand speeches to imaginary crowds. Downstairs, I filled the house with traditional folk songs (türküler), creating a safe, creative, and fiercely independent inner world. That rooftop was my first stage—it taught me how to stand firmly on my own feet, take bold steps, and laugh freely.
+
+## Where the Story Begins
+
+The spark for my life's work happened right in the lively, chaotic, and beautiful setting of my childhood home. Growing up, I closely observed our complex family struggles. At the same time, I was navigating a vibrant, multicultural reality, constantly bridging the distinct worlds and mother tongues of Kurdish and Turkish while finding our footing in a massive new city.
+My very first "clinical practice" started before I was even a teenager. Whenever our parents went out to visit neighbors, my siblings, sisters, and cousins would gather around our kitchen round table. With my heart completely open, I listened as they shared their deepest secrets and problems. I was just a kid pulling the massive world of therapy into my playtime, completely unaware that I was running my first support group. The academic training and degrees that came decades later were simply built on top of this joyful childhood foundation.
+As a teenager, that circle grew. Friends and adults naturally found it easy to open up to me. This empathy eventually evolved into a lifelong commitment to human rights, leading me to advocate fiercely for the safety, dignity, and rights of women and children.
+
+## An Introduction to Two Worlds
+
+My interests eventually turned into formal university studies in psychology, philosophy, and creativity—a path I had hidden how I even managed to enter! But in 1999, during my very first year of university, a devastating earthquake struck Istanbul, shaping my direction forever.
+Following the disaster, I stepped into intensive trauma research and quickly hit a wall: the cutting-edge studies I needed to read were all written in English. Driven by an insatiable curiosity, I bought a one-way ticket to London to master the language. What was supposed to be a single year extended into an incredible 23-year adventure, and this historic city became my second home.
+Navigating London taught me that human experiences are formed from both the inside out and the outside in. My childhood view of the Bosphorus Bridge, which physically connects two continents, became the perfect blueprint for my career. I gathered a colorful tapestry of experience working across grassroots refugee organizations, charities, the NHS, universities, and private practices including Harley Street.
+
+## A New Chapter & Life's Varied Stories
+
+While building my career, I also took on my most profound and rewarding role: becoming a single mother to my daughter. Raising a child in a fast-paced metropolis like London taught me the vital importance of creating a grounding, joyful community.
+When the pandemic hit and the world locked down, "home" became the center of everything. While I spent those months listening to the intense experiences of my clients, the collective stillness also brought an unexpected gift. Long-buried family secrets came to light, bringing me a profound new level of self-understanding. It connected abstract family history to my real, lived experience, proving to me that our shared human quirks are vastly greater than our differences.
+Over my 27-year journey, trauma work became my core specialty, but it is far from my only focus. Human lives are a rich mosaic, and our stories do not dwell on pain all the time. My practice is dedicated to the full spectrum of human experiences—embracing existential crossroads, cultural transitions, relationship dynamics, and the wonderfully varied, sometimes humorous narratives that shape who we are.
+
+## The Essence of the Space & My Tools
+
+To honor the true variety of human stories, I do not believe in a one-size-fits-all approach. My clinical style is deeply alive, informed by my immersion in art, writing, and the raw mechanics of Flamenco dance, which taught me how to channel intense energy into focused presence.
+Because our stories live in our physical selves, somatic (body-centered) work and EMDR are essential tools in my practice for unburdening the physical body. At the same time, I ground my sessions in deeply reflective frameworks like existential and phenomenological philosophy, somatic expression, and psychodynamic approaches to explore how our pasts shape our search for meaning. To help navigate modern everyday life, I seamlessly integrate structured, action-oriented modalities like CBT (Cognitive Behavioral Therapy) and ACT (Acceptance and Commitment Therapy).
+At its core, my work is about sitting with your existence and pain, holding a safe, energetic container for deep self-exploration. By truly hearing, witnessing, and connecting, I support you in discovering and accepting your most authentic self. Creating this space for radical honesty is the very essence of healing from suffering. In the therapy room, boundaries soften, and it often becomes beautifully unclear who is healing whom.
+
+## The Timeless Journey
+
+When I was a young therapist, I desperately wanted to look like an "old, wise woman" to project authority. Now that I am actually in this mature chapter of my life, I smile realizing I still don't feel like that idealized, serious figure. What I have is a profound respect for the magnificent variety of human stories.
+The beautiful thing about being a therapist is that it spans every stage of life. It is a continuous learning journey that keeps you infinitely young and curious. Even in this new era of AI, where I find myself stepping into using new digital tools and then stepping back from them, the core of my practice is unmovable. Therapy is a profoundly touching, human-to-human practice that will never end.
+Inside me, I am still that curious child who wants to understand people, dream deeply, and bring those dreams into reality. Over time, that secret childhood round table grew up with me. Today, this confidential practice is my home—one of the best spaces for human existence. I fully intend to keep walking this path slowly, with no hurry, for as long as my energy lasts, watching the Bosphorus dance between two worlds.
+
+Thank you for walking through my story with me.
+```
+
+Talimat kısmı (birebir):
+
+> birinci metin türkçe about yazısı ikincisi ingilizce yazılardaki başlık açıklama hiyerarşisine
+> uygun ve web sayfasındaki yazı fontu ve yazı hiyerarşisine uygun olarak ait oldukları sayfalara
+> ekleyecesin. Türkçe ve ingilizce yazıları ait oldukları dil sayfasında öncelikle about bağımzıs
+> sayfasında about başlığı altına ekle, hera kısmında da aşağıdaki about başlığının altına yazının
+> sığabilen kısmını ekle fazlasını okumak isteyen more butonu ile zaten about bağımsız sayfasında
+> kalan içeriği görecek. İngilizce metin için de aynısını yap. Bundan sonra sana bölümlere ait
+> yazıları verdiğimde her içeriği türkçe ve ingilizce sayfalarına başlık yazı ve web sayfası yazı
+> fontu, font weight kurallarına uygun şekilde ekleyeceksin. Sana sadece ilgili başlıkla alakalı
+> yerlere ekle dediğimde verdiğim her metin için bunu yapacaksın, unutma.
+
+**Yorum/uygulama planı:** İki farklı yere eklenecek: (1) `hakkimda.html` (bağımsız About sayfası)
+— TAM metin, TR `data-tr` / EN `data-en` içine, mevcut başlık/paragraf hiyerarşisine (`h1`/`h2`/`p`)
+uyularak; (2) `index.html`'deki (ana sayfa) mevcut "Hakkımda/About" kısa tanıtım bölümü — metnin
+SIĞABİLEN (kısaltılmış/ilk bölüm) kısmı, zaten var olan "Devamını oku/More" butonu `hakkimda.html`'e
+link veriyor, o buton korunuyor. Kalıcı süreç kuralı: bundan sonra kullanıcı "ilgili başlıkla
+alakalı yerlere ekle" dediğinde verilen her yeni bölüm metni aynı ikili yerleştirme + font/hiyerarşi
+kuralına göre eklenecek.
+
+
+## Kullanıcı isteği — "Meet Cigdem" bölümü başlık + resim çerçevesi yerleşimi (2026-07-26, birebir metin)
+
+**Bağlam:** hakkimda.html'deki h1 başlık metni ve "Meet Cigdem" hikaye bölümünün etrafına birden
+fazla, konuma göre hizalanan resim çerçevesi (placeholder) eklenmesini isteyen çok parçalı,
+uzun bir yerleşim talimatı. Ham metin (birebir):
+
+> 1- 3 decades of adventure yazısı ' decades of adventure' olarak değiştir.
+> 2- Meet Cigdem
+> As a child, I was an incurable dreamer and a bit of a rebel. To escape the heavy realities of daily life, I would sneak up to our roof in Istanbul to dance, sing, and give grand speeches to imaginary crowds. Downstairs, I filled the house with traditional folk songs (türküler), creating a safe, creative, and fiercely independent inner world. That rooftop was my first stage—it taught me how to stand firmly on my own feet, take bold steps, and laugh freely.
+>
+> Where the Story Begins
+> The spark for my life's work happened right in the lively, chaotic, and beautiful setting of my childhood home. Growing up, I closely observed our complex family struggles. At the same time, I was navigating a vibrant, multicultural reality, constantly bridging the distinct worlds and mother tongues of Kurdish and Turkish while finding our footing in a massive new city.
+>
+> My very first "clinical practice" started before I was even a teenager. Whenever our parents went out to visit neighbors, my siblings, sisters, and cousins would gather around our kitchen round table. With my heart completely open, I listened as they shared their deepest secrets and problems. I was just a kid pulling the massive world of therapy into my playtime, completely unaware that I was running my first support group. The academic training and degrees that came decades later were simply built on top of this joyful childhood foundation.
+>
+> As a teenager, that circle grew. Friends and adults naturally found it easy to open up to me. This empathy eventually evolved into a lifelong commitment to human rights, leading me to advocate fiercely for the safety, dignity, and rights of women and children. bu yazıyı decades of adventure yazısının altına yasla, Cigdem trained across existential-phenomenological therapy, cognitive behavioural therapy (CBT) and Acceptance & Commitment Therapy (ACT), and has worked in clinical and organisational settings in both London and Istanbul. She works with people navigating anxiety, depression, relationship strain, trauma, and the particular disorientation of living between two cultures.
+>
+> "Therapy isn't about being fixed. It's about having somewhere honest to think."
+> BACP Registered
+> 20+ Years in practice
+> English & Turkish bu yazıları koplem kaldır, sonra 3 decades of adventure yazısının altındaki resim çerçevesinin üst sınırı Meet Cigdem
+> As a child, I was an incurable dreamer and a bit of a rebel. To escape the heavy realities of daily life, I would sneak up to our roof in Istanbul to dance, sing, and give grand speeches to imaginary crowds. Downstairs, I filled the house with traditional folk songs (türküler), creating a safe, creative, and fiercely independent inner world. That rooftop was my first stage—it taught me how to stand firmly on my own feet, take bold steps, and laugh freely.
+>
+> Where the Story Begins
+> The spark for my life's work happened right in the lively, chaotic, and beautiful setting of my childhood home. Growing up, I closely observed our complex family struggles. At the same time, I was navigating a vibrant, multicultural reality, constantly bridging the distinct worlds and mother tongues of Kurdish and Turkish while finding our footing in a massive new city.
+>
+> My very first "clinical practice" started before I was even a teenager. Whenever our parents went out to visit neighbors, my siblings, sisters, and cousins would gather around our kitchen round table. With my heart completely open, I listened as they shared their deepest secrets and problems. I was just a kid pulling the massive world of therapy into my playtime, completely unaware that I was running my first support group. The academic training and degrees that came decades later were simply built on top of this joyful childhood foundation.
+>
+> As a teenager, that circle grew. Friends and adults naturally found it easy to open up to me. This empathy eventually evolved into a lifelong commitment to human rights, leading me to advocate fiercely for the safety, dignity, and rights of women and children. yazısındaki Where the Story Begins başlığı ile başlayacak şekilde yapıştır, ve bu resim çerçevesi sayfanın sağı ile Where the Story Begins
+> The spark for my life's work happened right in the lively, chaotic, and beautiful setting of my childhood home. Growing up, I closely observed our complex family struggles. At the same time, I was navigating a vibrant, multicultural reality, constantly bridging the distinct worlds and mother tongues of Kurdish and Turkish while finding our footing in a massive new city.
+>
+> My very first "clinical practice" started before I was even a teenager. Whenever our parents went out to visit neighbors, my siblings, sisters, and cousins would gather around our kitchen round table. With my heart completely open, I listened as they shared their deepest secrets and problems. I was just a kid pulling the massive world of therapy into my playtime, completely unaware that I was running my first support group. The academic training and degrees that came decades later were simply built on top of this joyful childhood foundation.
+>
+> As a teenager, that circle grew. Friends and adults naturally found it easy to open up to me. This empathy eventually evolved into a lifelong commitment to human rights, leading me to advocate fiercely for the safety, dignity, and rights of women and children. paragrafı arasında ortada olsun resim çerçevesinin alt sınırı da kendi yüksekliği ile sınırllı olsun. Photo of Cigdem coming soon resim çerçevesinin içine de
+> 3- An Introduction to Two Worlds
+> My interests eventually turned into formal university studies in psychology, philosophy, and creativity—a path I had hidden how I even managed to enter! But in 1999, during my very first year of university, a devastating earthquake struck Istanbul, shaping my direction forever.
+>
+> Following the disaster, I stepped into intensive trauma research and quickly hit a wall: the cutting-edge studies I needed to read were all written in English. Driven by an insatiable curiosity, I bought a one-way ticket to London to master the language. What was supposed to be a single year extended into an incredible 23-year adventure, and this historic city became my second home.
+>
+> Navigating London taught me that human experiences are formed from both the inside out and the outside in. My childhood view of the Bosphorus Bridge, which physically connects two continents, became the perfect blueprint for my career. I gathered a colorful tapestry of experience working across grassroots refugee organizations, charities, the NHS, universities, and private practices including Harley Street.
+>
+> A New Chapter & Life's Varied Stories
+> While building my career, I also took on my most profound and rewarding role: becoming a single mother to my daughter. Raising a child in a fast-paced metropolis like London taught me the vital importance of creating a grounding, joyful community.
+>
+> When the pandemic hit and the world locked down, "home" became the center of everything. While I spent those months listening to the intense experiences of my clients, the collective stillness also brought an unexpected gift. Long-buried family secrets came to light, bringing me a profound new level of self-understanding. It connected abstract family history to my real, lived experience, proving to me that our shared human quirks are vastly greater than our differences.
+>
+> Over my 27-year journey, trauma work became my core specialty, but it is far from my only focus. Human lives are a rich mosaic, and our stories do not dwell on pain all the time. My practice is dedicated to the full spectrum of human experiences—embracing existential crossroads, cultural transitions, relationship dynamics, and the wonderfully varied, sometimes humorous narratives that shape who we are. yazısını da safanın soluna yasla ve resim çerçevesinin üst sınırı paragraf ile başlasın çerçevenin  sağ sol boşlukları sayfanın solu ve paragarfın ortası na gelecek şekilde olsun  alt sınırı da çerçevenin yüksekliği ile sınırlı olsun,
+> 4- The Essence of the Space & My Tools
+> To honor the true variety of human stories, I do not believe in a one-size-fits-all approach. My clinical style is deeply alive, informed by my immersion in art, writing, and the raw mechanics of Flamenco dance, which taught me how to channel intense energy into focused presence.
+>
+> Because our stories live in our physical selves, somatic (body-centered) work and EMDR are essential tools in my practice for unburdening the physical body. At the same time, I ground my sessions in deeply reflective frameworks like existential and phenomenological philosophy, somatic expression, and psychodynamic approaches to explore how our pasts shape our search for meaning. To help navigate modern everyday life, I seamlessly integrate structured, action-oriented modalities like CBT (Cognitive Behavioral Therapy) and ACT (Acceptance and Commitment Therapy).
+>
+> At its core, my work is about sitting with your existence and pain, holding a safe, energetic container for deep self-exploration. By truly hearing, witnessing, and connecting, I support you in discovering and accepting your most authentic self. Creating this space for radical honesty is the very essence of healing from suffering. In the therapy room, boundaries soften, and it often becomes beautifully unclear who is healing whom.
+>
+> The Timeless Journey
+> When I was a young therapist, I desperately wanted to look like an "old, wise woman" to project authority. Now that I am actually in this mature chapter of my life, I smile realizing I still don't feel like that idealized, serious figure. What I have is a profound respect for the magnificent variety of human stories.
+>
+> The beautiful thing about being a therapist is that it spans every stage of life. It is a continuous learning journey that keeps you infinitely young and curious. Even in this new era of AI, where I find myself stepping into using new digital tools and then stepping back from them, the core of my practice is unmovable. Therapy is a profoundly touching, human-to-human practice that will never end.
+>
+> Inside me, I am still that curious child who wants to understand people, dream deeply, and bring those dreams into reality. Over time, that secret childhood round table grew up with me. Today, this confidential practice is my home—one of the best spaces for human existence. I fully intend to keep walking this path slowly, with no hurry, for as long as my energy lasts, watching the Bosphorus dance between two worlds.
+>
+> Thank you for walking through my story with me. yazısını solunda olduğu yerde kalsın, sağına yine üst
+>   sınırı
+>     paragraf ile başlayan sağ sol boşlukları sayfanın solu ve paragraf ile ortalanarak
+>     ayarlansın,sağına yine üst sınırı paragraf ile başlayan sağ sol boşlukları sayfanın sağı ve paragraf ile ortalanarak ayarlansın, alt sınırı da çerçevenin yüksekliği ile sınırlı olsun.
+
+**Yorumlanan uygulama planı (asistanın çıkarımı, kullanıcı onayı bekleniyor — düzen çok özel/
+editoryal, ilk denemede tam tutmayabilir):**
+1. h1 başlığı EN "decades of adventure." / TR karşılığı (henüz kesinleşmemiş çeviri) olarak
+   güncellenecek.
+2. Eski "about-grid" özet bloğu (fotoğraf + "Cigdem trained across..." paragrafı + alıntı + BACP/
+   20+/English&Turkish strip) TAMAMEN kaldırılacak. "Meet Cigdem" + giriş paragrafı + "Where the
+   Story Begins" bloğu h1'in hemen altına gelecek. Bir fotoğraf çerçevesi ("Photo of Cigdem coming
+   soon") eklenecek: üst sınırı "Where the Story Begins" başlığıyla hizalı, sayfanın SAĞ kenarı ile
+   metin sütunu arasındaki boşlukta yatayda ortalanmış, kendi yüksekliğiyle sınırlı (esnetilmeyen).
+3. "An Introduction to Two Worlds" + "A New Chapter & Life's Varied Stories" bloğu sayfanın SOLUNA
+   yaslanacak; bir fotoğraf çerçevesi üst sınırı bu paragrafla hizalı, sayfanın SOL kenarı ile
+   paragrafın ORTASI arasında konumlanacak (sol boşlukta), kendi yüksekliğiyle sınırlı.
+4. "The Essence of the Space & My Tools" + "The Timeless Journey" bloğu olduğu gibi (sol hizalı)
+   kalacak; İKİ fotoğraf çerçevesi eklenecek — biri sol boşlukta (sayfa solu ↔ paragraf ortası),
+   biri sağ boşlukta (sayfa sağı ↔ paragraf ortası), ikisi de üst sınırı paragrafla hizalı, kendi
+   yükseklikleriyle sınırlı.
+
+## Kullanıcı isteği — "Approach" (Yaklaşım) sayfa içeriği, About sayfasıyla aynı ikili yerleşim süreci (2026-07-26, birebir metin)
+
+**Bağlam:** Önceki "Hakkımda" isteğinde kurulan kalıcı süreç uyarınca ("Bundan sonra sana
+bölümlere ait yazıları verdiğimde ... ekleyeceksin ... unutma") — kullanıcı önce "bu yazıyı aynı
+about sayfasında olduğu gibi Approach sayfası içinde hem bağımsız sayfa hem de hero bölümünde alta
+kaydırılan yerde sığan kısmı kadar ekle, zaten kalanını more ile approach bağımsız sayfasında
+okuyabilir" dedi, ardından aşağıdaki İngilizce ham metni verdi (Türkçe çevirisi kullanıcı tarafından
+verilmedi, çeviri asistan tarafından yapılacak). Ham metin (birebir):
+
+```
+Evidence-Based Approaches
+
+Cognitive Behavioural Therapy (CBT)
+
+Cognitive Behavioural Therapy (CBT) is an extensively researched, highly structured psychotherapy that has been clinically proven effective for a wide range of psychological challenges, including anxiety, depression, and stress-related disorders. Recommended globally as a leading first-line treatment by organizations such as the National Institute for Health and Care Excellence (NICE), CBT operates on a set of standardized, goal-oriented protocols that help you map the direct links between your thoughts, physical feelings, and daily actions. I invite you to explore this collaborative framework with me not as a rigid set of clinical rules, but as a practical, deeply personalized toolkit designed to help you break free from overwhelming mental patterns and reclaim your day-to-day balance. British Association for Behavioural and Cognitive Psychotherapies (BABCP)
+
+Eye Movement Desensitisation and Reprocessing (EMDR)
+
+EMDR is an extensively researched, standardized psychotherapy that is globally proven to be highly effective for the treatment of trauma by incorporating elements from a wide range of clinical approaches. Recognized as a leading, evidence-based trauma treatment by major international organizations—including the World Health Organization (WHO), the American Psychiatric Association—this structured protocol utilizes rhythmic bilateral stimulation to help the brain safely process, integrate, and release stuck, painful memories. I invite you to explore this transformative pathway with me as a gentle way to help your nervous system finally let go of survival mode, process past events, and return to a state of true safety and calm. To learn more about these global standards, you can visit EMDRIAor the EMDR Association UK. UK Professional Organisation: EMDR Association UK
+
+Acceptance and Commitment Therapy (ACT)
+
+Acceptance and Commitment Therapy (ACT) is an empirically supported, mindfulness-based psychotherapy that has been extensively researched and proven effective for helping individuals and groups navigate chronic pain, anxiety, and depression. Utilizing a standardized framework of psychological flexibility, ACT incorporates evidence-based elements of cognitive defusion, acceptance, and values-based action to help you change your relationship with difficult internal experiences rather than endlessly fighting them. I invite you to step away from the exhausting struggle of trying to "fix" or suppress your thoughts, and instead partner with me to focus your energy on clarifying your deepest values and building a rich, purposeful life aligned with what truly matters to you.Association for Contextual Behavioral Science (ACBS) – UK Chapter
+
+Deep Exploration & Relational Modalities
+Existential & Phenomenological Therapy
+
+Existential and Phenomenological Therapy is a philosophically grounded, deeply researched approach to psychotherapy that addresses the fundamental challenges of the human condition—such as personal freedom, choice, uncertainty, and our search for meaning. Rather than viewing emotional distress through a purely diagnostic lens, this approach utilizes a rigorous descriptive framework to explore the unique, lived experience of the individual. I invite you into this collaborative, non-judgmental space where we set aside rigid clinical labels to deeply understand, honor, and explore your personal truth exactly as you perceive it, giving you the clarity and courage to live more authentically. The Society for Existential Analysis (SEA)
+
+Brief Dynamic Therapy
+
+Brief Dynamic Therapy is a focused, time-limited application of psychodynamic principles that has been proven effective for addressing recurring relational conflicts, depression, and deeply rooted emotional blocks. This standardized approach integrates attachment theory and unconscious dynamics to help you identify how your early developmental experiences actively shape your current relationship patterns and coping mechanisms. I invite you to join me in a compassionate, insightful exploration of your inner world, where gaining rapid clarity on these unconscious patterns gives you the freedom to break free from old scripts, set healthier boundaries, and cultivate more fulfilling connections. British Psychoanalytic Council (BPC)
+
+ Embodied Modalities
+ Embodied Therapies (Somatic expression & EMDR for pain and medically unexplained symptoms)
+
+Combining somatic expression, EMDR  and embodied therapies represent a well-researched, somatic field of practice proven highly effective for releasing the physical and emotional residue of stress, trauma, and chronic anxiety physical pain such as migrine, eg. These standardized, non-verbal protocols acknowledge that emotional experiences are held within the body's physiology, offering a safe, intuitive pathway to healing when traditional talking therapies reach their limits. I invite you to explore this gentler, more expressive way of working where we use simple rhythm, breathwork, and EMDR to bridge the gap between mind and body, helping your nervous system naturally release stored tension and regulate itself without the pressure of finding the "perfect" words.
+
+
+Professional Support & Broader Accreditations
+Clinical Supervision- Mentorship & Psychotherapy
+
+As a BACP Accredited Psychotherapist with extensive experience across private practice, the NHS, and academic settings, I provide a highly collaborative, reflective clinical supervision space designed to support the unique demands of your practice. Backed by established ethical frameworks and clinical standards, my supervision practice offers a structured yet deeply supportive space to explore complex case dynamics, safely process the somatic impact of your clinical work, and protect your professional well-being. I invite you into this warm, dedicated supervision sanctuary where we can safeguard your ethical boundaries, refine your clinical skills, and nurture your authentic therapeutic voice.
+British Association for Counselling and Psychotherapy (BACP)
+```
+
+**Uygulama planı:** About sayfasındaki ikili yerleşim birebir tekrarlanıyor: (1) `approach.html`
+(bağımsız Approach sayfası) — TAM metin, `.about-story` sınıfının h2/h3/p tipografi hiyerarşisi
+yeniden kullanılarak (yeni CSS eklenmeden), 4 grup başlığı (Evidence-Based Approaches / Deep
+Exploration & Relational Modalities / Embodied Modalities / Professional Support & Broader
+Accreditations) h2, her yöntem adı (CBT, EMDR, ACT, Existential & Phenomenological, Brief Dynamic,
+Embodied Therapies, Clinical Supervision) h3, her birinin kendi paragrafı ve varsa akreditasyon
+kuruluşu satırı (`.about-story-closing` ile) — TR çevirisi asistan tarafından yazılacak (kullanıcı
+sadece İngilizce metni verdi). Sayfadaki eski 3'lü `.approach-list` özet kutusu (Existential-
+Phenomenological/CBT/ACT) kaldırılıyor çünkü yeni metin bu üçünü zaten çok daha kapsamlı şekilde
+içeriyor (About'taki eski `about-grid` özetinin kaldırılmasıyla aynı mantık). (2) `index.html`'deki
+mevcut "Approach/Yaklaşım" (#yaklasim) kısa tanıtım bölümü — CBT paragrafının ilk iki cümlesi
+(TR+EN, birebir alıntı, yeni özet metni uydurulmadan) önizleme olarak kullanılıyor, var olan
+"More/Devamı" butonu `approach.html`'e link vermeye devam ediyor.
+
+## Kullanıcı isteği — Services (Servisler) sayfası kutucuklarına tıkla-genişlet içerik (2026-07-26, birebir metin)
+
+Kullanıcı `services.html`'deki 5 `.service-card` kutusuna tıklanınca yerinde (sayfa değiştirmeden)
+genişleyen uzun açıklama metni, renkli gradyan/gölgeli arka planlar ve boxların üstüne çerçevesiz
+bir "How I Work" notu eklenmesini istedi. Ham metin (birebir):
+
+```
+Şimdi sana vereceğim servislerle ilgili başlıkları servisler sayfasındaki kutucukların içerisine
+yerleştireceğiz. Kutucukların genişlikleri yukarıdan aşağı doğru şu anda web sitesinde göründüğü
+gibi olacak. Ancak devamını okumak istediğinde o kutucuğa tıkladığında yazının devamı okunacak.
+Ama o kutucuklara ilave yapacağız ve kaç tane olduğunu söyleyeceğim. İlk dört kutucuktan sonra
+professional support at development grubunu tek bir kutucuk olarak yapacağız. Yani dört tanesi
+ayrı development of support da bir olacak. Tamam. Ancak devamı basıldığında ayrı bağımsız bir
+sayfa pencere olarak yukarıda açılmasın. Aynı servisler bağımsız sayfasının içerisinde böyle
+genişleyen bir pencere pencere gibi görünsün. Sayfanın herhangi bir yerine tıklandığında tekrar
+daha kısa formdaki çerçeve görünsün.
+
+1- 'Therapy & Healing Spaces
+Individual Therapy: This is a deeply collaborative process. Beyond simply managing symptoms, we
+will work together to uncover the root causes of what is holding you back. I provide a grounded,
+compassionate space where you can safely explore past traumas, navigate difficult life
+transitions, and reconnect with your authentic self. It is about fostering profound
+self-awareness and building the emotional resilience needed to thrive.' yazısını Bireysel Terapi
+Kaygı, depresyon, travma, kimlik ve hayat geçişleri için birebir seanslar. yazan kutuya yaz,
+
+2- 'Couples Therapy
+Entrenched conflicts often stem from unspoken needs and emotional disconnections. In our
+sessions, my role is not to take sides, but to act as a bridge between you and your partner. We
+will focus on identifying negative communication loops, fostering empathy, and developing
+practical tools so you can both feel truly seen, heard, and valued within the relationship.'
+yazsını Çift Danışmanlığı
+Eşlerin birbirini yeniden duyabileceği, yapılandırılmış bir alan. yazısını olduğu kutuya yaz,
+
+3- 'Group Psychotherapy
+There is a unique and powerful medicine in being witnessed by others. Group therapy acts as a
+microcosm of the real world, allowing you to explore your interpersonal dynamics in real-time.
+It breaks the isolation that often accompanies psychological struggles, offering a space where
+you can practice new ways of relating, give and receive support, and heal within the context of
+community.' yazısını Yaşam Koçluğu
+Kariyer, özgüven ve yaşam yönü için hedef odaklı çalışma. yazısının olduğu kutuya yaz,
+
+4- 'Somatic Creative Practices
+Trauma and deeply held emotions often reside in the nervous system, where words simply cannot
+reach. By integrating somatic expression, movement, and creative writing into our therapeutic
+work, we can bypass the logical mind. This holistic approach allows the body to release stored
+tension and provides a powerful, alternative voice for your inner experiences.' yazısını Klinik
+Süpervizyon
+Aktif olarak çalışan terapist ve danışmanlar için süpervizyon. yazısını olduğu kutuya ekle,
+
+5- 'Professional Support & Development
+Clinical Supervision: The work we do as therapists is profoundly rewarding, but it carries a
+heavy emotional weight. I offer a supportive, non-judgmental sanctuary for you to unpack complex
+cases, explore countertransference, and maintain ethical rigor. My goal is to help you cultivate
+a sustainable practice, preventing burnout while nurturing your ongoing development as a
+confident practitioner.
+Mentoring: Navigating a career in the clinical, academic, or public health sectors can be
+daunting. I am here to walk alongside you, offering strategic guidance and sharing the insights
+I have gathered over the years. Whether you are defining your career path, stepping into a new
+role, or looking to build your own private practice, I can help you bridge the gap between
+where you are and where you want to be.
+Consultation: Sometimes, teams and organizations need an external, objective lens to navigate
+gridlocks or complex clinical scenarios. I partner with you to offer psychological insights that
+illuminate blind spots, improve team dynamics, and ultimately optimize the care and services you
+provide to your community.
+Training & Workshops: I design interactive and experiential learning environments that bridge
+the gap between psychological theory and everyday practice. My workshops are designed to be
+engaging and deeply practical, equipping professionals with evidence-based tools and fresh
+perspectives that they can immediately integrate into their own work.' yazısını Kurumsal
+Programlar
+Ekipler ve kurumlar için tasarlanmış iyi oluş ve ruh sağlığı desteği. yazısına ait kutuya ekle,
+
+6- 'How I Work
+Bilingual Services (English & Turkish): Language is intimately tied to our emotional memory. For
+many, accessing early experiences or expressing the deepest parts of the self can only happen in
+their mother tongue. Offering my services fluently in both English and Turkish allows me to
+provide culturally attuned care, ensuring that nothing is lost in translation and that you can
+engage in the healing process in the language that feels most natural to you.' yazısını da bu
+kutuların üstünde, Seanslar getirdiğin konuya göre şekillenir — sabit bir program değildir.
+yazısının altında düz yazı olarak çerçevesiz olarak yaz.
+
+Sana 5 çerçeve yazısı verdim, her bir çerçevenin rengi ayrı, gradyan ve gölgeli olsun renker için
+bu 4 rengi: #FFBE91
+#FFDDB0
+#FFFCE1
+#CFE kullan, 5. çerçeve için de bu renk paletine uygun bir renk kullan. aynı şeyi anlayacağın
+üzere ingilizce sayfa için de yap.
+```
+
+**Not:** Madde 3'te "Group Psychotherapy" metni "Yaşam Koçluğu" kutusuna, Madde 4'te "Somatic
+Creative Practices" metni "Klinik Süpervizyon" kutusuna eşleniyor — başlık/metin içerik olarak
+birebir örtüşmüyor ama kullanıcının eşlemesi budur, olduğu gibi uygulandı. Madde 5, mevcut 5.
+kutuyu (Kurumsal Programlar) tek kutu olarak koruyor — kutu sayısı zaten 5 olduğu için ayrıca
+birleştirme gerekmedi. Site tek dosyada data-en/data-tr ile iki dilli olduğundan "ingilizce sayfa
+için de yap" isteği ayrı bir dosya değil, aynı kartların data-en tarafına karşılık gelir; TR
+tarafı için kullanıcının verdiği İngilizce metinlerin çevirisi asistan tarafından yazıldı.
+
+- [x] **Durum (2026-07-26): Tamamlandı, browser'da test edildi.** `services.html`'e her karta
+      `.service-more` (gizli tam metin, native olmayan ama minimal bir grid-template-rows
+      0fr→1fr geçişiyle "auto height" animasyonu) + `.service-hint` (Devamı/Read more ↔ Daha az
+      göster/Show less) eklendi; JS click/keydown (Enter/Space) handler kartı açıp diğerlerini
+      kapatıyor, `document` click handler kart dışına tıklanınca açık kartı kapatıyor — ayrı
+      sayfa/pencere açılmıyor. 5 karta `.service-card--1..5` ile #FFBE91/#FFDDB0/#FFFCE1/#CCFFEE
+      (kullanıcının verdiği `#CFE` kısaltmasının açılımı) + palete uygun 5. renk (#D8CCFF, pastel
+      lavanta) gradyan+gölge (`color-mix` ile, projenin var olan buton/kart deseniyle tutarlı)
+      atandı. "How I Work" notu `.page-intro`'ya `lead` paragrafının altına, kutuların üstüne,
+      çerçevesiz `<p class="services-note">` olarak eklendi. `style.css`'in cache-busting
+      sürümü tüm sayfalarda v=69→v=70'e çıkarıldı. `browse` skill'iyle localhost:5173 üzerinde
+      görsel doğrulama yapıldı: 5 farklı renk, tıkla-genişlet (kart 1 ve kart 5'in 4 alt-bölümü),
+      dışarı tıklayınca kapanma, TR dil geçişi ve mobil (390px) tek sütun görünüm hepsi beklendiği
+      gibi çalıştı, konsol hatası yok.
+
+- [x] **Ek istek (2026-07-26): kutuların arkasına hafif blur'lu çiçek fotoğrafı.** Kullanıcının
+      verdiği görsel `assets/accent-wildflowers.png` olarak kaydedildi (sips ile 900px genişliğe
+      küçültüldü, 2.3MB→645KB — bu makinede webp encoder yok, `sips` webp çıktısı gerçekte PNG
+      üretiyor, o yüzden diğer bazı `accent-*.png` dosyaları gibi PNG olarak bırakıldı). 5 kartı
+      saran `.services-section`e `.services-bg` (mutlak konumlu, `filter:blur()+saturate()`,
+      opacity 0.4) eklendi — kartların kendi opak gradyanlarının arkasında/aralarında hafifçe
+      görünüyor, `.zig-graphic`/`.photo-backdrop` desenindeki aynı blur-arka-plan tekniği. v=71'e
+      çıkarıldı, browser'da genişletme + mobil (390px) ile birlikte tekrar doğrulandı.
+
+## Kullanıcı isteği — Services kutularının "Devamı" içeriğine başlık/yazı hiyerarşisi (2026-07-26, birebir metin)
+
+Ham metin (birebir):
+
+```
+1- 'İndividual Therapy
+ This is a deeply collaborative process. Beyond simply managing symptoms, we will work together
+to uncover the root causes of what is holding you back. I provide a grounded, compassionate
+space where you can safely explore past traumas, navigate difficult life transitions, and
+reconnect with your authentic self. It is about fostering profound self-awareness and building
+the emotional resilience needed to thrive.' bunu Individual Therapy başlığının olduğu kutudaki
+yazının yerine yaz
+
+2- 'Couples Therapy
+Entrenched conflicts often stem from unspoken needs and emotional disconnections. In our
+sessions, my role is not to take sides, but to act as a bridge between you and your partner. We
+will focus on identifying negative communication loops, fostering empathy, and developing
+practical tools so you can both feel truly seen, heard, and valued within the relationship.'
+bunu Couples Counselling başlığının olduğu kutudaki yazının yerine yaz
+
+3- 'Group Psychotherapy: There is a unique and powerful medicine in being witnessed by others.
+Group therapy acts as a microcosm of the real world, allowing you to explore your interpersonal
+dynamics in real-time. It breaks the isolation that often accompanies psychological struggles,
+offering a space where you can practice new ways of relating, give and receive support, and heal
+within the context of community.' bunu Life Coaching başlığının olduğu kutunun içindeki yazının
+yerine yaz,
+
+4- 'Somatic Creative Practices: Trauma and deeply held emotions often reside in the nervous
+system, where words simply cannot reach. By integrating somatic expression, movement, and
+creative writing into our therapeutic work, we can bypass the logical mind. This holistic
+approach allows the body to release stored tension and provides a powerful, alternative voice
+for your inner experiences.' bunu Clinical Supervision başlığının olduğu kutudaki yazının yerine
+yaz
+
+5- 'Professional Support & Development
+Clinical Supervision
+The work we do as therapists is profoundly rewarding, but it carries a heavy emotional weight. I
+offer a supportive, non-judgmental sanctuary for you to unpack complex cases, explore
+countertransference, and maintain ethical rigor. My goal is to help you cultivate a sustainable
+practice, preventing burnout while nurturing your ongoing development as a confident
+practitioner.
+Mentoring
+Navigating a career in the clinical, academic, or public health sectors can be daunting. I am
+here to walk alongside you, offering strategic guidance and sharing the insights I have gathered
+over the years. Whether you are defining your career path, stepping into a new role, or looking
+to build your own private practice, I can help you bridge the gap between where you are and
+where you want to be.
+Consultation
+Sometimes, teams and organizations need an external, objective lens to navigate gridlocks or
+complex clinical scenarios. I partner with you to offer psychological insights that illuminate
+blind spots, improve team dynamics, and ultimately optimize the care and services you provide to
+your community.
+Training & Workshops
+I design interactive and experiential learning environments that bridge the gap between
+psychological theory and everyday practice. My workshops are designed to be engaging and deeply
+practical, equipping professionals with evidence-based tools and fresh perspectives that they
+can immediately integrate into their own work.' Organisational Programmes başlığının olduğu
+kutudaki yazının yerine yaz.
+Başlık ve yazı hiyerarşisini uygulamayı unutma.
+```
+
+**Yorum/uygulama:** Verilen paragraf metinleri, önceki "Devamı" (tıkla-genişlet) isteğinde
+`.service-more` içine zaten birebir aynı İngilizce metinlerle eklenmişti — içerik değişmiyor.
+Kullanıcının asıl istediği, kapanış cümlesinden ("Başlık ve yazı hiyerarşisini uygulamayı
+unutma") anlaşıldığı üzere, her `.service-more` bloğunun başına o yaklaşımın kendi adını gerçek
+bir başlık (h3) olarak eklemek — kart 1-4'te önceden hiç başlık yoktu (sadece çıplak paragraf),
+kart 5'te ise "Clinical Supervision:" gibi etiketler `<strong>` + iki nokta olarak paragrafın
+içine gömülüydü. Madde 3 ve 4'te verilen iç başlık adı ("Group Psychotherapy", "Somatic Creative
+Practices") kartın kendi dış başlığından (Life Coaching / Clinical Supervision) BİLEREK farklı —
+bu, ilk büyük istekte zaten not edilen kasıtlı eşleşmeme ile tutarlı, olduğu gibi uygulanıyor.
+Kart 5'e ayrıca üst seviye "Professional Support & Development" (h3) başlığı + altında 4 adet alt
+başlık (h4: Clinical Supervision/Mentoring/Consultation/Training & Workshops) + her birinin
+paragrafı ekleniyor — inline `<strong>` etiketler kaldırılıp gerçek `<h4>` yapılıyor.
+
+## Kullanıcı isteği — Services kutularındaki orijinal başlık/kısa açıklamayı sil (2026-07-26, birebir metin)
+
+Ham metin (birebir):
+
+```
+Şimdi sana kutular içinde silinecekleri yazıyorum, sadece sana verdiklerimi sil altlarındaki
+eklettiğim başlıklar ve yazılar kalsın.
+silinecekler:
+1- Individual Therapy
+One-to-one sessions for anxiety, depression, trauma, identity and life transitions.
+2- Couples Counselling
+Structured space for partners to be heard and to hear each other again.
+3- Life Coaching
+Focused, goal-oriented work for career, confidence and life direction.
+4- Clinical Supervision
+Supervision for practising therapists and counsellors.
+5- Organisational Programmes
+Wellbeing and mental health support designed for teams and organisations.
+```
+
+**Uygulama notu:** Bu metinler her kartın hep-görünür `<h2>`+`<p>` ikilisiydi (kartın orijinal
+başlığı + kısa TR/EN açıklama). Kullanıcı SADECE bunları siliyor; bir önceki istekte `.service-more`
+(tıkla-genişlet, gizli) içine eklenen `<h3>`/`<h4>` + paragraflar aynen kalıyor. Sonuç: kart artık
+kapalıyken sadece renkli arka plan + "Devamı" ipucu gösteriyor, tıklanınca `.service-more` içindeki
+başlık+metin açılıyor — `.service-more` gizli/açılır mekanizması değiştirilmedi, sadece dış
+`<h2>`+`<p>` kaldırıldı.
+
+**Düzeltme (2026-07-26, kullanıcı geri bildirimi):** Kullanıcı bunun beklediği sonuç olmadığını
+belirtti — "eklettiğim yazılar görünmüyor, ... yukarı taşımamışsın, ancak read more tıkladığımda
+yazılar görünür oluyor" (eklenen h3/h4+paragraf içeriğinin tıklamadan, doğrudan görünmesini
+istiyor). Bunun üzerine `.service-more`/tıkla-genişlet mekanizması tamamen kaldırıldı: h3(+h4)+p
+artık kartın DOĞRUDAN GÖRÜNÜR içeriği (gizli değil), "Devamı"/"Read more" ipucu ve ilgili JS
+(click/keydown toggle, document click-outside kapatma) ve CSS (`.service-more`, `.service-hint`,
+`.is-open`) silindi — artık gösterilecek "kısa vs uzun" iki ayrı içerik yok, tek içerik var ve o
+her zaman görünüyor. Kartlar artık tıklanabilir değil (cursor/hover/focus-visible/tabindex/role
+kaldırıldı). Ayrıca `.services-grid`'e `align-items:start` eklendi çünkü içerik uzunlukları artık
+kart başına değişken ve grid satırı en uzun karta göre gerilip kısa kartlarda boş alan
+bırakıyordu.
+
+**İkinci düzeltme (2026-07-26, kullanıcı tekrar geri bildirdi):** Kullanıcı bu sefer tam tersini
+istedi — "read more'ları neden kaldırdın geri koy tıklandığında kutu genişlesin boş bir yere
+tıklandığında kutu aynı boyutuna geri dönsün." Yani bir önceki düzeltme yanlış yorumlanmıştı:
+kullanıcı görünürlüğü değil, SADECE eklenen başlık/metnin DOĞRU KONUMDA (üstte, açıldığında ilk
+görünen şey olarak) olmasını istemiş, tıkla-genişlet mekanizmasının tamamen kaldırılmasını değil.
+`.service-more`/`.service-hint` (Devamı/Daha az göster) + JS click/keydown/document-click-outside
+toggle + `.service-card` cursor/hover/focus-visible/tabindex/role hepsi AYNEN eski haliyle geri
+kondu. `.services-grid`'in `align-items:start`'ı korundu (zararsız, kartlar kapalıyken zaten eşit
+kısa boyda). Kart içeriği (h3/h4+paragraflar) değişmedi, sadece tekrar `.service-more` içine
+sarmalandı.
+
+**Üçüncü düzeltme (2026-07-26, ekran görüntüsüyle):** Kullanıcı hâlâ "yazılar read more
+tıklayınca çıkıyor" dedi — netleştirmek için soru soruldu, cevap: "Başlık + yazının birkaç satırı
+ve altta read more" (klasik kırpılmış-önizleme deseni). Uygulanan nihai tasarım: her kartın h3
+başlığı `.service-more`'un DIŞINA taşındı, her zaman görünür (kart 5'te sadece üst "Professional
+Support & Development" h3'ü dışarı çıktı, 4 alt h4+p bir arada `.service-more` içinde kaldı ki
+h4-p eşleşmesi bozulmasın). `.service-more`'un kapalı hâli artık tamamen gizli değil —
+`max-height:4.6em; overflow:hidden` ile ~3 satır önizleme gösteriyor, altta o kartın kendi
+gradyan rengine göre kırpma hissi veren bir CSS `mask-image` (solid overlay değil, düz-metnin
+kendisini fade eden maskeleme — `.services-bg`'de zaten kullanılan aynı teknik) var. "Devamı"
+tıklanınca `max-height:60rem` + mask kaldırılıyor, tam metin açılıyor. `index.html`'in
+`.zig-copy`/`.zig-copy::after` "birkaç satır + fade + Devamı" deseninden ilham alındı ama solid
+renk overlay yerine mask-image kullanıldı çünkü kartların arka planı düz renk değil gradyan.
+
+## Kullanıcı isteği — hakkimda.html'deki 3 "Photo of Cigdem coming soon" çerçevesine gerçek fotoğraf (2026-07-26, birebir metin)
+
+Ham metin (birebir):
+
+```
+1- bu fotoğrafı about bağımsız sayfasındaki Meet Cigdem başlığının sağındaki resim çerçevesine
+ekle,
+2- bu fotoğrafı about bağımsız sayfasındaki An Introduction to Two Worlds başlığının solundaki
+resim çerçevesine ekle, ve fotoğrafı soldan sağdan kırpmak yerine resim çerçevesinin soldan
+sağdan ebatlarını büyüt
+3- bu fotoğrafı about bağımsız sayfasındaki The Essence of the Space & My Tools başlığının
+yanındaki resim çerçevesine ekle, ve fotoğrafı soldan sağdan kırpmak yerine resim çerçevesinin
+soldan sağdan ebatlarını büyüt
+```
+
+**Yorum/eşleme:** "Meet Cigdem" başlığının kendi yanında ayrı bir çerçeve yok (bkz. yukarıdaki
+"Meet Cigdem bölümü başlık + resim çerçevesi yerleşimi" kaydı) — o başlığa görsel olarak en yakın
+tek çerçeve, `story-block--right`/`.story-photo--right` (üst sınırı "Where the Story Begins" ile
+hizalı, "Meet Cigdem" metninin hemen altında/sağında). Madde 1 oraya kondu. Madde 2 →
+`.story-photo--left` ("An Introduction to Two Worlds" bloğu). Madde 3 → sınıfsız `.story-photo`
+("The Essence of the Space & My Tools" bloğu). Madde 2 ve 3'teki fotoğraflar neredeyse kare
+(1440×1440 ve 680×641) — mevcut `.story-photo` çerçevesi dar bir portre sütunu için
+`max-width:clamp(15.3rem,27.2vw,22.1rem)` kullanıyordu; kare bir fotoğrafı buraya `object-fit:cover`
+ile sıkıştırmak ciddi sol-sağ kırpma gerektirirdi. Bunun yerine kırpma YAPILMADI (img doğal en-boy
+oranıyla, `object-fit` kullanılmadan yerleştirildi) ve bu iki çerçeveye özel `.story-photo--wide`
+sınıfıyla `max-width` genişletildi (`clamp(18rem, 34vw, 30rem)`) — talimatta istenen "kırpmak
+yerine çerçevenin ebatlarını büyüt" birebir budur. Madde 1'in fotoğrafı (501×614, zaten dikey/3:4'e
+yakın) mevcut dar çerçeveye kırpmadan zaten sığdığı için `.story-photo--wide` eklenmedi.
+
+## Kullanıcı isteği — index.html hero altındaki "05 Contact" teaser'ı kaldır (2026-07-26)
+
+Kullanıcı: "Hero'nun en altına doğru kaydığımızda 5 numaralı başlıkta contact bölümünü Hero'nun
+altından kaldıralım. Bağımsız sayfası şimdilik kalsın." → `index.html`'deki `#iletisim` (`05`
+numaralı) zig-teaser bölümü tamamen silindi (04 Blog artık son teaser, hemen ardından footer
+geliyor). `iletisim.html` bağımsız sayfası DOKUNULMADI, hâlâ nav'dan ve `#hakkimda` vb. diğer
+"More/Devamı" linklerinden erişilebiliyor. Yan etki: `iletisim.html`'in "Geri" linki
+`index.html#iletisim`'e gidiyordu (artık olmayan bir anchor) — `index.html`'e (anchor'sız)
+çevrildi, diğer sayfaların "Geri" linkleri (`#hakkimda`, `#servisler` vb.) etkilenmedi çünkü o
+teaser'lar hâlâ mevcut.
+
+## Kullanıcı isteği — iletisim.html bağımsız sayfasını da tamamen kaldır (2026-07-26)
+
+Kullanıcı: "contact a ait bağımsız sayfayı da kaldıralım." → `iletisim.html` dosyası silindi
+(contact formu, WhatsApp/e-posta linkleri, translate butonu dahil). Diğer 7 sayfanın (`blog`,
+`cancel`, `approach`, `booking`, `hakkimda`, `index`, `services`) nav'ındaki "CONTACT/İLETİŞİM"
+linki kaldırıldı (`panel.html`'de zaten yoktu). Sadece `iletisim.html`'e özel CSS de temizlendi:
+`.contact-grid`, `form.contact`, `.contact-info`, `.whatsapp-link` — `.field`/`.form-actions`/
+`.form-note` KALDI çünkü booking.html ve cancel.html'in kendi formları da bunları kullanıyor.
+v=87'ye çıkarıldı. **Not:** `booking.html`'in iptal/değişiklik metninde kendi WhatsApp/e-posta
+linki zaten ayrıca var (satır ~191) — sitede Çiğdem'e ulaşmanın tek yolu artık booking akışı
+(randevu formu + iptal sayfasındaki WhatsApp/e-posta), ayrı bir "İletişim" sayfası/formu yok.
+
+## Kullanıcı isteği — İptal akışı: iade politikası anlayışı + manuel/müşteri iptal tasarımı (2026-07-26, birebir metin)
+
+Ham metin (birebir, iki mesaj):
+
+**Mesaj 1:**
+```
+slot seçimi yaptıktan sonra müşterinin iptal işlemi yapabilmesi için müşterinin kendi manuel
+müdahalesi için mi bir ekleme yapalım yoksa benim müdahalemle iptal yapılabilecek bir ekleme
+yapalım. Bundan önce de şu herkes için aynı iptal politikasını mı yapalım, şu 72 saat iptal
+politikası, hani daha önce çeşitlendirmiştik, 72 48 24 iptal türleri onlar hafızandarı nasıl bir
+düzenleme yapmıştık hem tekli slot hem ddde çoklu seçim yapanlar için? Bunları birlikte
+değerlendirelim.
+```
+
+**Mesaj 2 (kullanıcının cevabım üzerine düzeltme + yeni gereksinimler):**
+```
+iade politikasında anladığım şu, kişi tekli de çoklu da seçim yapsa ilk slota ya da seçtiği tel
+slota 72 saatten az süre varsa tekli slotta tek slotun %50'si çoklu slotta en yakın slotun %50'si
+kesilir kalan slotların ücreti iade edilir.
+Manuel müdahale de kişi seçimini yaptı ödemesini de yaptı ama sonradan web sitesine girdi slot
+seçimi yapar gibi seçtiği slotları iptal için seçecek ama seçtiği slotlar zaten rezerve olduğu
+için o slotlar inaktif olmuş olacak bu durmumda nasıl iptal edecek, orasını anlamadı, çiğdem in
+mauel iptali için de dediğin gibi çiğdemin elle iade oranını değiştirebileceği bir override olsun
+ve bu işlemi gerek çiğdem tamamladığında gerekse müşteri kendisi(bunun nasıl olduğunu sen
+söyleyeceksin- benim anlamadığım nokta) iptal ettiğinde hem müşterinin kendisine whatsapp iptal
+şablon mesajı hem de google sheet te hem sayfa 1 e hem hem de -çoklu seçim iptali ise- çoklu
+sewçim sayılı ek sayfadaki bilgilerine işlensin, müşteriye giden whatsapp iptal şablon mesaj
+bilgisi de google sheet te ilgili sayfalarda müşteriye ait satır ve sütunlara işlensin.
+```
+
+**Kod tarafında doğrulanan mevcut durum (henüz uygulama YAPILMADI, sadece tespit):**
+- Müşteri kendi iptalini zaten yapabiliyor: imzalı link (`?session=&token=`) → `cancel.html` →
+  `GET/POST /cancel` (`form-backend/src/routes/cancel.ts`). Slot seçme adımı YOK — link doğrudan o
+  kişinin rezervasyonuna bağlı, önizlemede kalan TÜM seansları gösterip tek "Randevumu İptal Et"
+  butonuyla hepsini birden iptal ediyor (kısmi/tekil seans seçip iptal etme YOK).
+- Panelde (Çiğdem tarafı) iptal AKSİYONU yok — `panel.ts` sadece iptal durumunu gösteriyor
+  (`.client.cancelled` CSS'i), override'lı elle iptal butonu henüz eklenmedi.
+- Gerçek iade matematiği (`lib/refund.ts`, 2026-07-23 kararı): en yakın kalan seansa göre TEK bir
+  oran hesaplanıp (≥72s → %100, <72s → %50) bu oran KALAN TÜM seanslara uygulanıyor — kullanıcının
+  Mesaj 2'deki anlayışı ("sadece en yakın slotun %50'si kesilir, kalanlar tam iade") ile ÇELİŞİYOR.
+  Bu netleştirilmeden refund kodu değiştirilmeyecek.
+- Google Sheets tek sayfa/tek satır mimarisi (CLAUDE.md'de de yazılı): "çoklu seçim sayılı ek
+  sayfa" diye ayrı bir Sheets sayfası YOK — session2..10 aynı satırda sağa doğru ek sütunlar
+  (`sessionNStartUtc` vb.). Kullanıcının "ek sayfa" ifadesi bu koddaki gerçek yapıyla uyuşmuyor,
+  cevapta düzeltildi.
+- WhatsApp iptal şablonu müşteriye zaten gönderiliyor (`cancel.ts` satır ~138,
+  `WHATSAPP_TEMPLATES.cancellationConfirmed`) ama gönderim BİLGİSİ Sheets'e hiç işlenmiyor (aksine
+  `confirmationSentAt`/`reminderSentAt` gibi guard-timestamp sütunları yok) — bu, istenen ama
+  henüz eklenmemiş bir sütun.
+
+**Sonraki adım:** Yukarıdaki netleştirmeler (iade matematiği: en yakın slot mu / tüm kalanlar mı;
+admin override tasarımı; müşteri linkinde kısmi seans seçimi eklenecek mi) kullanıcıyla
+konuşmada netleşince buraya kararla birlikte yeni bir bölüm eklenecek, sonra kod değişikliği
+yapılacak.
+
+## Karar — İade matematiği NETLEŞTİ + no-show senaryosu doğrulandı (2026-07-26)
+
+Kullanıcının birebir mesajı (netleştirme):
+```
+öncelikle iptal politikasındaki 3 gün yerine 72 saat ifadesini yaz
+sonra eğer çoklu seçim yapmış müşteri sadece bir seansını iptal edecekse ve bu en yakın-ilk seans
+ise en yakın seansa 72 saatten az kalmışsa %50 iade, ilk değil de 2., 3. veya X. seans ise 72 saat
+kuralı devreye girer ve %100 iade alır (ya da müşteri herhangi bir seansını iptal linkinden iptal
+etmeden seansa gelmedi ve doğal olarak Çiğdem de bu seans ile alakalı not tutmadı ise gerekli
+mesaj sadece çiğdem'in google sheet'ine bu seans için not tutulmadı mesajı gider ve kişiye de
+sonraki seansın bilgilendirme mesajı gider ve müşteri bu seansın parasını iptal etmediği için
+iade alamaz), Netleşmesi gereken tek matematik noktası'ın da anlaşılmayacak bir nokta yok aslında
+kişi 1. seansını tutup diğer seansları iptal etmek istediğinde eğer iptal etmek istediği seansa
+72 saatten az kalmışsa iptal ettiği seansın %50'si iade edilir, çoklu iptalde de diyelim ki çoklu
+seans iptal edecek 72 saatten az kalan kaç seans varsa %50'si kesilir 72 saatten uzun olanlar
+%100 iade edilir. Bu durum ne zaman gerçekleşir, en son seans seçiminde müşteri içinde bulunduğu
+haftada istediği güne ve istediği sayıda seans seçebilir demiştik, bu nedenle bugüne 3 seans ya da
+bugüne extra seans yarına 2 seans ertesi gün 72 saatten daha kısa süreye yine seans seçerse ve
+bunlardan kaç tane iptal ederse 72 saatten az kuralı nedeniyle hepsinin %50'si kesilir eğer
+içlerinden 72 saatten uzun zaman olanlar varsa onların da hepsinin %100'ü iade edilir.
+```
+
+**Nihai kural (uygulanacak, `lib/refund.ts`'de mevcut "hep en yakın seansa göre tek oran" mantığının
+yerine geçecek):** İptal edilmek istenen HER seans, kendi başlangıç saatine göre BAĞIMSIZ
+değerlendirilir — seansın booking içindeki sırası (1., 2., 3., X.) hesaba katılmaz. O seansa ≥72
+saat varsa %100 iade, <72 saat varsa %50 iade. Birden fazla seans aynı anda iptal edilirse her biri
+kendi süresine göre ayrı ayrı hesaplanır (biri %100 biri %50 olabilir aynı işlemde). Bu, önceki
+"en yakın kalan seansa göre TEK oran tüm kalanlara uygulanır" kuralının (2026-07-23 kararı) yerini
+alıyor — o kural artık YANLIŞ, değiştirilecek.
+
+**No-show senaryosu — kod zaten bunu yapıyor, YENİ İŞ GEREKMİYOR:** Müşteri iptal linkini hiç
+kullanmadan seansa gelmez ve Çiğdem o seans için not girmezse, mevcut `lib/notes.ts`
+(`closeOutSessionNote`, hem panelin manuel "Ekle" butonundan hem `scheduled.ts`'in 23:59 cron
+fallback'ından çağrılıyor) zaten tam istenen şeyi yapıyor: not alanına varsayılan
+`"Bu seansta not alınmadı."` yazılıyor (Sheets'e, Çiğdem'in göreceği yer), son seans değilse
+müşteriye bir sonraki randevunun bilgilendirme WhatsApp'ı gidiyor, ve hiçbir Stripe/iade işlemi
+tetiklenmiyor (bu akış iade koduna hiç dokunmuyor, dolayısıyla müşteri o seansın parasını iade
+alamıyor — istenen tam olarak bu). Doğrulandı, ek geliştirme yok.
+
+**Ayrıca yapıldı:** `booking.html`'deki iptal politikası metni (EN+TR) "3 gün/3 days" → "72 saat/72
+hours" olarak güncellendi, ayrıca metin artık "bir sonraki seansınızdan" yerine "her seans kendi
+süresine göre değerlendirilir" diyor (yukarıdaki per-seans kuralla tutarlı olsun diye).
+
+**Hâlâ AÇIK / henüz uygulanmadı:** (1) `refund.ts`'in yukarıdaki per-seans kurala göre yeniden
+yazılması, (2) müşterinin kendi linkinden kısmi seans seçimi (checkbox'lı iki adımlı akış, önceki
+bölümde tasarımı var), (3) panelde Çiğdem'in override'lı manuel iptali, (4) WhatsApp iptal
+şablonuna iade detayı parametresi + Sheets'e "iptal WhatsApp'ı gönderildi" guard sütunu.
+
+## Uygulandı — per-seans iade kuralı YAZILDI + 72 saat altı %0'a değişti + Çiğdem'in override'lı manuel iptali (2026-07-26)
+
+Yukarıdaki "hâlâ açık" listesinden (1) ve (3) tamamlandı; kullanıcının iki ek talimatı da bu
+oturumda birebir uygulandı:
+
+**Politika değişikliği (kullanıcı talimatı, birebir):** "Bu arada 72 saatten kısa kalan
+iptallerde %50 iade yerine tüm paranın kesilmesini yapacağız." → `lib/refund.ts`'de `computeRefund`
+artık <72 saat için `rate = 0` (önceden 0.5) kullanıyor: ≥72 saat = %100 iade, <72 saat = **%0 iade
+(tam kesinti)**. Per-seans bağımsız değerlendirme (bir önceki karardan) korunuyor — hâlâ her seans
+kendi süresine göre ayrı hesaplanıyor, sadece <72h dalındaki oran 0.5'ten 0'a indi. `booking.html`
+EN+TR iptal politikası metni "yarısı iade edilir" → "iade yapılmaz" olarak güncellendi.
+`test/cancel.spec.ts`'deki ilgili beklentiler (4 test) yeni %0 kuralına göre düzeltildi.
+
+**Çiğdem'in override'lı manuel iptali (kullanıcı talimatı, birebir):** "Çiğdemin override lı manuel
+iptaline müşterinin ağır hastalık, ölüm, doğum gibi ekstrem koşullar (bunları sen ekle) için bir ok
+tuşu ile seçip iptalini yapıp ve % oranını da 0'dan 100'e kadar ... değişen seçenekler ile
+belirleyip iptal etmesini sağlayacak düzenlemeyi yap." →
+- `config.ts`'e `CANCELLATION_OVERRIDE_REASONS` eklendi: Ağır hastalık, Vefat, Doğum, Kaza/Hastane
+  yatışı, Ailevi acil durum, Diğer (kullanıcı "bunları sen ekle" dediği için ek 3 seçenek —
+  ölüm/hastalık/doğum dışındakiler — benim eklediğim, gerekirse değiştirilebilir).
+- `lib/refund.ts`'e `computeOverrideRefund(row, now, refundPercent)` eklendi: otomatik 72 saat
+  kuralını uygulamaz, Çiğdem'in seçtiği % oranını kalan TÜM seanslara eşit uygular (tek bir karar,
+  seans bazlı değil — extrem durumlarda mantıklı olan bu).
+- **Varsayım (kullanıcıya sorulmadı, oto-modda karar verildi):** "% oranını 0'dan 100'e kadar 2'şer
+  5'er değişen seçenekler" ifadesindeki "2'şer 5'er" belirsizdi — **5'er artan** (%0, %5, %10, ...,
+  %100 = 21 seçenek) olarak uygulandı, çünkü "5'er" daha standart bir UI adımı ve mesajın geri
+  kalanı ("0'dan 100'e kadar") tek bir artış birimini işaret ediyor. Farklı istenirse
+  `panel.html`'deki `for (var pct = 100; pct >= 0; pct -= 5)` döngüsü değiştirilir.
+- Para/Takvim/Sheets/WhatsApp mekaniği (`cancel.ts`'nin POST /cancel'i ile AYNI kod) tek bir yerde
+  toplandı: yeni `lib/cancellation.ts`'deki `performCancellation()` — Stripe iadesi, Calendar
+  event silme, Sheets kaydı (cancellationReason/stripeRefundId/refundPercent/refundAmount/
+  cancelledAt + seans sütunlarını boşaltma), müşteri+Çiğdem WhatsApp'ı. Hem `routes/cancel.ts`
+  (müşteri linki, otomatik hesap) hem yeni `routes/panel.ts::handlePanelCancel` (Çiğdem'in
+  override'ı) bu TEK fonksiyonu çağırıyor — CLAUDE.md'nin "paylaşılan mantık lib/'de, tekrarlanmaz"
+  kuralı.
+- Yeni route: `POST /panel/cancel` (`index.ts`'e eklendi, `requirePanelAuth` ile korunuyor).
+  Body: `{ stripeSessionId, refundPercent (0-100, 5'in katı), reason (yukarıdaki listeden), 
+  reasonDetail (sadece reason='Diğer' ise zorunlu) }`. Zaten iptal edilmişse 409.
+- `panel.html`: danışan arama listesindeki her (iptal edilmemiş) danışan satırına "İptal Et"
+  butonu eklendi → tıklanınca neden (select) + "Diğer" için açıklama kutusu + %0-100 arası iade
+  oranı (select) + onay ile `POST /panel/cancel` çağıran bir panel açılıyor.
+- `test/panel.spec.ts`'e 5 yeni test eklendi (`POST /panel/cancel` bloğu): override'ın otomatik
+  <72h politikasını görmezden geldiğini, 'Diğer' için açıklama zorunluluğunu, %5 katı olmayan
+  oranın reddini, geçersiz nedenin reddini, zaten-iptal-edilmiş 409'unu doğruluyor.
+- Doğrulama: `npx tsc --noEmit` temiz, `npx prettier --check` temiz, `npx vitest run` → 16 dosya,
+  114/114 test yeşil.
+
+**Hâlâ AÇIK:** müşterinin kendi linkinden kısmi (tek tek) seans seçimi hâlâ yok (cancel.html hâlâ
+"kalan tüm seansları birden iptal et" — bu ayrı, daha büyük bir iş olarak bekliyor), WhatsApp iptal
+şablonuna iade detay parametresi eklenmedi, Sheets'e "iptal WhatsApp'ı gönderildi" guard sütunu
+eklenmedi, `iptal_onay_danisan`/`iptal_bildirimi_selen` şablonları hâlâ Meta'ya onaylatılmadı.
+
+## Canlı test oturumu + panel override'a kısmi (seans bazlı) seçim eklendi (2026-07-26/27)
+
+**Canlı test (gerçek test hesapları üzerinde, wrangler dev + stripe listen + python http.server):**
+- `computeRefund`'ın per-seans/%0-altı-72-saat matematiği gerçek bir kayıt üzerinde (Serap, 4
+  seans) `GET /cancel` önizlemesiyle doğrulandı: 1. seansa ~11 saat kalmış → %0, diğer 3 seans
+  uzakta → %100 her biri → toplam %75 (£450/£600). Elle hesapla birebir eşleşti.
+- `POST /cancel` (müşteri linki) Serap üzerinde gerçek Stripe test-mode iadesi + Calendar event
+  silme + Sheets yazımı ile uçtan uca çalıştı (£450, %75). WhatsApp gönderimi 401 ile başarısız
+  oldu ama izolasyon sayesinde asıl işlem (iade/Sheets) yine de 200 OK ile tamamlandı — tasarlanan
+  davranış tam olarak bu.
+- `POST /panel/cancel` (Çiğdem override) Eva Kursun üzerinde otomatik hesabın vereceği %100'ü
+  bilerek %40'a düşürerek test edildi (£560/£1400) — override'ın otomatik politikayı gerçekten
+  görmezden geldiği kanıtlandı.
+- İki yeni gerçek test rezervasyonu booking.html + Stripe test kartıyla (4242...) oluşturuldu:
+  "Engin" (1 seans) ve "Selen" (3 seans, art arda hafta kuralı doğru işledi). `stripe listen
+  --forward-to localhost:8787/webhook/stripe` ile webhook forwarding kuruldu, mevcut
+  `STRIPE_WEBHOOK_SECRET` ile CLI'ın ürettiği secret birebir eşleşti (aynı hesap/cihaz için
+  deterministik).
+
+**Bulunan ve düzeltilen gerçek bug (panel.html):** Kullanıcı Engin'i panelden başarıyla iptal
+ettikten sonra Selen'i iptal etmeye çalıştığında istek hiç sunucuya gitmedi — sunucu logunda
+Selen'in ID'siyle ilgili tek bir `panel/cancel` çağrısı yoktu, ama sonda bağlantısız bir `409
+Conflict` vardı. Kök neden: başarılı bir iptalden sonra `cancelBox` kapanmıyor ve `cancelTarget`
+sıfırlanmıyordu — kullanıcı yeni bir işlem yaptığını sanırken aslında hâlâ açık duran ESKİ
+(Engin'in) hedefine istek gönderdi, o zaten iptal edildiği için sessizce 409 aldı, Selen'e hiç
+dokunulmadı. Düzeltme: başarılı/409 sonrası `cancelTarget = null`; `openSession` ve picker'ı yeniden
+açma da artık `cancelBox`'ı kapatıp sıfırlıyor (aynı anda yalnızca bir aksiyon paneli açık kalıyor).
+"İptal Et" butonu da artık kırmızı ve kendi satırında (`.sess.cancel-trigger`) — seans
+kutucuklarıyla karışmasın diye.
+
+**Kullanıcının fark ettiği tasarım eksiği (birebir): "Selen'in altındaki iptal kutusuna bastığımda
+üstte görünen 3 seanstan hangisini iptal edeceği konusunda insanın kafası karışıyor... belki
+Çiğdem kişinin 2. seansını da iptal etmek istedi ya da 3.'yü, ya da 1 ve 3'ü... her bir seansı tek
+tek iptal etmek zorunda mı, yoksa 1'den fazla seansı seçip iptal edebiliyor mu?"** → Gerçekten
+eksikti: panel override'ı o ana kadar HER ZAMAN kalan TÜM seansları tek seferde iptal ediyordu,
+hangi seans(lar)ın iptal edileceğini seçme imkânı yoktu. Bu tamamen düzeltildi:
+- `lib/refund.ts`'deki `computeOverrideRefund` artık opsiyonel `onlyIndexes: number[]` parametresi
+  alıyor — verilirse sadece o seanslara uygulanıyor, verilmezse (eski davranış) hepsine.
+- `POST /panel/cancel` artık `{ stripeSessionId, sessionIndexes: number[], refundPercent, reason,
+  reasonDetail? }` bekliyor — `sessionIndexes` seçilenler. Seçilen seanslardan biri artık geçerli
+  (gelecekte/aktif) değilse 400 döner (sessizce yoksaymıyor).
+- `lib/cancellation.ts`'deki `performCancellation`'a `markBookingCancelled?: boolean` eklendi:
+  seçilen seanslar rezervasyondaki TÜM kalan seanslara eşitse `cancelledAt` yazılıyor (rezervasyon
+  tamamen kapandı), değilse (kısmi iptal) `cancelledAt` YAZILMIYOR — booking hâlâ aktif sayılıyor,
+  kalan seanslar için hatırlatma/not akışı (scheduled.ts, panel/pending) normal çalışmaya devam
+  ediyor.
+- Aynı yerde ikinci bir gerçek bug daha bulundu ve düzeltildi: WhatsApp iptal onay mesajı randevu
+  tarihi olarak HER ZAMAN `row.appointmentStartUtc` (1. seans) gösteriyordu — kısmi iptalde 2. ya
+  da 3. seans iptal edilse bile mesaj yanlışlıkla 1. seansın tarihini söylüyordu. Artık iptal
+  edilen seansların en erkenini (`params.remaining[0].startUtc`) kullanıyor.
+- `panel.html`: "İptal Et" butonuna basınca artık o danışanın o an aktif TÜM seansları checkbox
+  listesi olarak açılıyor, HİÇBİRİ varsayılan olarak işaretli değil (yanlışlıkla "hepsi iptal
+  olacak" hissi/riski kalmasın diye bilerek böyle), onay metni kaç/hangi seansın iptal edileceğini
+  açıkça söylüyor ("X. seansı" / "N seansı (1, 3)").
+- `test/panel.spec.ts`'e 5 yeni test: kısmi iptal (session 2/3'ün dokunulmadığını + cancelledAt'ın
+  boş kaldığını + WhatsApp mesajının doğru seansın tarihini içerdiğini doğruluyor), tam iptal
+  (hepsi seçilince cancelledAt yazılıyor), boş sessionIndexes reddi, geçersiz/artık-yaşamayan
+  sessionIndex reddi. Gerçek kullanıcı testinde de (Selen'in 1. seansı seçilip iptal edilmesi, 2.
+  ve 3. dokunulmadan kalması) birebir doğrulandı.
+- Doğrulama: `npx tsc --noEmit` temiz, `npx prettier --check` temiz, `npx vitest run` → 16 dosya,
+  **118/118 test yeşil**.
+
+**WhatsApp altyapısı bulgusu — engelleyici:** `.dev.vars`'taki `WHATSAPP_ACCESS_TOKEN`'ın
+25 Temmuz 2026 14:00 (PDT)'te süresi dolduğu doğrudan Graph API'ye sorularak (gerçek istekle)
+doğrulandı (`error_subcode: 463`, "Session has expired"). Bu SADECE mesaj göndermeyi değil, yeni
+bir WhatsApp şablonu oluşturup Meta'ya göndermeyi de engelliyor (ikisi de aynı token'ı kullanıyor).
+Token yenilenmeden (Meta Business/Developer panelinden) ne mevcut şablonlar gönderilebilir ne
+`iptal_onay_danisan`/`iptal_bildirimi_selen` oluşturulabilir.
+
+**Taslak şablon metinleri (kullanıcı onayı bekleniyor, henüz Meta'ya GÖNDERİLMEDİ):**
+- `iptal_onay_danisan` (müşteriye, {{1}}=isim {{2}}=randevu tarihi {{3}}=iade tutarı): "Hi {{1}},
+  your Talk and Heal session on {{2}} has been cancelled. A refund of {{3}} has been processed to
+  your original payment method — please allow a few days for it to appear, depending on your
+  bank. If you have any questions, feel free to reach out."
+- `iptal_bildirimi_selen` (Çiğdem'e, aynı 3 parametre): "Cancellation: {{1}}'s session on {{2}} has
+  been cancelled. Refund issued: {{3}}."
+- Diğer onaylı şablonlar gibi İngilizce (proje `WHATSAPP_TEMPLATE_LANGUAGE='en'` kullanıyor, sadece
+  şablon adları Türkçe) — kategori muhtemelen UTILITY (işlemsel bildirim, pazarlama değil).
+
+**Sonraki adım:** (1) kullanıcı taslak metinleri onaylasın ya da değiştirsin, (2) WhatsApp token'ı
+yenilensin, (3) ikisi tamamlanınca Graph API'nin `message_templates` uç noktasına gönderilip Meta
+onayına sunulacak (kod değişikliği değil, tek seferlik bir API çağrısı).
+
+## Çözüldü — WhatsApp şablonları zaten varmış + 2 yeni gerçek bug bulunup düzeltildi (2026-07-27)
+
+**Token yenilendi:** Kullanıcı Meta'dan yeni bir `WHATSAPP_ACCESS_TOKEN` oluşturup verdi, `.dev.vars`'a
+yazıldı (değer sohbete hiç yazdırılmadı, sadece dosyaya işlendi). Graph API'ye gerçek bir istekle
+doğrulandı: eski token'ın 25 Temmuz 14:00 (PDT)'te süresi dolmuştu, yenisi çalışıyor (test numarası
+`+1 555-157-0699` bilgileri başarıyla döndü).
+
+**Bulgu — bir önceki bölümdeki "şablonlar Meta'ya hiç gönderilmedi" varsayımı YANLIŞMIŞ:**
+Kullanıcı WhatsApp Yöneticisi'nde (business.facebook.com → WhatsApp Yöneticisi → Şablonları yönet)
+kontrol etti: `iptal_onay_danisan` VE `iptal_bildirimi_selen` ikisi de zaten **"Aktif - Kalite"**
+durumunda, English dilinde, son düzenleme 22 Temmuz 2026 — yani birileri (muhtemelen önceki bir
+oturumda) bunları zaten oluşturup onaylatmış, ama `config.ts`'deki "TBD, henüz Meta'ya
+gönderilmedi" yorumu hiç güncellenmemişti. Yeni şablon oluşturulmadı (buna hiç gerek yoktu),
+sadece `config.ts`'deki o yorum düzeltildi. **Taslak metinler kullanılmadı/gönderilmedi** — gerçek
+onaylı şablonların içeriği zaten kendine ait, olduğu gibi bırakıldı.
+
+**Gerçek bug #1 — Stripe idempotency key, kısmi iptalle çakışıyordu:** Selen'in 1. seansı panelden
+iptal edildikten sonra 2. seansını iptal etmeye çalışınca Stripe 500 hatası verdi: "Keys for
+idempotent requests can only be used with the same parameters they were first used with."
+Kök neden: `lib/cancellation.ts`'deki idempotency key sadece `cancel_${stripeSessionId}` idi —
+kısmi iptal öncesi (booking başına TEK iptal varken) bu doğruydu, ama artık AYNI rezervasyonda
+birden fazla AYRI iptal işlemi (farklı seanslar, farklı tutarlar) olabiliyor ve Stripe haklı olarak
+aynı key'in farklı parametrelerle tekrar kullanılmasını reddediyor. Düzeltme: key artık iptal
+edilen seans indekslerini de içeriyor (`cancel_${stripeSessionId}_s${sıralı-indeksler}`) — aynı
+işlemin gerçek bir tekrarı (double-click) hâlâ aynı key'i üretip idempotent kalıyor, ama farklı bir
+kısmi iptal (farklı seans seti) artık ayrı bir key alıp geçebiliyor. Canlı doğrulandı: Selen'in
+2. seansı bu düzeltmeden sonra başarıyla iptal edildi (£175, %100), 3. seansa dokunulmadı.
+
+**Gerçek bug #2 değil, beklenen kısıtlama:** WhatsApp gönderimi bu kez template/token hatası değil
+`(#131030) Recipient phone number not in allowed list` ile başarısız oldu — WhatsApp Cloud API test
+numaraları, WhatsApp Yöneticisi'nde önceden "alıcı listesine" eklenmemiş hiçbir numaraya mesaj
+gönderemiyor (Resend'in sandbox modunda sadece kendi doğrulanmış adresine göndermesiyle birebir
+aynı kısıtlama türü). Test numarasının alıcı listesi sayfası: WhatsApp Yöneticisi → Hesap Araçları
+→ Telefon numaraları → test numarası → alıcı listesi (5 numaraya kadar). Kullanıcıya kendi
+numarasını oraya eklemesi önerildi; henüz eklenip gerçek mesaj teslimatı uçtan uca doğrulanmadı.
+Para/Calendar/Sheets tarafı bu kısıtlamadan etkilenmiyor (izolasyon çalışıyor, doğrulandı).
+
+**Doğrulama:** `npx tsc --noEmit` temiz. (Bu turda kod değişikliği küçük — config.ts yorum +
+cancellation.ts idempotency key — mevcut 118 testi bozmadı, ayrıca yeni bir test eklenmedi çünkü
+mock Stripe stub'ı gerçek idempotency çakışmasını simüle etmiyor; bu, gerçek Stripe test-mode
+hesabına karşı canlı testle doğrulandı.)
+
+**Hâlâ AÇIK:** WhatsApp alıcı-izin-listesine gerçek bir test numarası eklenip uçtan uca mesaj
+teslimatı doğrulanmadı; müşterinin kendi linkinden kısmi seans seçimi hâlâ yok; Sheets'e "iptal
+WhatsApp'ı gönderildi" guard sütunu eklenmedi.
+
+## Kullanıcı isteği — iptal bilgilendirmesi (2026-07-27, birebir)
+
+> iptal ile ilgili bilgilendirme ve iptali yapabileceği link mail in içinde olsun, iptali
+> yapabileceği ile alakalı bilgilendirme de İptal Politikası kutusunun altında yer alan 'İptal veya
+> değişiklik için WhatsApp'tan yaz ya da help@talkandheal.co.uk adresine e-posta at.' yazısı yerine
+> 'İptal ve değişiklik için size gönderilen ilk bilgilendirme mailinizi kontrol edin.' gibi bir
+> uyarı yazsın. Yani iptal ile alakalı ilk bilgiyi İptal Politikası kutusunun en altın okumuş olsun
+> ve ödeme yaptıktan sonra kendisine gidem mailin içinde hem iptal şartlarını okusun hem de iptal
+> işlemini yapabileceği ve tıkladığında web sitesinde iptal işlemini yapabileceği bölüme
+> yönlendirildiği iptal işlem linki olsun ve bu şekilde hem iptal bilgilendirmelerini hem de iptali
+> yapabileceği linklere ulaşmış olsun. İptal yaptığında da hem kendisi hem de çiğdem sırasıyla
+> whatsapp şablon mesajıyla ve çiğdem de google sheet te iptal eden kişiye ait satıra ait sütun
+> altında iptal bilgilendirme verisini alsın.
+
+Bundan önceki turda tespit edilen bağlam: müşteri onay maili (iptal linkli olan) Resend sandbox
+kısıtlaması yüzünden gerçek müşteri adresine hiç ulaşmıyor (403), WhatsApp müşteri onayı da token
+süresi dolduğu için (401) ulaşmıyor — ikisi de altyapı/config sorunu, kod eksikliği değil. Bu
+maddenin kapsamı: (1) booking.html'deki İptal Politikası kutusunun alt metnini değiştirmek, (2)
+onay mailine iptal şartları metnini + linki eklemek (link zaten kodda vardı, şartlar metni yoktu),
+(3) iptal ANINDA (panelden ya da müşterinin linkinden) hem müşteriye hem Çiğdem'e WhatsApp şablon
+mesajı + Sheets'e iptal verisi yazılması — bunun ne kadarının zaten mevcut olduğu kontrol edilecek.
+
+## Uygulandı — müşterinin kendi /cancel linkinden kısmi seans seçimi (2026-07-27)
+
+Kullanıcı gerçek bir çoklu seans rezervasyonu (booking.html + test kart) oluşturup `/cancel`
+linkiyle test etti; önceden link her zaman kalan TÜM seansları tek seferde iptal ediyordu (panelde
+zaten çözülmüş olan sorunun aynısı, müşteri tarafında henüz yoktu). Yapılan değişiklik:
+- `lib/refund.ts`: `computeRefund` artık opsiyonel `onlyIndexes: number[]` alıyor (panelin
+  `computeOverrideRefund`'ıyla aynı desen) — verilmezse eskisi gibi tüm kalan seanslar.
+- `routes/cancel.ts`: `GET /cancel` artık `sessions=1,2` query param'ı destekliyor (önizleme için,
+  her zaman TÜM kalan seansları `sessions: [{index, startUtc}]` olarak da döndürüyor ki checkbox
+  listesi kurulabilsin), `POST /cancel` artık body'de opsiyonel `sessionIndexes` alıyor; seçilenler
+  booking'in kalan TÜM seansına eşit değilse `markBookingCancelled: false` (kısmi iptal, booking
+  hâlâ aktif).
+- `cancel.html`: birden fazla kalan seans varsa checkbox listesi gösteriliyor (hepsi varsayılan
+  işaretli — tek tıkla "hepsi iptal" eski davranışını korumak için), seçim değiştikçe iade
+  önizlemesi tekrar hesaplanıyor. Tek seans kalan bir rezervasyonda checkbox hiç gösterilmiyor, eski
+  tek-butonlu akış aynen çalışıyor.
+- `test/cancel.spec.ts`'e 3 yeni test (17/17 yeşil), tam suite 124/124 yeşil, `tsc`/`prettier` temiz.
+- **Canlı testte bulunan gerçek bug (2026-07-27):** checkbox'lar hızlıca değiştirilince önizleme
+  metni (İade tutarı/yüzdesi) ESKİ seçime ait değeri göstermeye devam ediyordu — art arda atılan
+  `GET /cancel?sessions=...` istekleri sırasız dönebiliyor, yavaş/eski cevap yeni cevabın üzerine
+  yazıyordu (ekran görüntüsüyle doğrulandı: önizleme "£150 (%25)" gösterirken gerçek iptal "£0"
+  hesapladı — checkbox'lar POST anında doğru okunduğu için GERÇEK iptal doğruydu, sadece EKRANDAKİ
+  önizleme metni yanlıştı). Düzeltme: `fetchPreview`'a artan bir `requestSeq` sayacı eklendi, sadece
+  EN SON atılan isteğin cevabı ekranı güncelliyor, daha eski bir cevap gelirse sessizce yok
+  sayılıyor.
+
+## Kullanıcı isteği — Sheets'te kısmi iptalde seans sayısı düşümü + mirror sekme taşıma (2026-07-27, birebir)
+
+> sana randevu iptal edildikten sonra ekranda yazması gereken uyarıların neler olduğunu bir önceki
+> promptta yazmıştım, promptta istediklerim ile senin yazdıkların ikinci görselde, karşılaştır ve
+> istediğim şekilde düzelt. Ayrıc çoklu seans iptalinde toplam 6 seanstan 3 tanesini iptal
+> ettiğimde google sheet teki Toplam Seans Sayısı'ndan iptal edilen seans sayısı düşülerek kalan
+> sena sayısı Topalm Seans Sayısı olarak işlensin, Topalm seans sayısı na göre de bu kişiye ait 6
+> seans sayfasındaki bilgileri otomatik olarak silinip 3 seans sayfasına taşınsın. Sonra tekrar
+> çoklu seans randevusu oluşturup tekrar iptal işlemi yapacağız bu denemelerle eksiklerimizi
+> tamamlaya tamamlaya ilerleyeceğiz.
+
+**Durum — madde 1 uygulandı, madde 2 hâlâ netleştirme bekliyor:**
+- Kullanıcı "önceki prompt"u yeniden birebir yazdı (paralel oturuma gerek kalmadan): iptal
+  başarılı olduğunca `cancel.html`'de `#introSection` (eyebrow+başlık+"Aşağıdan randevunu...")
+  VE önizleme kutusu tamamen gizleniyor, ekranda SADECE tek bir bilgilendirme cümlesi kalıyor:
+  iade tutarı+yüzdesi, 72 saat kuralının (≥72s tam iade / <72s iade yok) bu tutarı nasıl
+  belirlediğinin açıklaması, ve iadenin bankaya yansıma süresinin bankanın kendi sürecine bağlı
+  olduğu + soruların için doğrudan bankayla iletişime geçilmesi gerektiği notu (EN+TR).
+- Seans sayısı düşümü + "6 Seans" sekmesinden "3 Seans" sekmesine taşıma: `lib/sheets.ts`'teki
+  mirror mimarisi şu an sekme adını SADECE `row.sessionCount`'tan türetiyor
+  (`mirrorTabName`, satır 169-172) ve hiçbir "bir sekmeden diğerine taşı/sil" fonksiyonu yok.
+  Kalan seanslar bitişik değilse (örn. 6 seanstan 2. ve 4.'ü iptal edilirse kalan 1,3,5,6 olur)
+  "3 seans sayfasına taşı" isteğinin seans 1..3 sütunlarına YENİDEN NUMARALANMASINI mı gerektirdiği
+  (Calendar event ID'leri, hatırlatma guard sütunları, panel not sütunları hep index'e göre
+  isimlendirilmiş — bkz. CLAUDE.md session-prefix convention) yoksa sadece sekme adı/etiketinin mi
+  değişmesi gerektiği netleşmedi. Canlı Sheet verisini etkileyen, geri almasa zor bir şema
+  değişikliği olduğu için kullanıcıyla netleştirilmeden kodlanmayacak.
+
+**Karar (2026-07-27) — en riskli kısım (sekme taşıma/yeniden numaralandırma) YAPILMAYACAK:**
+Kullanıcıya risk anlatıldı (bitişik olmayan iptallerde `sessionCount`'u düşürmek 5./6. gibi hâlâ
+aktif seansları hatırlatma/panel/mirror-sekme aramalarından tamamen görünmez kılar), kullanıcı en
+risksiz seçeneği onayladı. Uygulanan: `sessionCount`/mirror-sekme mantığına hiç dokunulmadı, yanına
+salt-görüntüleme amaçlı yeni bir sütun eklendi:
+- `config.ts`: `SHEET_COLUMNS`'a `activeSessionCount` eklendi (`refundAmount`'tan hemen sonra,
+  `SESSION_NOTE_COLUMNS`'tan önce — son sütun harfi `BQ`→`BR` kaydı), etiketi "Aktif Seans Sayısı".
+- `stripe-webhook.ts`: yeni bir booking satırı yazılırken `activeSessionCount` başlangıçta
+  `sessionCount` ile aynı değere set ediliyor.
+- `lib/cancellation.ts`'in `performCancellation`'ı artık her iptalde
+  `sessionRefs(row).length - params.remaining.length` hesaplayıp `activeSessionCount`'ı
+  güncelliyor — bu SADECE görüntüleme amaçlı, `sessionCount`'a ya da hiçbir okuma mantığına
+  dokunmuyor.
+- `test/sheets.spec.ts`'teki son-sütun-harfi testleri (`BQ`→`BR`) ve `test/cancel.spec.ts`'teki
+  writeCell sayıları (+1 yeni yazım, mirror'lı testte +2) güncellendi, yeni bir assertion da
+  `activeSessionCount`'ın gerçek değerini (3 seanstan 1'i iptal → 2) doğruluyor. `tsc`/`prettier`
+  temiz, tam suite 124/124 yeşil.
+

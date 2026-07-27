@@ -1,7 +1,9 @@
-import { MAX_SESSION_COUNT, getSessionMinutes, type SessionType } from '../config';
+import { MAX_SESSION_COUNT, CANCELLATION_OVERRIDE_REASONS, SUMMARY_MAX_LENGTH, getSessionMinutes, type SessionType } from '../config';
 import { signPanelToken, isPanelAuthorized } from '../lib/panel-auth';
 import { findRowBySessionId, getRow, getAllRows, writeCellMirrored } from '../lib/sheets';
 import { sessionFields, bookedSessionIndexes, nextBookedSession, closeOutSessionNote } from '../lib/notes';
+import { computeOverrideRefund } from '../lib/refund';
+import { performCancellation } from '../lib/cancellation';
 import { errorResponse, json } from '../lib/http';
 import type { Env, SheetRow } from '../types';
 
@@ -142,6 +144,64 @@ export async function handlePanelNotePost(request: Request, env: Env): Promise<R
 	const value = mode === 'append' && existing ? `${existing}\n${text}` : text;
 	await writeCellMirrored(env, row, rowNumber, noteField, value.slice(0, NOTE_MAX_LENGTH));
 	return json({ ok: true }, request);
+}
+
+// POST /panel/cancel { stripeSessionId, sessionIndexes, refundPercent, reason, reasonDetail? } —
+// Çiğdem's manual override cancellation, for extreme circumstances (bereavement, severe illness,
+// etc.) where the automatic <72h policy shouldn't apply. Unlike the client's own /cancel link
+// (which always cancels every remaining session), Çiğdem picks BOTH which specific session(s) of
+// the booking to cancel (`sessionIndexes`, e.g. just session 2 of 3) AND the refund percentage by
+// hand (0-100, 5% steps) instead of the automatic policy-tier calculation. Shares the actual
+// cancellation mechanics (Stripe refund + Calendar delete + Sheets record + WhatsApp) with
+// routes/cancel.ts via lib/cancellation.ts — see that module for why the two triggers use one
+// implementation, and why `markBookingCancelled` must be false for a partial (not-all-sessions)
+// cancellation.
+export async function handlePanelCancel(request: Request, env: Env): Promise<Response> {
+	let body: { stripeSessionId?: unknown; sessionIndexes?: unknown; refundPercent?: unknown; reason?: unknown; reasonDetail?: unknown };
+	try {
+		body = (await request.json()) as typeof body;
+	} catch {
+		return errorResponse(request, 400, 'Geçersiz istek.');
+	}
+	const stripeSessionId = String(body.stripeSessionId ?? '');
+	const sessionIndexes = Array.isArray(body.sessionIndexes) ? body.sessionIndexes.map(Number) : [];
+	const refundPercent = Number(body.refundPercent);
+	const reason = String(body.reason ?? '');
+	const reasonDetail = String(body.reasonDetail ?? '').slice(0, SUMMARY_MAX_LENGTH);
+	if (!stripeSessionId) return errorResponse(request, 400, 'Geçersiz kayıt.');
+	if (!sessionIndexes.length || sessionIndexes.some((i) => !Number.isInteger(i) || i < 1 || i > MAX_SESSION_COUNT)) {
+		return errorResponse(request, 400, 'En az bir geçerli seans seçilmeli.');
+	}
+	if (!Number.isInteger(refundPercent) || refundPercent < 0 || refundPercent > 100 || refundPercent % 5 !== 0) {
+		return errorResponse(request, 400, "İade oranı 0-100 arası, 5'in katı olmalı.");
+	}
+	if (!(CANCELLATION_OVERRIDE_REASONS as readonly string[]).includes(reason)) {
+		return errorResponse(request, 400, 'Geçersiz iptal nedeni.');
+	}
+	if (reason === 'Diğer' && !reasonDetail) {
+		return errorResponse(request, 400, "'Diğer' seçildiğinde açıklama gerekli.");
+	}
+
+	const found = await loadRow(env, stripeSessionId);
+	if (!found) return errorResponse(request, 404, 'Kayıt bulunamadı.');
+	const { rowNumber, row } = found;
+	if (row.cancelledAt) return errorResponse(request, 409, 'Bu randevu zaten iptal edilmiş.');
+
+	const now = new Date();
+	const allRemainingCount = computeOverrideRefund(row, now, refundPercent).remaining.length;
+	const chosen = computeOverrideRefund(row, now, refundPercent, sessionIndexes);
+	if (chosen.remaining.length !== sessionIndexes.length) {
+		return errorResponse(request, 400, 'Seçilen seanslardan biri artık geçerli değil (belki zaten iptal edilmiş ya da geçmişte kalmış).');
+	}
+
+	await performCancellation(env, rowNumber, row, stripeSessionId, {
+		remaining: chosen.remaining,
+		refundGBP: chosen.refundGBP,
+		refundPercent: chosen.refundPercent,
+		reason: reason === 'Diğer' ? `Diğer: ${reasonDetail}` : reason,
+		markBookingCancelled: chosen.remaining.length === allRemainingCount,
+	});
+	return json({ cancelled: true, refundGBP: chosen.refundGBP, refundPercent: chosen.refundPercent }, request);
 }
 
 // Shared guard: every /panel/* route except login must carry a valid Bearer token.

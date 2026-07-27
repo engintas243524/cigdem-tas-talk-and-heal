@@ -89,10 +89,29 @@ describe('POST /booking validation', () => {
 			expect(response.status).toBe(400);
 		});
 
-		it('rejects two sessions in the same week', async () => {
-			// Monday and Wednesday of the same week.
+		it('allows multiple different day/times in the first (reference) week', async () => {
+			// Monday and Wednesday of the same (first) week — now a valid pattern-establishing week.
 			const response = await postBooking({ slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-05T09:00:00.000Z'] });
+			expect(response.status).not.toBe(400);
+		});
+
+		it('rejects a duplicate day/time within the same week', async () => {
+			const response = await postBooking({ slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-03T09:00:00.000Z'] });
 			expect(response.status).toBe(400);
+		});
+
+		it('rejects a later week using a pattern not established in the first week', async () => {
+			// Week 1: Monday 09:00 only. Week 2: Wednesday 09:00 — not in the reference pattern set.
+			const response = await postBooking({ slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-12T09:00:00.000Z'] });
+			expect(response.status).toBe(400);
+		});
+
+		it("allows a later week to reuse a subset of the first week's patterns", async () => {
+			// Week 1: Mon 09:00 + Wed 09:00. Week 2: only Wed 09:00 — a subset, should be fine.
+			const response = await postBooking({
+				slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-05T09:00:00.000Z', '2026-08-12T09:00:00.000Z'],
+			});
+			expect(response.status).not.toBe(400);
 		});
 
 		it('rejects sessions with more than a week between them', async () => {

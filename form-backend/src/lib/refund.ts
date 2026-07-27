@@ -29,39 +29,67 @@ export interface RefundResult {
 	refundPercent: number; // effective % of the remaining sessions' value being refunded
 }
 
-// Re-decided rule (2026-07-23, replaces Session 13's separate "3+ remaining" special case): the
-// booking-time `policyTier` column is stale by the time a cancellation actually happens — it was
-// computed once, from how far the FIRST session was from the moment of booking, not from how much
-// notice the client is giving NOW. A 2-session package booked 10 days out locks in tier 72 (100%
-// refund) at booking time; if the client attends session 1 and then cancels session 2 with only 11
-// hours' notice, reading the stale tier would still refund 100% — a real revenue leak. Every
-// cancellation now recomputes the tier from hours-until-the-soonest-still-upcoming session, and
-// applies ONE resulting rate (72 => 100%, 48 or 24 => 50%) to every remaining session, no matter
-// how many remain (1, 2, 3, or more) — same formula every time, re-evaluated at each cancellation.
+// Re-decided rule (2026-07-26, replaces the 2026-07-23 "one rate for every remaining session"
+// version): each session being cancelled is judged on ITS OWN notice period, independent of its
+// position in the booking (1st, 2nd, ... Xth) and independent of every other remaining session.
+// A booking can mix days freely (client picks any day/count within the current week), so it's
+// normal for one remaining session to be 10 hours out and another 10 days out in the same
+// cancellation — each gets its own tier, not one shared rate.
 //
+// Same day, second policy change: under 72 hours' notice now forfeits the FULL amount (0% refund),
+// not 50% — a session cancelled with under 72h notice earns no refund at all. >=72h notice still
+// refunds 100%. (The 48/24 sub-tiers in policy.ts no longer affect the refund rate at all — both
+// collapse to 0%, same as they collapsed to 50% before — but the tier plumbing is left in place
+// since nothing else needs removing it.)
+function remainingSessions(row: SheetRow, now: Date): SessionRef[] {
+	return sessionRefs(row)
+		.filter((r) => new Date(r.startUtc).getTime() > now.getTime())
+		.sort((a, b) => new Date(a.startUtc).getTime() - new Date(b.startUtc).getTime());
+}
+
 // UNIT PRICE NOTE: `unitPriceGBP` is `row.priceGBP` as-stored, which booking.ts sets to the
 // per-session price (Checkout charges `unit_amount = priceGBP*100` with `quantity = sessionCount`,
 // so the real per-session amount charged IS priceGBP, and the total charged is priceGBP*sessionCount).
 // It is deliberately NOT `priceGBP / sessionCount`. See the builder summary for why this diverges
 // from the task's literal wording — using the divided value would under-refund multi-session
 // bookings by a factor of sessionCount.
-export function computeRefund(row: SheetRow, now: Date): RefundResult {
+// `onlyIndexes` (2026-07-27): the client's own /cancel link now lets them pick which remaining
+// session(s) to cancel, same as Çiğdem's panel override below — omitted or empty still means
+// "every remaining session" so a single-session booking needs no caller changes.
+export function computeRefund(row: SheetRow, now: Date, onlyIndexes?: number[]): RefundResult {
 	const unitPriceGBP = Number(row.priceGBP) || 0;
-
-	const remaining = sessionRefs(row)
-		.filter((r) => new Date(r.startUtc).getTime() > now.getTime())
-		.sort((a, b) => new Date(a.startUtc).getTime() - new Date(b.startUtc).getTime());
-
-	const n = remaining.length;
-	let refundGBP = 0;
-	if (n >= 1) {
-		const hoursUntilSoonest = (new Date(remaining[0].startUtc).getTime() - now.getTime()) / 3_600_000;
-		const tier = computePolicyTier(hoursUntilSoonest);
-		const rate = tier === 72 ? 1 : 0.5; // 48 & 24 both => 50%
-		refundGBP = n * unitPriceGBP * rate;
+	let remaining = remainingSessions(row, now);
+	if (onlyIndexes && onlyIndexes.length > 0) {
+		const chosen = new Set(onlyIndexes);
+		remaining = remaining.filter((r) => chosen.has(r.index));
 	}
 
-	const remainingValue = n * unitPriceGBP;
+	let refundGBP = 0;
+	for (const session of remaining) {
+		const hoursUntil = (new Date(session.startUtc).getTime() - now.getTime()) / 3_600_000;
+		const tier = computePolicyTier(hoursUntil);
+		const rate = tier === 72 ? 1 : 0; // under 72h => full forfeiture
+		refundGBP += unitPriceGBP * rate;
+	}
+
+	const remainingValue = remaining.length * unitPriceGBP;
 	const refundPercent = remainingValue > 0 ? Math.round((refundGBP / remainingValue) * 100) : 0;
+	return { remaining, refundGBP, refundPence: Math.round(refundGBP * 100), refundPercent };
+}
+
+// Çiğdem's manual override (panel), for extreme circumstances (bereavement, severe illness, etc.):
+// she picks the refund percentage by hand instead of the automatic policy-tier calculation above,
+// and picks WHICH remaining session(s) it applies to (2026-07-27: a booking can have several
+// upcoming sessions and only some of them may need cancelling — found live, the panel used to
+// always cancel every remaining session in one shot, which is not what "cancel just session 2"
+// needs). `onlyIndexes` omitted or empty means "every remaining session", same as before.
+export function computeOverrideRefund(row: SheetRow, now: Date, refundPercent: number, onlyIndexes?: number[]): RefundResult {
+	const unitPriceGBP = Number(row.priceGBP) || 0;
+	let remaining = remainingSessions(row, now);
+	if (onlyIndexes && onlyIndexes.length > 0) {
+		const chosen = new Set(onlyIndexes);
+		remaining = remaining.filter((r) => chosen.has(r.index));
+	}
+	const refundGBP = remaining.length * unitPriceGBP * (refundPercent / 100);
 	return { remaining, refundGBP, refundPence: Math.round(refundGBP * 100), refundPercent };
 }

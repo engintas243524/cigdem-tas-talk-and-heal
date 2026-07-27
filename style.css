@@ -550,6 +550,7 @@ nav.primary.open{
   text-align:center;
   padding:var(--space-2);
 }
+img.zig-photo{ object-fit:cover; border:0; padding:0; }
 .zig-graphic, .zig-front-card{
   position:absolute;
   aspect-ratio:3/4;
@@ -580,6 +581,17 @@ nav.primary.open{
   color:var(--ink);
   margin-top:var(--space-2);
 }
+.services-note{
+  max-width:70ch;
+  margin-top:var(--space-3);
+}
+.services-note h3{ font-size:1.15rem; font-weight:500; margin-bottom:var(--space-1); }
+.services-note p{
+  font-size:0.95rem;
+  font-weight:300;
+  color:var(--ink);
+  margin:0;
+}
 
 /* ---------- Sections ---------- */
 section{ padding-block:var(--space-7); }
@@ -598,32 +610,97 @@ section.alt{ background:var(--surface); }
   color:var(--ink);
   margin:0 0 var(--space-2);
 }
+.page-back{
+  display:inline-flex; align-items:center; gap:0.3rem;
+  margin-bottom:var(--space-3);
+  font-family:var(--font-body); font-weight:300; font-size:0.85rem;
+  color:var(--taupe); text-decoration:none;
+}
+.page-back:hover{ color:var(--brand); }
+.page-back .arrow{ font-family:var(--font-display); font-size:1.05rem; line-height:1; }
 
 /* About */
-.about-grid{ display:grid; gap:var(--space-5); }
-.about-grid img{
-  border-radius:var(--radius-md);
-  width:100%;
-  max-width:clamp(15rem, 10rem + 12vw, 26rem);
+.about-story{ margin-top:calc(-1 * var(--space-3)); }
+.about-story h2{
+  font-family:var(--font-display); font-weight:400;
+  font-size:clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
+  margin:0 0 var(--space-3);
 }
-.quote-block{
-  border-left:0.1875rem solid var(--brand);
-  padding-left:var(--space-3);
-  font-family:var(--font-display);
-  font-style:italic;
-  font-size:1.15rem;
-  color:var(--ink);
-  margin-block:var(--space-4);
+/* Approach's group headings (Evidence-Based Approaches, Deep Exploration..., Embodied
+   Modalities) sit in separate .story-block siblings with no shared flex/grid gap between them
+   -- without this, the second/third block lands flush against the previous block's last
+   paragraph (about-story p:last-child has margin-bottom:0). Margin goes on .story-block itself,
+   not just its h2: each grid item (.story-text and .story-photo) establishes its own formatting
+   context, so a margin-top on the h2 alone stays contained inside .story-text and never pushes
+   the top-aligned .story-photo column down with it -- the photo would stay flush against the
+   previous block regardless of how much top margin the heading got. Scoped to a block that
+   follows another .story-block so the very first block on the page stays flush under the
+   page-intro eyebrow. */
+.story-block + .story-block{ margin-top:var(--space-5); }
+.about-story h3{
+  font-family:var(--font-display); font-weight:300;
+  font-size:clamp(1.15rem, 1rem + 0.5vw, 1.5rem);
+  margin:var(--space-5) 0 var(--space-2);
 }
-.about-grid{ max-width:70ch; }
-@media (min-width:900px){
-  .about-grid:has(img, .photo-placeholder){ grid-template-columns:clamp(15rem, 10rem + 12vw, 26rem) 1fr; align-items:start; max-width:none; }
+.about-story p{ margin:0 0 var(--space-2); }
+.about-story p:last-child{ margin-bottom:0; }
+.about-story-closing{ font-style:italic; color:var(--taupe); }
+
+/* Every column below is minmax(), not a fixed size -- text can narrow down to 20rem and the
+   photo down to 9rem, so the grid actually negotiates the available width instead of an
+   all-or-nothing breakpoint hiding photos entirely on anything narrower than some guessed
+   desktop width (that guess was wrong twice: once needing 1300/1750px when the real viewport
+   was well under that). .story-photo is centered in its own track (justify-self:center)
+   instead of hugging whichever side the track sizes itself to. An earlier absolute-positioned
+   version let the photo overlap and obscure the text; a dedicated grid column can't overlap
+   by construction. Below 1100px the block stacks to a single column (text, then photo) --
+   the photo stays visible there too, its clamp() width shrinking fluidly with the viewport
+   (phone/tablet/laptop/desktop) instead of a hard breakpoint hiding it outright. */
+.story-text{ width:100%; max-width:70ch; }
+.story-block{ display:grid; grid-template-columns:1fr; gap:var(--space-4); align-items:start; }
+.story-photo{ width:100%; max-width:clamp(11rem, 55vw, 22.1rem); justify-self:center; }
+/* Square-ish source photos would need heavy left/right cropping to fit the
+   narrow portrait column above (object-fit:cover was rejected on purpose) --
+   widening the frame instead keeps the whole photo uncropped. */
+.story-photo--wide{ max-width:clamp(18rem, 34vw, 30rem); }
+@media (min-width:1100px){
+  .story-block--right{ grid-template-columns:minmax(20rem, 70ch) minmax(9rem, 1fr); }
+  .story-block--right .story-text{ grid-column:1; grid-row:1; }
+  .story-block--right .story-photo{ display:flex; grid-column:2; grid-row:1; justify-self:center; }
+  /* "An Introduction to Two Worlds" + "A New Chapter" block: photo centered top-to-bottom
+     against the full paragraph group's height, not pinned to the first heading like the
+     right-hand block above -- align-self:center overrides .story-block's align-items:start. */
+  .story-block--left{ grid-template-columns:minmax(9rem, 1fr) minmax(20rem, 70ch); }
+  .story-block--left .story-text{ grid-column:2; grid-row:1; }
+  .story-block--left .story-photo{ display:flex; grid-column:1; grid-row:1; justify-self:center; align-self:center; }
+  /* "The Essence of the Space & My Tools" + "The Timeless Journey" + the closing line: reuses
+     --right's two-column grid (so the single remaining photo gets the *whole* gutter track to
+     itself and can reach the same max-width as the other single-photo blocks above, instead of
+     splitting that space with a second photo) plus this centering modifier, since --right on
+     its own stays pinned to the block's first heading like "Where the Story Begins" does. */
+  .story-block--center-v .story-photo{ align-self:center; }
 }
 
 /* Services */
+.services-section{ position:relative; overflow:hidden; }
+.services-bg{
+  position:absolute;
+  inset:-3rem;
+  top:0;
+  z-index:0;
+  background-image:url("assets/accent-beach-sand.png");
+  background-size:100% 100%;
+  background-repeat:no-repeat;
+  background-position:top center;
+  opacity:0.55;
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 14%);
+  mask-image:linear-gradient(to bottom, transparent 0%, #000 14%);
+}
 .services-grid{
+  position:relative; z-index:1;
   display:grid; gap:var(--space-3);
   grid-template-columns:1fr;
+  align-items:start;
 }
 @media (min-width:640px){
   .services-grid{ grid-template-columns:repeat(2,1fr); }
@@ -632,29 +709,52 @@ section.alt{ background:var(--surface); }
   .services-grid{ grid-template-columns:repeat(3,1fr); }
 }
 .service-card{
-  background:var(--paper);
-  border:0.0625rem solid var(--border);
   border-radius:var(--radius-sm);
   padding:var(--space-3);
+  cursor:pointer;
+  transition:transform 0.15s ease, box-shadow 0.2s ease;
 }
-section.alt .service-card{ background:var(--paper); }
-.service-card h2{ font-size:1.05rem; font-weight:300; margin-bottom:var(--space-1); }
-.service-card p{ color:var(--ink); font-size:0.92rem; font-weight:300; margin:0; }
+.service-card:hover{ transform:translateY(-0.15rem); }
+.service-card:focus-visible{ outline:0.125rem solid var(--ink); outline-offset:0.125rem; }
+.service-card h3{ font-size:1.05rem; font-weight:400; margin:0 0 var(--space-1); color:#3d3733; }
+.service-card h4{ font-size:0.92rem; font-weight:500; margin:var(--space-2) 0 0.2rem; color:#3d3733; }
+.service-card p{ color:#3d3733; font-size:0.92rem; font-weight:300; margin:0; }
+.service-card p + p{ margin-top:var(--space-2); }
+.service-card h3 + p, .service-card h4 + p{ margin-top:0; }
 
-/* Approach */
-.approach-list{
-  display:grid; gap:var(--space-4);
+/* Collapsed: clipped to a ~3-line preview with the card's own colour fading
+   the text out at the bottom (mask, not an overlay -- so it fades into
+   whatever gradient that specific card uses). Read more expands max-height
+   to reveal the rest; ceiling is a generous fixed value since content length
+   varies per card (the standard max-height-transition trick). */
+.service-more{
+  max-height:4.6em;
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image:linear-gradient(to bottom, #000 60%, transparent 100%);
+  transition:max-height 0.4s ease;
 }
-@media (min-width:820px){
-  .approach-list{ grid-template-columns:repeat(3,1fr); }
+.service-card.is-open .service-more{
+  max-height:60rem;
+  -webkit-mask-image:none;
+  mask-image:none;
 }
-.approach-item h2{
-  font-size:1.05rem;
-  font-weight:300;
-  color:var(--ink);
-  margin-bottom:var(--space-1);
+.service-hint{
+  display:block;
+  margin-top:var(--space-2);
+  font-size:0.8rem;
+  font-weight:400;
+  text-decoration:underline;
+  color:#3d3733;
 }
-.approach-item p{ color:var(--ink); font-size:0.92rem; font-weight:300; }
+.service-hint .hint-less{ display:none; }
+.service-card.is-open .service-hint .hint-more{ display:none; }
+.service-card.is-open .service-hint .hint-less{ display:inline; }
+.service-card--1{ background:linear-gradient(145deg, #FFBE91, color-mix(in srgb, #FFBE91 65%, white)); box-shadow:0 1rem 2rem -1.1rem color-mix(in srgb, #FFBE91 70%, transparent); }
+.service-card--2{ background:linear-gradient(145deg, #FFDDB0, color-mix(in srgb, #FFDDB0 65%, white)); box-shadow:0 1rem 2rem -1.1rem color-mix(in srgb, #FFDDB0 70%, transparent); }
+.service-card--3{ background:linear-gradient(145deg, #FFFCE1, color-mix(in srgb, #FFFCE1 65%, white)); box-shadow:0 1rem 2rem -1.1rem color-mix(in srgb, #FFFCE1 70%, transparent); }
+.service-card--4{ background:linear-gradient(145deg, #CCFFEE, color-mix(in srgb, #CCFFEE 65%, white)); box-shadow:0 1rem 2rem -1.1rem color-mix(in srgb, #CCFFEE 70%, transparent); }
+.service-card--5{ background:linear-gradient(145deg, #CFEBFF, color-mix(in srgb, #CFEBFF 65%, white)); box-shadow:0 1rem 2rem -1.1rem color-mix(in srgb, #CFEBFF 70%, transparent); }
 
 /* Cost & Info */
 .info-list{ display:grid; gap:var(--space-5); max-width:70ch; }
@@ -673,12 +773,6 @@ section.alt .service-card{ background:var(--paper); }
   margin-left:var(--space-1);
 }
 
-/* Contact */
-.contact-grid{ display:grid; gap:var(--space-5); }
-@media (min-width:900px){
-  .contact-grid{ grid-template-columns:1fr 1fr; }
-}
-form.contact{ display:grid; gap:var(--space-2); }
 .field{ display:grid; gap:0.375rem; }
 .field label{ font-size:0.85rem; font-weight:300; }
 .field input, .field textarea{
@@ -712,10 +806,6 @@ form.contact{ display:grid; gap:var(--space-2); }
 .mic-wave span:nth-child(4){ animation-delay:0.45s; }
 @keyframes mic-wave-bounce{ 0%, 100%{ height:0.25rem; } 50%{ height:1rem; } }
 
-.contact-info{ display:grid; gap:var(--space-3); align-content:start; }
-.contact-info a{ text-decoration:underline; text-underline-offset:0.1875rem; }
-.contact-info h2{ font-size:1.05rem; font-weight:300; }
-.contact-info p{ font-weight:300; }
 .mode-pill span{ font-weight:300; }
 
 /* Booking */
@@ -917,15 +1007,6 @@ form.contact{ display:grid; gap:var(--space-2); }
 .recurring-note{ margin-top:var(--space-2); }
 .recurring-note p{ margin:0.35rem 0 0; font-size:0.78rem; font-weight:300; color:var(--taupe); }
 .recurring-note p:first-child{ margin-top:0; }
-
-.whatsapp-link{
-  display:inline-flex; align-items:center; gap:0.5rem;
-  margin-top:var(--space-2);
-  font-weight:300;
-  text-decoration:none;
-  color:var(--sage);
-}
-.whatsapp-link svg{ width:1.375rem; height:1.375rem; flex:none; }
 
 footer.site{
   background:linear-gradient(to bottom, var(--paper), var(--surface));

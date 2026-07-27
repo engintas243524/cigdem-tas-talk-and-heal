@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=53">
+<link rel="stylesheet" href="style.css?v=87">
 <style>
   /* Standalone internal tool — deliberately does NOT carry the public site header/footer/nav.
      Reuses only style.css's colour + font variables (Jost). Turkish-only (Çiğdem's own tool). */
@@ -17,7 +17,7 @@
   h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; margin: 0 0 var(--space-3); }
   .hidden { display: none !important; }
   label { display: block; font-size: 0.85rem; font-weight: 500; margin: 0 0 0.4rem; color: var(--taupe); }
-  input[type="text"], input[type="password"], input[type="search"], textarea {
+  input[type="text"], input[type="password"], input[type="search"], select, textarea {
     width: 100%; box-sizing: border-box; font-family: var(--font-body); font-size: 1rem;
     color: var(--ink); background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-sm); padding: 0.7rem 0.85rem;
@@ -55,7 +55,11 @@
   .sess { display: inline-block; margin: 0.35rem 0.4rem 0 0; padding: 0.3rem 0.6rem; font-size: 0.8rem;
     border: 1px solid var(--border); border-radius: var(--radius-xs); background: var(--paper); }
   .sess.done { opacity: 0.55; }
+  .sess.cancel-trigger { display: block; margin-top: 0.5rem; color: #fff; background: var(--brand-deep); border-color: var(--brand-deep); font-weight: 500; }
   .muted { color: var(--taupe); font-size: 0.82rem; }
+  .cancel-box { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.85rem; margin-top: var(--space-2); }
+  #cancelSessionsList label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 400; color: var(--ink); margin: 0.3rem 0; }
+  #cancelSessionsList input[type="checkbox"] { width: auto; }
 </style>
 </head>
 <body>
@@ -95,6 +99,39 @@
     </div>
 
     <p class="context-line" id="contextLine"></p>
+
+    <!-- Manual override cancellation (extreme circumstances) — triggered from the client picker's "İptal Et" button -->
+    <div class="cancel-box hidden" id="cancelBox">
+      <p class="context-line" id="cancelContextLine"></p>
+      <div class="field">
+        <label>İptal edilecek seans(lar) — en az birini seçin</label>
+        <div id="cancelSessionsList"></div>
+      </div>
+      <div class="field">
+        <label for="cancelReason">İptal nedeni</label>
+        <select id="cancelReason">
+          <option value="Ağır hastalık">Ağır hastalık</option>
+          <option value="Vefat">Vefat</option>
+          <option value="Doğum">Doğum</option>
+          <option value="Kaza / Hastane yatışı">Kaza / Hastane yatışı</option>
+          <option value="Ailevi acil durum">Ailevi acil durum</option>
+          <option value="Diğer">Diğer</option>
+        </select>
+      </div>
+      <div class="field hidden" id="cancelDetailField">
+        <label for="cancelDetail">Açıklama</label>
+        <input type="text" id="cancelDetail" maxlength="450" />
+      </div>
+      <div class="field">
+        <label for="cancelPercent">İade oranı</label>
+        <select id="cancelPercent"></select>
+      </div>
+      <div class="actions">
+        <button class="btn-secondary" id="cancelCloseBtn" type="button">Vazgeç</button>
+        <button class="btn-primary" id="cancelConfirmBtn" type="button">Randevuyu İptal Et</button>
+      </div>
+      <div class="status" id="cancelStatus"></div>
+    </div>
 
     <div class="field">
       <label for="noteBox">Not</label>
@@ -217,6 +254,7 @@
 
   el('pickBtn').addEventListener('click', function () {
     if (!picker.classList.contains('hidden')) { picker.classList.add('hidden'); return; }
+    cancelBox.classList.add('hidden'); cancelTarget = null; // reopening the picker leaves any open cancel panel behind
     picker.classList.remove('hidden');
     authFetch('/panel/clients').then(function (r) { return r.json(); }).then(function (data) {
       allClients = data.clients || []; renderClients('');
@@ -243,11 +281,92 @@
         b.addEventListener('click', function () { openSession(c.stripeSessionId, s.sessionIndex); });
         div.appendChild(b);
       });
+      if (!c.cancelled) {
+        var cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'sess cancel-trigger';
+        cancelBtn.textContent = 'İptal Et';
+        cancelBtn.addEventListener('click', function () { openCancel(c.stripeSessionId, c.name, c.sessions); });
+        div.appendChild(cancelBtn);
+      }
       clientList.appendChild(div);
     });
   }
 
+  // --- Manual override cancellation (extreme circumstances) ---
+  var cancelBox = el('cancelBox'), cancelContextLine = el('cancelContextLine'), cancelSessionsList = el('cancelSessionsList');
+  var cancelReason = el('cancelReason'), cancelDetailField = el('cancelDetailField'), cancelDetail = el('cancelDetail');
+  var cancelPercent = el('cancelPercent'), cancelStatus = el('cancelStatus');
+  var cancelTarget = null; // { stripeSessionId, name }
+
+  for (var pct = 100; pct >= 0; pct -= 5) {
+    var pctOpt = document.createElement('option');
+    pctOpt.value = String(pct); pctOpt.textContent = '%' + pct;
+    cancelPercent.appendChild(pctOpt);
+  }
+
+  cancelReason.addEventListener('change', function () {
+    cancelDetailField.classList.toggle('hidden', cancelReason.value !== 'Diğer');
+  });
+
+  // `sessions` is that client's currently-active (not yet cancelled) sessions from /panel/clients.
+  // Nothing is pre-checked — Çiğdem must explicitly pick which one(s) to cancel; a booking with
+  // several upcoming sessions must never look like "confirm = cancel everything".
+  function openCancel(stripeSessionId, name, sessions) {
+    cancelTarget = { stripeSessionId: stripeSessionId, name: name };
+    cancelContextLine.textContent = name + ' — iptal edilecek seansı/seansları seçin';
+    cancelSessionsList.innerHTML = '';
+    (sessions || []).forEach(function (s) {
+      var label = document.createElement('label');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = String(s.sessionIndex);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(s.sessionIndex + '. seans' + (s.startUtc ? ' — ' + fmt(s.startUtc) : '')));
+      cancelSessionsList.appendChild(label);
+    });
+    cancelReason.value = 'Ağır hastalık';
+    cancelDetailField.classList.add('hidden');
+    cancelDetail.value = '';
+    cancelPercent.value = '100';
+    setStatus(cancelStatus, '', '');
+    picker.classList.add('hidden');
+    cancelBox.classList.remove('hidden');
+  }
+
+  el('cancelCloseBtn').addEventListener('click', function () {
+    cancelBox.classList.add('hidden');
+    cancelTarget = null;
+  });
+
+  el('cancelConfirmBtn').addEventListener('click', function () {
+    if (!cancelTarget) return;
+    var indexes = Array.prototype.slice.call(cancelSessionsList.querySelectorAll('input:checked')).map(function (cb) { return Number(cb.value); });
+    if (!indexes.length) { setStatus(cancelStatus, 'En az bir seans seçmelisiniz.', 'err'); return; }
+    var reason = cancelReason.value;
+    var detail = cancelDetail.value.trim();
+    if (reason === 'Diğer' && !detail) { setStatus(cancelStatus, "'Diğer' seçildiğinde açıklama girmelisiniz.", 'err'); return; }
+    var percent = Number(cancelPercent.value);
+    var which = indexes.length === 1 ? (indexes[0] + '. seansı') : (indexes.length + ' seansı (' + indexes.join(', ') + ')');
+    if (!confirm(cancelTarget.name + ' için ' + which + ' iptal edilecek ve %' + percent + ' iade yapılacak. Devam edilsin mi?')) return;
+    setStatus(cancelStatus, 'İşleniyor...', '');
+    authFetch('/panel/cancel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stripeSessionId: cancelTarget.stripeSessionId, sessionIndexes: indexes, refundPercent: percent, reason: reason, reasonDetail: detail })
+    }).then(function (r) {
+      if (r.status === 409) { setStatus(cancelStatus, 'Bu randevu zaten iptal edilmiş.', 'err'); cancelTarget = null; return; }
+      if (!r.ok) throw new Error('fail');
+      return r.json().then(function (data) {
+        // Clear the target so a stray extra click on this (now stale) confirm button can never
+        // silently re-fire against the just-cancelled booking — found live: a leftover open box
+        // from a prior cancellation kept re-submitting to the old target instead of the new one.
+        cancelTarget = null;
+        setStatus(cancelStatus, 'İptal edildi. İade: £' + data.refundGBP + ' (%' + data.refundPercent + ').', 'ok');
+      });
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(cancelStatus, 'İptal edilemedi.', 'err'); });
+  });
+
   function openSession(stripeSessionId, sessionIndex) {
+    cancelBox.classList.add('hidden'); cancelTarget = null; // only one action panel visible at a time
     setStatus(panelStatus, 'Yükleniyor...', '');
     authFetch('/panel/note?stripeSessionId=' + encodeURIComponent(stripeSessionId) + '&sessionIndex=' + sessionIndex)
       .then(function (r) { return r.json(); })

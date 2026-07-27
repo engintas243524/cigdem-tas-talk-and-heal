@@ -173,14 +173,47 @@ function mirrorTabName(row: SheetRow): string | null {
 
 // Create the tab if it isn't there yet (checked against live spreadsheet metadata). Only tabs a
 // real multi-session booking actually uses are created — not all of "2 Seans".."10 Seans" up front.
+//
+// Also grows the tab's grid to fit SHEET_COLUMNS.length, for both a brand-new tab and one that
+// already existed with fewer grid columns than the schema currently has (found live, 2026-07-27:
+// SHEET_COLUMNS grew by one column, but an already-mirrored tab's grid stayed at its old width —
+// ensureHeaderRow's PUT past the grid edge doesn't auto-expand it, Sheets just 400s. That throw was
+// swallowed by writeCellMirrored's/mirrorBookingRow's isolation, so a mirror row silently never got
+// created/updated at all — this had gone unnoticed because failures there only ever log, never
+// surface). Same fix covers the same class of bug the next time SHEET_COLUMNS grows.
 async function ensureSheetTab(env: Env, tab: string): Promise<void> {
-	const response = await sheetsFetch(env, '?fields=sheets.properties.title');
-	const data = (await response.json()) as { sheets?: { properties?: { title?: string } }[] };
-	if ((data.sheets ?? []).some((s) => s.properties?.title === tab)) return;
-	await sheetsFetch(env, ':batchUpdate', {
-		method: 'POST',
-		body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab } } }] }),
-	});
+	const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title,gridProperties.columnCount)');
+	const data = (await response.json()) as {
+		sheets?: { properties?: { sheetId?: number; title?: string; gridProperties?: { columnCount?: number } } }[];
+	};
+	const existing = (data.sheets ?? []).find((s) => s.properties?.title === tab);
+
+	if (!existing) {
+		await sheetsFetch(env, ':batchUpdate', {
+			method: 'POST',
+			body: JSON.stringify({
+				requests: [{ addSheet: { properties: { title: tab, gridProperties: { columnCount: SHEET_COLUMNS.length } } } }],
+			}),
+		});
+		return;
+	}
+
+	const columnCount = existing.properties?.gridProperties?.columnCount ?? 0;
+	if (columnCount < SHEET_COLUMNS.length && existing.properties?.sheetId !== undefined) {
+		await sheetsFetch(env, ':batchUpdate', {
+			method: 'POST',
+			body: JSON.stringify({
+				requests: [
+					{
+						updateSheetProperties: {
+							properties: { sheetId: existing.properties.sheetId, gridProperties: { columnCount: SHEET_COLUMNS.length } },
+							fields: 'gridProperties.columnCount',
+						},
+					},
+				],
+			}),
+		});
+	}
 }
 
 // Ensure the mirror tab exists + is headered + holds a row for this stripeSessionId (appending a

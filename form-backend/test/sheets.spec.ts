@@ -37,14 +37,14 @@ describe('appendBookingRow', () => {
 		const calls = stubApis('Sayfa1!A2');
 		const rowNumber = await appendBookingRow(env, { ...emptySheetRow(), stripeSessionId: 'cs_test_1' });
 		expect(rowNumber).toBe(2);
-		expect(calls.some((c) => c.method === 'PUT' && c.url.includes('B2%3ABQ2'))).toBe(true);
+		expect(calls.some((c) => c.method === 'PUT' && c.url.includes('B2%3ABR2'))).toBe(true);
 	});
 
 	it('parses the row number from a multi-cell updatedRange ("Sayfa1!A7:A7", any later row)', async () => {
 		const calls = stubApis('Sayfa1!A7:A7');
 		const rowNumber = await appendBookingRow(env, { ...emptySheetRow(), stripeSessionId: 'cs_test_2' });
 		expect(rowNumber).toBe(7);
-		expect(calls.some((c) => c.method === 'PUT' && c.url.includes('B7%3ABQ7'))).toBe(true);
+		expect(calls.some((c) => c.method === 'PUT' && c.url.includes('B7%3ABR7'))).toBe(true);
 	});
 
 	it('throws (rather than silently writing to a garbled row) if updatedRange is missing', async () => {

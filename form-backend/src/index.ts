@@ -11,6 +11,7 @@ import {
 	handlePanelClients,
 	handlePanelNoteGet,
 	handlePanelNotePost,
+	handlePanelCancel,
 	requirePanelAuth,
 } from './routes/panel';
 import { runReminderSweep, runSessionNoteFallback } from './scheduled';
@@ -56,6 +57,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handlePanelNoteGet(request, env);
 			case 'POST /panel/note':
 				return (await requirePanelAuth(request, env)) ?? handlePanelNotePost(request, env);
+			case 'POST /panel/cancel':
+				return (await requirePanelAuth(request, env)) ?? handlePanelCancel(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}

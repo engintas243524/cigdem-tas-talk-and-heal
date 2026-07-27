@@ -14,6 +14,7 @@ interface StubOptions {
 	tabExists?: boolean; // is the "{N} Seans" tab already present in spreadsheet metadata?
 	mirrorRowExists?: boolean; // does a row with this stripeSessionId already exist in the mirror tab?
 	failMetadata?: boolean; // force the metadata read (first mirror step) to 500
+	tabColumnCount?: number; // grid width Google reports for the existing tab (default: wide enough)
 }
 
 // Models exactly the Sheets endpoints writeCellMirrored touches, recording every non-oauth call.
@@ -30,10 +31,14 @@ function stubSheets(opts: StubOptions = {}) {
 			calls.push({ url, method, body: String(init?.body ?? '') });
 
 			// Spreadsheet metadata (ensureSheetTab) — the first mirror step.
-			if (url.includes('?fields=sheets.properties.title')) {
+			if (url.includes('fields=sheets.properties')) {
 				if (opts.failMetadata) return new Response('boom', { status: 500 });
-				const titles = ['Sayfa1', ...(opts.tabExists ? ['3 Seans'] : [])];
-				return new Response(JSON.stringify({ sheets: titles.map((title) => ({ properties: { title } })) }), { status: 200 });
+				const columnCount = opts.tabColumnCount ?? SHEET_COLUMNS.length;
+				const sheets = [
+					{ properties: { sheetId: 0, title: 'Sayfa1', gridProperties: { columnCount } } },
+					...(opts.tabExists ? [{ properties: { sheetId: 1, title: '3 Seans', gridProperties: { columnCount } } }] : []),
+				];
+				return new Response(JSON.stringify({ sheets }), { status: 200 });
 			}
 			// ensureHeaderRow read — return a full header so it never needs to PUT one.
 			if (method === 'GET' && url.includes('!A1:')) {
@@ -61,7 +66,7 @@ describe('writeCellMirrored — Madde 7 multi-session mirror', () => {
 		const calls = stubSheets();
 		await writeCellMirrored(env, makeRow('1'), 5, 'confirmationSentAt', '2026-08-01T00:00:00.000Z');
 		expect(has(calls, 'PUT', 'Sayfa1!')).toBe(true);
-		expect(calls.some((c) => c.url.includes('?fields=sheets.properties.title'))).toBe(false);
+		expect(calls.some((c) => c.url.includes('fields=sheets.properties'))).toBe(false);
 		expect(calls.some((c) => c.url.includes(':batchUpdate'))).toBe(false);
 		expect(calls.some((c) => c.url.includes('3 Seans'))).toBe(false);
 	});
@@ -86,6 +91,20 @@ describe('writeCellMirrored — Madde 7 multi-session mirror', () => {
 		expect(has(calls, 'PUT', '3 Seans!')).toBe(true);
 		expect(calls.some((c) => c.url.includes(':batchUpdate'))).toBe(false); // tab already there
 		expect(calls.some((c) => c.url.includes(':append'))).toBe(false); // row already there
+	});
+
+	it('sessionCount > 1, tab exists but its grid is narrower than SHEET_COLUMNS: grows the grid before writing', async () => {
+		// Regression for the 2026-07-27 bug: SHEET_COLUMNS grew by one column, but an already-mirrored
+		// tab's grid stayed at its old width. ensureHeaderRow's PUT past the grid edge doesn't
+		// auto-expand it — Sheets 400s, which writeCellMirrored's isolation swallowed, so the mirror
+		// row silently never got created/updated at all. ensureSheetTab must grow the grid first.
+		const calls = stubSheets({ tabExists: true, mirrorRowExists: true, tabColumnCount: SHEET_COLUMNS.length - 1 });
+		await writeCellMirrored(env, makeRow('3'), 5, 'cancelledAt', '2026-08-01T00:00:00.000Z');
+		const resize = calls.find((c) => c.url.includes(':batchUpdate') && c.body.includes('updateSheetProperties'));
+		expect(resize).toBeDefined();
+		expect(resize!.body).toContain(`"columnCount":${SHEET_COLUMNS.length}`);
+		// the mirror write itself still goes through, after the grid grows
+		expect(has(calls, 'PUT', '3 Seans!')).toBe(true);
 	});
 
 	it('mirror failure never breaks the authoritative Sayfa1 write', async () => {

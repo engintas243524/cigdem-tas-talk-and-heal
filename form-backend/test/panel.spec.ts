@@ -1,7 +1,7 @@
 import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import worker from '../src';
-import { handlePanelNotePost, handlePanelPending } from '../src/routes/panel';
+import { handlePanelNotePost, handlePanelPending, handlePanelCancel } from '../src/routes/panel';
 import { runSessionNoteFallback } from '../src/scheduled';
 import { signPanelToken } from '../src/lib/panel-auth';
 import { SHEET_COLUMNS } from '../src/config';
@@ -35,7 +35,7 @@ function letterToIndex(letters: string): number {
 // lock (409) and the cron guard-sharing testable end to end.
 function stubApis(rows: SheetRow[]) {
 	const store = rows;
-	const whatsapp: { to: string }[] = [];
+	const whatsapp: { to: string; bodyParams?: string[] }[] = [];
 	const puts: { column: string; rowNumber: number; value: string }[] = [];
 
 	const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -46,9 +46,18 @@ function stubApis(rows: SheetRow[]) {
 			return new Response(JSON.stringify({ access_token: 'fake', expires_in: 3600 }), { status: 200 });
 		}
 		if (url.includes('graph.facebook.com')) {
-			whatsapp.push({ to: JSON.parse(init!.body as string).to });
+			const parsed = JSON.parse(init!.body as string);
+			const bodyParams = parsed.template?.components?.[0]?.parameters?.map((p: { text: string }) => p.text);
+			whatsapp.push({ to: parsed.to, bodyParams });
 			return new Response('{}', { status: 200 });
 		}
+		if (url.includes('api.stripe.com/v1/checkout/sessions')) {
+			return new Response(JSON.stringify({ id: 'cs_1', payment_intent: 'pi_test_123' }), { status: 200 });
+		}
+		if (url.includes('api.stripe.com/v1/refunds')) {
+			return new Response(JSON.stringify({ id: 're_test_1' }), { status: 200 });
+		}
+		if (url.includes('/calendar/v3')) return new Response('{}', { status: 200 });
 		if (url.includes('sheets.googleapis.com')) {
 			const range = decodeURIComponent(url.split('/values/')[1].split('?')[0]);
 			if (method === 'PUT') {
@@ -238,6 +247,174 @@ describe('POST /panel/note', () => {
 	it('rejects an unknown mode with 400', async () => {
 		stubApis([makeRow({ stripeSessionId: 'cs_1', appointmentStartUtc: past(1) })]);
 		expect((await notePost({ stripeSessionId: 'cs_1', sessionIndex: 1, mode: 'delete', text: 'x' })).status).toBe(400);
+	});
+});
+
+// --- Çiğdem's manual override cancellation --------------------------------------------------
+
+function cancelPost(body: Record<string, unknown>) {
+	return handlePanelCancel(
+		new Request('http://example.com/panel/cancel', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		}),
+		testEnv,
+	);
+}
+
+describe('POST /panel/cancel (manual override)', () => {
+	it('applies the chosen refund percent uniformly, overriding the automatic <72h-forfeits policy', async () => {
+		const { store, whatsapp } = stubApis([
+			makeRow({
+				stripeSessionId: 'cs_1',
+				name: 'Ada',
+				phone: '447911123456',
+				sessionType: 'standard',
+				sessionMode: 'online',
+				clientTimeZone: 'Europe/London',
+				sessionCount: '1',
+				priceGBP: '120',
+				appointmentStartUtc: future(0.1), // ~2.4h out — would auto-forfeit fully
+			}),
+		]);
+
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1], refundPercent: 100, reason: 'Vefat' });
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { cancelled: boolean; refundGBP: number; refundPercent: number };
+		expect(data).toMatchObject({ cancelled: true, refundGBP: 120, refundPercent: 100 });
+		expect(store[0].cancellationReason).toBe('Vefat');
+		expect(store[0].refundAmount).toBe('120');
+		expect(store[0].cancelledAt).not.toBe(''); // the only session — cancelling it closes the whole booking
+		expect(whatsapp).toHaveLength(2); // client + Selen
+	});
+
+	it('partial: cancelling just session 2 of 3 leaves sessions 1 and 3 untouched and does not close the booking', async () => {
+		const session1Start = future(5);
+		const session2Start = future(12);
+		const session3Start = future(19);
+		const { store, whatsapp, puts } = stubApis([
+			makeRow({
+				stripeSessionId: 'cs_1',
+				name: 'Ada',
+				phone: '447911123456',
+				sessionType: 'standard',
+				sessionMode: 'online',
+				clientTimeZone: 'Europe/London',
+				sessionCount: '3',
+				priceGBP: '120',
+				appointmentStartUtc: session1Start,
+				session2StartUtc: session2Start,
+				session3StartUtc: session3Start,
+			}),
+		]);
+
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [2], refundPercent: 100, reason: 'Vefat' });
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { refundGBP: number; refundPercent: number };
+		expect(data).toMatchObject({ refundGBP: 120, refundPercent: 100 }); // just session 2's price
+
+		expect(store[0].appointmentStartUtc).not.toBe(''); // session 1 untouched
+		expect(store[0].session2StartUtc).toBe(''); // session 2 cleared
+		expect(store[0].session3StartUtc).not.toBe(''); // session 3 untouched
+		expect(store[0].cancelledAt).toBe(''); // booking still has live sessions — NOT fully cancelled
+		expect(puts.some((p) => p.column === 'cancelledAt')).toBe(false);
+
+		// The WhatsApp confirmation must quote session 2's date, not session 1's (found live: it
+		// used to always quote row.appointmentStartUtc regardless of which session was cancelled).
+		const fmt = (iso: string) =>
+			new Date(iso).toLocaleString('en-GB', { timeZone: 'Europe/London', dateStyle: 'medium', timeStyle: 'short' });
+		const clientMsg = whatsapp.find((w) => w.to === '447911123456');
+		expect(clientMsg?.bodyParams?.[1]).toBe(fmt(session2Start));
+		expect(clientMsg?.bodyParams?.[1]).not.toBe(fmt(session1Start));
+	});
+
+	it('full: cancelling every remaining session (3 of 3) does close the booking', async () => {
+		const { store, puts } = stubApis([
+			makeRow({
+				stripeSessionId: 'cs_1',
+				name: 'Ada',
+				phone: '447911123456',
+				sessionType: 'standard',
+				sessionMode: 'online',
+				clientTimeZone: 'Europe/London',
+				sessionCount: '3',
+				priceGBP: '120',
+				appointmentStartUtc: future(5),
+				session2StartUtc: future(12),
+				session3StartUtc: future(19),
+			}),
+		]);
+
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1, 2, 3], refundPercent: 100, reason: 'Vefat' });
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { refundGBP: number };
+		expect(data.refundGBP).toBe(360); // all 3 sessions
+
+		expect(store[0].appointmentStartUtc).toBe('');
+		expect(store[0].session2StartUtc).toBe('');
+		expect(store[0].session3StartUtc).toBe('');
+		expect(store[0].cancelledAt).not.toBe('');
+		expect(puts.some((p) => p.column === 'cancelledAt')).toBe(true);
+	});
+
+	it('rejects an empty sessionIndexes array', async () => {
+		stubApis([makeRow({ stripeSessionId: 'cs_1', appointmentStartUtc: future(5) })]);
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [], refundPercent: 50, reason: 'Vefat' });
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects a sessionIndex that is not actually a live session on this booking', async () => {
+		stubApis([makeRow({ stripeSessionId: 'cs_1', sessionCount: '1', appointmentStartUtc: future(5) })]);
+		// session 2 was never booked (sessionCount is 1) — must not silently no-op or partially apply.
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1, 2], refundPercent: 50, reason: 'Vefat' });
+		expect(response.status).toBe(400);
+	});
+
+	it("'Diger' (other) requires a typed detail, then stores it appended to the reason", async () => {
+		const { store } = stubApis([
+			makeRow({
+				stripeSessionId: 'cs_1',
+				name: 'Ada',
+				phone: '447911123456',
+				sessionType: 'standard',
+				sessionMode: 'online',
+				clientTimeZone: 'Europe/London',
+				sessionCount: '1',
+				priceGBP: '120',
+				appointmentStartUtc: future(5),
+			}),
+		]);
+
+		expect((await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1], refundPercent: 50, reason: 'Diğer' })).status).toBe(400);
+
+		const ok = await cancelPost({
+			stripeSessionId: 'cs_1',
+			sessionIndexes: [1],
+			refundPercent: 50,
+			reason: 'Diğer',
+			reasonDetail: 'Uçuş iptali',
+		});
+		expect(ok.status).toBe(200);
+		expect(store[0].cancellationReason).toBe('Diğer: Uçuş iptali');
+	});
+
+	it('rejects a refund percent that is not a multiple of 5', async () => {
+		stubApis([makeRow({ stripeSessionId: 'cs_1', appointmentStartUtc: future(5) })]);
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1], refundPercent: 42, reason: 'Vefat' });
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects an unlisted reason', async () => {
+		stubApis([makeRow({ stripeSessionId: 'cs_1', appointmentStartUtc: future(5) })]);
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1], refundPercent: 50, reason: 'Canım öyle istedi' });
+		expect(response.status).toBe(400);
+	});
+
+	it('409s on an already-cancelled booking', async () => {
+		stubApis([makeRow({ stripeSessionId: 'cs_1', appointmentStartUtc: future(5), cancelledAt: past(1) })]);
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1], refundPercent: 50, reason: 'Vefat' });
+		expect(response.status).toBe(409);
 	});
 });
 

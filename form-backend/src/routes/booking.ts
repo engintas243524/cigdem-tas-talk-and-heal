@@ -30,19 +30,57 @@ function weekStartKey(date: Date): string {
 	return monday.toISOString().slice(0, 10);
 }
 
-// Recurring/multi-session bookings must be exactly one slot per week, in consecutive weeks (no
-// skipped weeks) — the exact rule + wording the user specified for the booking-system-expansion
-// plan. Single-session bookings (length 1) skip this check entirely.
+// Weekday+hour identity (BUSINESS_HOURS' timezone) used to match a slot against the recurring
+// pattern set below — independent of which week it falls in.
+function patternKey(date: Date): string {
+	const { isoWeekday, hour } = getLocalDateParts(date, BUSINESS_HOURS.timeZone);
+	return `${isoWeekday}-${hour}`;
+}
+
+// Recurring/multi-session bookings establish their weekly pattern from the earliest ("reference")
+// week the client picks: any number of distinct weekday+hour patterns in that first week (even
+// several on the same day). Every later week may only reuse patterns from that set — a subset is
+// fine, the client isn't forced to repeat all of them — and consecutive weeks (Monday-of-week, in
+// BUSINESS_HOURS.timeZone) can't be more than 7 days apart. Generalizes the old "exactly one slot
+// per week, identical weekday+hour every week" rule to N weekly patterns. Single-session bookings
+// (length 1) skip this check entirely.
 function validateConsecutiveWeeks(slotStartUtcs: string[]): string | null {
 	if (slotStartUtcs.length <= 1) return null;
 
 	const sorted = [...slotStartUtcs].map((s) => new Date(s)).sort((a, b) => a.getTime() - b.getTime());
-	const weekKeys = sorted.map(weekStartKey);
-	if (new Set(weekKeys).size !== weekKeys.length) {
-		return 'Only one session per week is allowed for a recurring booking.';
+
+	const weekOrder: string[] = [];
+	const byWeek = new Map<string, Date[]>();
+	for (const d of sorted) {
+		const key = weekStartKey(d);
+		if (!byWeek.has(key)) {
+			byWeek.set(key, []);
+			weekOrder.push(key);
+		}
+		byWeek.get(key)!.push(d);
 	}
-	for (let i = 1; i < weekKeys.length; i++) {
-		const daysBetween = (new Date(weekKeys[i]).getTime() - new Date(weekKeys[i - 1]).getTime()) / 86_400_000;
+
+	const referenceSlots = byWeek.get(weekOrder[0])!;
+	const referencePatterns = new Set(referenceSlots.map(patternKey));
+	if (referencePatterns.size !== referenceSlots.length) {
+		return 'Duplicate day/time selected in the same week.';
+	}
+
+	for (let i = 1; i < weekOrder.length; i++) {
+		const weekSlots = byWeek.get(weekOrder[i])!;
+		const seen = new Set<string>();
+		for (const d of weekSlots) {
+			const key = patternKey(d);
+			if (!referencePatterns.has(key)) {
+				return 'Only day/times from your first week can be selected in later weeks.';
+			}
+			if (seen.has(key)) return 'Duplicate day/time selected in the same week.';
+			seen.add(key);
+		}
+	}
+
+	for (let i = 1; i < weekOrder.length; i++) {
+		const daysBetween = (new Date(weekOrder[i]).getTime() - new Date(weekOrder[i - 1]).getTime()) / 86_400_000;
 		if (daysBetween > 7) {
 			return 'Sessions cannot be more than a week apart — please adjust your session selections.';
 		}
