@@ -11,6 +11,7 @@ import {
 	handlePanelClients,
 	handlePanelNoteGet,
 	handlePanelNotePost,
+	handlePanelRefundPreview,
 	handlePanelCancel,
 	requirePanelAuth,
 } from './routes/panel';
@@ -57,6 +58,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handlePanelNoteGet(request, env);
 			case 'POST /panel/note':
 				return (await requirePanelAuth(request, env)) ?? handlePanelNotePost(request, env);
+			case 'GET /panel/refund-preview':
+				return (await requirePanelAuth(request, env)) ?? handlePanelRefundPreview(request, env);
 			case 'POST /panel/cancel':
 				return (await requirePanelAuth(request, env)) ?? handlePanelCancel(request, env);
 			default:

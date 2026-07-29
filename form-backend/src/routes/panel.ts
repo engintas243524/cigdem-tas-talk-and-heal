@@ -2,7 +2,7 @@ import { MAX_SESSION_COUNT, CANCELLATION_OVERRIDE_REASONS, SUMMARY_MAX_LENGTH, g
 import { signPanelToken, isPanelAuthorized } from '../lib/panel-auth';
 import { findRowBySessionId, getRow, getAllRows, writeCellMirrored } from '../lib/sheets';
 import { sessionFields, bookedSessionIndexes, nextBookedSession, closeOutSessionNote } from '../lib/notes';
-import { computeOverrideRefund } from '../lib/refund';
+import { computeRefund, computeOverrideRefund } from '../lib/refund';
 import { performCancellation } from '../lib/cancellation';
 import { errorResponse, json } from '../lib/http';
 import type { Env, SheetRow } from '../types';
@@ -82,7 +82,19 @@ export async function handlePanelClients(request: Request, env: Env): Promise<Re
 		.map(({ row }) => ({
 			stripeSessionId: row.stripeSessionId,
 			name: row.name,
+			email: row.email,
+			phone: row.phone,
+			sessionType: row.sessionType,
+			sessionDurationMinutes: row.sessionDurationMinutes,
+			therapyMode: row.therapyMode,
+			sessionMode: row.sessionMode,
+			sessionCount: row.sessionCount,
+			// Blank until the booking's first (partial or full) cancellation — until then every
+			// purchased session is still active, so it reads the same as the total.
+			activeSessionCount: row.activeSessionCount || row.sessionCount,
 			cancelled: Boolean(row.cancelledAt),
+			cancellationReason: row.cancellationReason,
+			refundAmount: row.refundAmount,
 			sessions: bookedSessionIndexes(row).map((index) => {
 				const { startUtcField, guardField } = sessionFields(index);
 				return { sessionIndex: index, startUtc: row[startUtcField], submitted: Boolean(row[guardField]) };
@@ -146,6 +158,31 @@ export async function handlePanelNotePost(request: Request, env: Env): Promise<R
 	return json({ ok: true }, request);
 }
 
+// GET /panel/refund-preview?stripeSessionId=&sessions=1,2[&percent=NN] — read-only info box next to
+// the override picker. No `percent`: shows what the automatic 72h policy (same math as the
+// client's own /cancel link) would refund for the checked session(s) — updates as Çiğdem toggles
+// checkboxes. With `percent`: shows what HER hand-picked override rate would refund instead — updates
+// when she changes the İade Oranı dropdown. Never mutates anything.
+export async function handlePanelRefundPreview(request: Request, env: Env): Promise<Response> {
+	const url = new URL(request.url);
+	const stripeSessionId = url.searchParams.get('stripeSessionId') ?? '';
+	const sessionIndexes = (url.searchParams.get('sessions') ?? '')
+		.split(',')
+		.map(Number)
+		.filter((i) => Number.isInteger(i) && i > 0);
+	if (!stripeSessionId || !sessionIndexes.length) return errorResponse(request, 400, 'Geçersiz istek.');
+
+	const found = await loadRow(env, stripeSessionId);
+	if (!found) return errorResponse(request, 404, 'Kayıt bulunamadı.');
+
+	const percentParam = url.searchParams.get('percent');
+	const refund =
+		percentParam !== null
+			? computeOverrideRefund(found.row, new Date(), Number(percentParam), sessionIndexes)
+			: computeRefund(found.row, new Date(), sessionIndexes);
+	return json({ refundGBP: refund.refundGBP, refundPercent: refund.refundPercent }, request);
+}
+
 // POST /panel/cancel { stripeSessionId, sessionIndexes, refundPercent, reason, reasonDetail? } —
 // Çiğdem's manual override cancellation, for extreme circumstances (bereavement, severe illness,
 // etc.) where the automatic <72h policy shouldn't apply. Unlike the client's own /cancel link
@@ -199,6 +236,7 @@ export async function handlePanelCancel(request: Request, env: Env): Promise<Res
 		refundGBP: chosen.refundGBP,
 		refundPercent: chosen.refundPercent,
 		reason: reason === 'Diğer' ? `Diğer: ${reasonDetail}` : reason,
+		cancelledBy: 'Çiğdem',
 		markBookingCancelled: chosen.remaining.length === allRemainingCount,
 	});
 	return json({ cancelled: true, refundGBP: chosen.refundGBP, refundPercent: chosen.refundPercent }, request);

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { runReminderSweep } from '../src/scheduled';
 import { SHEET_COLUMNS } from '../src/config';
 import { emptySheetRow } from '../src/lib/sheets';
+import { isHeaderRequest, headerResponse } from './sheets-test-header';
 import type { SheetRow } from '../src/types';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -52,6 +53,7 @@ function stubSheetsAndWhatsapp(rows: SheetRow[], opts: { failOn?: string } = {})
 				}));
 				return new Response(JSON.stringify({ sheets }), { status: 200 });
 			}
+			if (isHeaderRequest(url)) return headerResponse();
 			if (init?.method === 'PUT') {
 				const range = decodeURIComponent(new URL(url).pathname.split('/values/')[1] ?? '');
 				const value = JSON.parse(init.body as string).values[0][0];

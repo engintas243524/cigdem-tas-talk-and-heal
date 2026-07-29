@@ -2,13 +2,14 @@
 <html lang="tr" data-lang="tr" data-theme="light">
 <head>
 <meta charset="UTF-8" />
+<meta name="google" content="notranslate" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Not Paneli — Talk &amp; Heal</title>
 <meta name="robots" content="noindex, nofollow" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=87">
+<link rel="stylesheet" href="style.css?v=95">
 <style>
   /* Standalone internal tool — deliberately does NOT carry the public site header/footer/nav.
      Reuses only style.css's colour + font variables (Jost). Turkish-only (Çiğdem's own tool). */
@@ -57,6 +58,8 @@
   .sess.done { opacity: 0.55; }
   .sess.cancel-trigger { display: block; margin-top: 0.5rem; color: #fff; background: var(--brand-deep); border-color: var(--brand-deep); font-weight: 500; }
   .muted { color: var(--taupe); font-size: 0.82rem; }
+  .cancel-summary { color: var(--brand-deep); }
+  #clientSearchField { margin-bottom: 0.5rem; }
   .cancel-box { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.85rem; margin-top: var(--space-2); }
   #cancelSessionsList label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 400; color: var(--ink); margin: 0.3rem 0; }
   #cancelSessionsList input[type="checkbox"] { width: auto; }
@@ -93,7 +96,19 @@
     <!-- client picker (toggled by pickBtn) -->
     <div class="picker hidden" id="picker">
       <div style="padding:0.6rem">
-        <input type="search" id="clientSearch" placeholder="İsim ara..." />
+        <select id="clientSearchField">
+          <option value="name">İsim</option>
+          <option value="stripeSessionId">Stripe İşlem No</option>
+          <option value="email">E-posta</option>
+          <option value="phone">Telefon</option>
+          <option value="sessionType">Seans Türü</option>
+          <option value="therapyMode">Terapi Türü</option>
+          <option value="sessionMode">Seans Şekli</option>
+          <option value="sessionDurationMinutes">Seans Süresi</option>
+          <option value="sessionCount">Toplam Seans Sayısı</option>
+          <option value="activeSessionCount">Kalan Seans Sayısı</option>
+        </select>
+        <input type="search" id="clientSearch" placeholder="İsim ara..." autocomplete="off" />
       </div>
       <div class="picker-list" id="clientList"></div>
     </div>
@@ -106,6 +121,9 @@
       <div class="field">
         <label>İptal edilecek seans(lar) — en az birini seçin</label>
         <div id="cancelSessionsList"></div>
+      </div>
+      <div class="field">
+        <p class="context-line" id="cancelRefundPreview"></p>
       </div>
       <div class="field">
         <label for="cancelReason">İptal nedeni</label>
@@ -250,29 +268,79 @@
 
   // --- Client picker ---
   var picker = el('picker'), clientList = el('clientList'), clientSearch = el('clientSearch');
+  var clientSearchField = el('clientSearchField');
   var allClients = [];
+
+  // Turkish labels for the search-by dropdown and for the raw enum codes Sheets stores — the
+  // dropdown itself IS the "ok tuşu ile açılan liste" (a native <select>, no custom widget needed).
+  var FIELD_LABELS = {
+    name: 'İsim', stripeSessionId: 'Stripe İşlem No', email: 'E-posta', phone: 'Telefon',
+    sessionType: 'Seans Türü', therapyMode: 'Terapi Türü', sessionMode: 'Seans Şekli',
+    sessionDurationMinutes: 'Seans Süresi', sessionCount: 'Toplam Seans Sayısı', activeSessionCount: 'Kalan Seans Sayısı',
+  };
+  var VALUE_LABELS = {
+    sessionType: { standard: 'Standart', extended: 'Uzatılmış' },
+    therapyMode: { individual: 'Bireysel', couple: 'Çift' },
+    sessionMode: { online: 'Online', inPerson: 'Yüz Yüze' },
+  };
+  function fieldText(c, field) {
+    var raw = c[field] == null ? '' : String(c[field]);
+    var map = VALUE_LABELS[field];
+    return (map && map[raw]) || raw;
+  }
 
   el('pickBtn').addEventListener('click', function () {
     if (!picker.classList.contains('hidden')) { picker.classList.add('hidden'); return; }
     cancelBox.classList.add('hidden'); cancelTarget = null; // reopening the picker leaves any open cancel panel behind
     picker.classList.remove('hidden');
     authFetch('/panel/clients').then(function (r) { return r.json(); }).then(function (data) {
-      allClients = data.clients || []; renderClients('');
+      allClients = data.clients || []; renderClients(clientSearch.value);
     }).catch(function (e) { if (e.message !== 'unauthorized') clientList.innerHTML = '<div class="client muted">Liste yüklenemedi.</div>'; });
   });
 
   clientSearch.addEventListener('input', function () { renderClients(clientSearch.value); });
+  clientSearchField.addEventListener('change', function () {
+    clientSearch.placeholder = FIELD_LABELS[clientSearchField.value] + ' ara...';
+    renderClients(clientSearch.value);
+  });
+
+  // Total minus still-active is what a PARTIAL cancellation leaves behind — a full cancellation
+  // (cancelledAt set) always shows its own line regardless of the count math.
+  function cancelSummary(c) {
+    var total = Number(c.sessionCount) || 0;
+    var active = Number(c.activeSessionCount);
+    if (isNaN(active)) active = total;
+    var cancelledCount = total - active;
+    if (!c.cancelled && cancelledCount <= 0) return '';
+    var line = c.cancelled ? 'Randevu tamamen iptal edildi' : (cancelledCount + ' seans iptal edildi');
+    var extra = [];
+    if (c.refundAmount) extra.push('£' + c.refundAmount + ' iade');
+    if (c.cancellationReason) extra.push(c.cancellationReason);
+    if (extra.length) line += ' — ' + extra.join(', ');
+    return line;
+  }
 
   function renderClients(q) {
     q = (q || '').toLocaleLowerCase('tr');
+    var field = clientSearchField.value;
     clientList.innerHTML = '';
-    var matches = allClients.filter(function (c) { return (c.name || '').toLocaleLowerCase('tr').indexOf(q) !== -1; });
+    var matches = allClients.filter(function (c) { return fieldText(c, field).toLocaleLowerCase('tr').indexOf(q) !== -1; });
     if (!matches.length) { clientList.innerHTML = '<div class="client muted">Eşleşen danışan yok.</div>'; return; }
     matches.forEach(function (c) {
       var div = document.createElement('div');
       div.className = 'client' + (c.cancelled ? ' cancelled' : '');
       var nameEl = document.createElement('div'); nameEl.className = 'client-name'; nameEl.textContent = c.name;
       div.appendChild(nameEl);
+      if (field !== 'name') {
+        var matchLine = document.createElement('div'); matchLine.className = 'muted';
+        matchLine.textContent = FIELD_LABELS[field] + ': ' + fieldText(c, field);
+        div.appendChild(matchLine);
+      }
+      var summary = cancelSummary(c);
+      if (summary) {
+        var summaryEl = document.createElement('div'); summaryEl.className = 'muted cancel-summary'; summaryEl.textContent = summary;
+        div.appendChild(summaryEl);
+      }
       (c.sessions || []).forEach(function (s) {
         var b = document.createElement('button');
         b.type = 'button';
@@ -296,7 +364,7 @@
   // --- Manual override cancellation (extreme circumstances) ---
   var cancelBox = el('cancelBox'), cancelContextLine = el('cancelContextLine'), cancelSessionsList = el('cancelSessionsList');
   var cancelReason = el('cancelReason'), cancelDetailField = el('cancelDetailField'), cancelDetail = el('cancelDetail');
-  var cancelPercent = el('cancelPercent'), cancelStatus = el('cancelStatus');
+  var cancelPercent = el('cancelPercent'), cancelStatus = el('cancelStatus'), cancelRefundPreview = el('cancelRefundPreview');
   var cancelTarget = null; // { stripeSessionId, name }
 
   for (var pct = 100; pct >= 0; pct -= 5) {
@@ -309,6 +377,28 @@
     cancelDetailField.classList.toggle('hidden', cancelReason.value !== 'Diğer');
   });
 
+  function checkedCancelIndexes() {
+    return Array.prototype.slice.call(cancelSessionsList.querySelectorAll('input:checked')).map(function (cb) { return Number(cb.value); });
+  }
+
+  // Info box next to the picker: 'auto' (checkbox toggled) shows what the automatic 72h policy
+  // would refund; 'manual' (İade Oranı dropdown touched) shows what Çiğdem's own hand-picked rate
+  // would refund instead — same box, whichever control she touched last wins.
+  var refundPreviewSeq = 0;
+  function updateRefundPreview(mode) {
+    var indexes = checkedCancelIndexes();
+    if (!indexes.length) { cancelRefundPreview.textContent = ''; return; }
+    var thisSeq = ++refundPreviewSeq;
+    var qs = '?stripeSessionId=' + encodeURIComponent(cancelTarget.stripeSessionId) + '&sessions=' + indexes.join(',');
+    if (mode === 'manual') qs += '&percent=' + encodeURIComponent(cancelPercent.value);
+    authFetch('/panel/refund-preview' + qs).then(function (r) { return r.json(); }).then(function (data) {
+      if (thisSeq !== refundPreviewSeq) return; // a newer request already landed, ignore this stale one
+      cancelRefundPreview.textContent = (mode === 'manual' ? 'Seçilen orana göre iade: ' : 'Otomatik hesaplanan iade: ') +
+        '£' + data.refundGBP + ' (%' + data.refundPercent + ')';
+    }).catch(function (e) { if (e.message !== 'unauthorized') cancelRefundPreview.textContent = 'İade hesaplanamadı.'; });
+  }
+  cancelPercent.addEventListener('change', function () { updateRefundPreview('manual'); });
+
   // `sessions` is that client's currently-active (not yet cancelled) sessions from /panel/clients.
   // Nothing is pre-checked — Çiğdem must explicitly pick which one(s) to cancel; a booking with
   // several upcoming sessions must never look like "confirm = cancel everything".
@@ -320,6 +410,7 @@
       var label = document.createElement('label');
       var cb = document.createElement('input');
       cb.type = 'checkbox'; cb.value = String(s.sessionIndex);
+      cb.addEventListener('change', function () { updateRefundPreview('auto'); });
       label.appendChild(cb);
       label.appendChild(document.createTextNode(s.sessionIndex + '. seans' + (s.startUtc ? ' — ' + fmt(s.startUtc) : '')));
       cancelSessionsList.appendChild(label);
@@ -328,6 +419,7 @@
     cancelDetailField.classList.add('hidden');
     cancelDetail.value = '';
     cancelPercent.value = '100';
+    cancelRefundPreview.textContent = '';
     setStatus(cancelStatus, '', '');
     picker.classList.add('hidden');
     cancelBox.classList.remove('hidden');
@@ -340,7 +432,7 @@
 
   el('cancelConfirmBtn').addEventListener('click', function () {
     if (!cancelTarget) return;
-    var indexes = Array.prototype.slice.call(cancelSessionsList.querySelectorAll('input:checked')).map(function (cb) { return Number(cb.value); });
+    var indexes = checkedCancelIndexes();
     if (!indexes.length) { setStatus(cancelStatus, 'En az bir seans seçmelisiniz.', 'err'); return; }
     var reason = cancelReason.value;
     var detail = cancelDetail.value.trim();
@@ -348,7 +440,8 @@
     var percent = Number(cancelPercent.value);
     var which = indexes.length === 1 ? (indexes[0] + '. seansı') : (indexes.length + ' seansı (' + indexes.join(', ') + ')');
     if (!confirm(cancelTarget.name + ' için ' + which + ' iptal edilecek ve %' + percent + ' iade yapılacak. Devam edilsin mi?')) return;
-    setStatus(cancelStatus, 'İşleniyor...', '');
+    var apptWord = indexes.length === 1 ? 'Randevunuz' : 'Randevularınız';
+    setStatus(cancelStatus, apptWord + ' iptal ediliyor...', '');
     authFetch('/panel/cancel', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stripeSessionId: cancelTarget.stripeSessionId, sessionIndexes: indexes, refundPercent: percent, reason: reason, reasonDetail: detail })
@@ -360,7 +453,7 @@
         // silently re-fire against the just-cancelled booking — found live: a leftover open box
         // from a prior cancellation kept re-submitting to the old target instead of the new one.
         cancelTarget = null;
-        setStatus(cancelStatus, 'İptal edildi. İade: £' + data.refundGBP + ' (%' + data.refundPercent + ').', 'ok');
+        setStatus(cancelStatus, apptWord + ' iptal edildi. İade: £' + data.refundGBP + ' (%' + data.refundPercent + ').', 'ok');
       });
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(cancelStatus, 'İptal edilemedi.', 'err'); });
   });

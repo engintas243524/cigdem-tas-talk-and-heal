@@ -205,6 +205,56 @@ nav.primary a{ text-decoration:none; }
 .lang-flag:hover{ opacity:1; }
 .lang-flag.active{ opacity:1; border-color:var(--brand); }
 
+.music-toggle{
+  display:inline-flex;
+  background:transparent;
+  border:0.0625rem solid transparent;
+  border-radius:var(--radius-xs);
+  padding:0.3rem;
+  color:var(--ink);
+  opacity:0.5;
+  cursor:pointer;
+  transition:opacity 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.music-toggle svg{ display:block; width:clamp(1.1rem, 0.9rem + 0.4vw, 1.4rem); height:clamp(1.1rem, 0.9rem + 0.4vw, 1.4rem); }
+.music-toggle:hover{ opacity:1; }
+.music-toggle.playing{ opacity:1; color:var(--sage); border-color:var(--brand); }
+.music-toggle .eq-bars{
+  display:none;
+  align-items:flex-end;
+  gap:0.15rem;
+  width:clamp(1.1rem, 0.9rem + 0.4vw, 1.4rem);
+  height:clamp(1.1rem, 0.9rem + 0.4vw, 1.4rem);
+}
+.music-toggle .eq-bars span{
+  flex:1;
+  height:100%;
+  background:var(--sage);
+  border-radius:1px;
+  transform-origin:bottom;
+  animation:eq-bounce 0.9s ease-in-out infinite;
+}
+.music-toggle .eq-bars span:nth-child(2){ animation-delay:0.2s; }
+.music-toggle .eq-bars span:nth-child(3){ animation-delay:0.4s; }
+.music-toggle.playing .note-icon{ display:none; }
+.music-toggle.playing .eq-bars{ display:flex; }
+.music-volume{
+  display:none;
+  width:clamp(3.5rem, 3rem + 2vw, 5rem);
+  height:0.25rem;
+  accent-color:var(--sage);
+  cursor:pointer;
+  vertical-align:middle;
+}
+.music-toggle.playing ~ .music-volume{ display:inline-block; }
+@keyframes eq-bounce{
+  0%, 100%{ transform:scaleY(0.3); }
+  50%{ transform:scaleY(1); }
+}
+@media (prefers-reduced-motion:reduce){
+  .music-toggle .eq-bars span{ animation:none; transform:scaleY(0.7); }
+}
+
 .menu-btn{
   display:inline-flex;
   background:none; border:none;
@@ -613,11 +663,22 @@ section.alt{ background:var(--surface); }
 .page-back{
   display:inline-flex; align-items:center; gap:0.3rem;
   margin-bottom:var(--space-3);
+  padding:0.5rem 1.1rem;
+  border:none;
+  border-radius:999px;
+  background:radial-gradient(circle, #FFBE91, color-mix(in srgb, #FFBE91 65%, white));
+  box-shadow:0 0.75rem 1.5rem -0.9rem color-mix(in srgb, #FFBE91 70%, transparent);
   font-family:var(--font-body); font-weight:300; font-size:0.85rem;
-  color:var(--taupe); text-decoration:none;
+  color:#3d3733; text-decoration:none;
+  transition:transform 0.15s ease, box-shadow 0.2s ease;
 }
-.page-back:hover{ color:var(--brand); }
+.page-back:hover{ transform:translateY(-0.1rem); box-shadow:0 1rem 1.75rem -1rem color-mix(in srgb, #FFBE91 75%, transparent); }
 .page-back .arrow{ font-family:var(--font-display); font-size:1.05rem; line-height:1; }
+/* Sits inside .services-section (over .services-bg's wave) right after the grid, not below the
+   section in the plain page background -- needs the same z-index:1 as .services-grid to paint
+   above the wave image instead of under it. */
+.page-back-bottom{ position:relative; z-index:1; margin-top:var(--space-3); }
+.page-top{ margin-top:var(--space-4); }
 
 /* About */
 .about-story{ margin-top:calc(-1 * var(--space-3)); }
@@ -977,12 +1038,71 @@ section.alt{ background:var(--surface); }
   color:var(--taupe);
   cursor:not-allowed;
 }
+/* Placeholder for a day that's already past (the backend never returns real availability for it) —
+   same flat --taupe fill as .slot-chip--reserved (this day is just as unselectable), but framed
+   with a light red/brand gradient ring so it reads as "over" rather than "taken", at a glance
+   distinct from a genuinely reserved future slot. Two-layer background (gray padding-box over a
+   gradient border-box) keeps the ring visible through the rounded corners — a plain `border`
+   can't take a gradient, and `border-image` ignores border-radius. */
+.slot-chip--past{
+  border:0.0625rem solid transparent;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--taupe) 18%, var(--surface)), color-mix(in srgb, var(--taupe) 18%, var(--surface))),
+    linear-gradient(135deg, color-mix(in srgb, var(--brand) 55%, transparent), color-mix(in srgb, var(--brand-deep) 35%, transparent));
+  background-origin:border-box;
+  background-clip:padding-box, border-box;
+  box-shadow:none;
+  color:var(--taupe);
+  cursor:not-allowed;
+}
 
 .slot-dots{ display:flex; justify-content:center; gap:0.4rem; margin-top:var(--space-3); }
 .slot-dot{ width:0.4rem; height:0.4rem; border-radius:50%; background:var(--border); border:none; padding:0; cursor:pointer; }
 .slot-dot.is-active{ background-image:linear-gradient(135deg, var(--btn-cta), var(--btn-cta-deep)); width:1.1rem; border-radius:0.25rem; }
 
 .field-hint{ margin:0 0 var(--space-2); font-size:0.78rem; color:var(--taupe); }
+/* Phone hint + error sit close together (grid's own gap only); the field only pushes the
+   next field-group down when one of them is actually showing, via .has-message. */
+#phoneHint, #phoneError{ margin:0; }
+.field-phone.has-message{ margin-bottom:var(--space-3); }
+
+/* Phone field: country combobox (button + searchable dropdown) + one box per required digit,
+   so the exact digit count needed is visible at a glance (accessibility ask). */
+.phone-input-row{ display:flex; gap:0.5rem; flex-wrap:wrap; }
+.country-select{ position:relative; flex:none; }
+.country-btn{
+  display:flex; align-items:center; gap:0.35rem; height:100%;
+  font-family:var(--font-body); font-size:1rem; color:var(--ink);
+  padding:0.75rem 0.6rem; border-radius:var(--radius-sm); border:0.0625rem solid var(--border);
+  background:var(--surface); cursor:pointer;
+}
+.country-caret{ width:0.8rem; height:0.8rem; opacity:0.6; }
+.country-dropdown{
+  position:absolute; z-index:20; top:calc(100% + 0.25rem); left:0;
+  width:max(16rem, 100%); max-width:min(22rem, 90vw);
+  background:var(--surface); border:0.0625rem solid var(--border); border-radius:var(--radius-sm);
+  box-shadow:0 0.5rem 1.5rem rgba(0,0,0,0.16); padding:0.5rem;
+}
+.country-search{
+  display:flex; align-items:center; gap:0.4rem; margin-bottom:0.4rem;
+  border:0.0625rem solid var(--border); border-radius:var(--radius-sm); padding:0.4rem 0.6rem;
+}
+.country-search svg{ width:1rem; height:1rem; opacity:0.55; flex:none; color:var(--ink); }
+.country-search input{
+  flex:1 1 auto; border:0; outline:0; background:transparent; color:var(--ink);
+  font-family:var(--font-body); font-size:0.9rem;
+}
+.country-list{ list-style:none; margin:0; padding:0; max-height:14rem; overflow-y:auto; }
+.country-list li{ padding:0.5rem 0.6rem; border-radius:var(--radius-sm); cursor:pointer; font-size:0.9rem; }
+.country-list li:hover, .country-list li.is-active{ background:var(--border); }
+.phone-digits{ display:flex; gap:0.3rem; flex-wrap:wrap; align-items:center; }
+/* Higher specificity than ".field input" (which sets its own padding/font-size) so the boxes
+   actually get this compact sizing instead of squeezing each digit into a few visible pixels. */
+.field-phone .phone-digit{
+  width:2rem; text-align:center; padding:0.75rem 0; font-size:1.1rem;
+  font-family:var(--font-body); border-radius:var(--radius-sm); border:0.0625rem solid var(--border);
+  background:var(--surface); color:var(--ink);
+}
 .char-count{ text-align:right; }
 .field-below-row{ display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); flex-wrap:wrap; }
 .field-below-row .char-count{ flex:1 1 auto; }

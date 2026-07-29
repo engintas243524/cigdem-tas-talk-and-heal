@@ -35,7 +35,14 @@ export async function performCancellation(
 	rowNumber: number,
 	row: SheetRow,
 	stripeSessionId: string,
-	params: { remaining: SessionRef[]; refundGBP: number; refundPercent: number; reason: string; markBookingCancelled?: boolean },
+	params: {
+		remaining: SessionRef[];
+		refundGBP: number;
+		refundPercent: number;
+		reason: string;
+		cancelledBy: 'Danışan' | 'Çiğdem';
+		markBookingCancelled?: boolean;
+	},
 ): Promise<{ refundId: string }> {
 	const refundPence = Math.round(params.refundGBP * 100);
 
@@ -75,9 +82,24 @@ export async function performCancellation(
 	// skips them. cancelledAt (when written) is last — it's the guard the idempotency check upstream
 	// reads, and must only mean "no future sessions remain on this booking".
 	await writeCellMirrored(env, row, rowNumber, 'cancellationReason', params.reason);
-	await writeCellMirrored(env, row, rowNumber, 'stripeRefundId', refundId);
-	await writeCellMirrored(env, row, rowNumber, 'refundPercent', String(params.refundPercent));
-	await writeCellMirrored(env, row, rowNumber, 'refundAmount', String(params.refundGBP));
+	await writeCellMirrored(env, row, rowNumber, 'cancelledBy', params.cancelledBy);
+	// refundAmount/refundPercent/stripeRefundId are CUMULATIVE across every partial cancellation this
+	// booking ever goes through (BE-37, 2026-07-27) — a booking can be partially cancelled more than
+	// once (different sessions, different days), and overwriting these with just the latest call's
+	// numbers silently lost every earlier refund's amount/id. refundPercent is now "% of the booking's
+	// ORIGINAL total value refunded so far", not "this action's rate" — the two are the same number
+	// for a booking's first/only cancellation, and only diverge once a second partial cancel happens.
+	// `refundId` already came back from the SAME Stripe idempotency key on a retried request, so
+	// checking it's not already in the prior list is what keeps a retry from double-counting.
+	const priorRefundIds = row.stripeRefundId ? row.stripeRefundId.split(', ').filter(Boolean) : [];
+	const isNewRefund = refundId !== '' && !priorRefundIds.includes(refundId);
+	const cumulativeRefundAmount = isNewRefund ? (Number(row.refundAmount) || 0) + params.refundGBP : Number(row.refundAmount) || 0;
+	const cumulativeRefundId = isNewRefund ? [...priorRefundIds, refundId].join(', ') : row.stripeRefundId;
+	const originalTotalGBP = (Number(row.priceGBP) || 0) * (Number(row.sessionCount) || 1);
+	const cumulativeRefundPercent = originalTotalGBP > 0 ? Math.round((cumulativeRefundAmount / originalTotalGBP) * 100) : 0;
+	await writeCellMirrored(env, row, rowNumber, 'stripeRefundId', cumulativeRefundId);
+	await writeCellMirrored(env, row, rowNumber, 'refundPercent', String(cumulativeRefundPercent));
+	await writeCellMirrored(env, row, rowNumber, 'refundAmount', String(cumulativeRefundAmount));
 	// Display-only counter for Çiğdem (2026-07-27) — deliberately NOT `sessionCount` itself, which
 	// every reminder/panel/mirror-tab lookup uses as "how many sessionN columns to read"; shrinking
 	// that on a non-contiguous partial cancellation (e.g. sessions 2+4 of 6 cancelled) would make the

@@ -2,6 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { SHEET_COLUMNS } from '../src/config';
 import { emptySheetRow, writeCellMirrored } from '../src/lib/sheets';
+import { isHeaderRequest, headerResponse } from './sheets-test-header';
 import type { SheetRow } from '../src/types';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -40,9 +41,10 @@ function stubSheets(opts: StubOptions = {}) {
 				];
 				return new Response(JSON.stringify({ sheets }), { status: 200 });
 			}
-			// ensureHeaderRow read — return a full header so it never needs to PUT one.
-			if (method === 'GET' && url.includes('!A1:')) {
-				return new Response(JSON.stringify({ values: [SHEET_COLUMNS.map((k) => k)] }), { status: 200 });
+			// header-row read (resolveHeaderPositions) — return a full real header so it never needs to
+			// PUT one, and so column resolution lands exactly where SHEET_COLUMNS says it should.
+			if (method === 'GET' && isHeaderRequest(url)) {
+				return headerResponse();
 			}
 			// findRowBySessionId read (column A of the mirror tab).
 			if (method === 'GET' && /!A2:A(\b|$)/.test(url)) {

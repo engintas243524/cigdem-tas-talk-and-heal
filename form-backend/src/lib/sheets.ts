@@ -5,7 +5,7 @@ import type { Env, SheetRow } from '../types';
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 // A1-style column letter for a 0-indexed column (0 -> 'A', 25 -> 'Z', 26 -> 'AA', ...). The sheet
-// now has ~48 columns (booking-system-expansion plan), well past 'Z', so a single
+// now has ~70+ columns (booking-system-expansion plan), well past 'Z', so a single
 // `String.fromCharCode` no longer works.
 function columnLetter(index: number): string {
 	let n = index + 1;
@@ -17,8 +17,6 @@ function columnLetter(index: number): string {
 	}
 	return letters;
 }
-
-const LAST_COLUMN_LETTER = columnLetter(SHEET_COLUMNS.length - 1);
 
 async function sheetsFetch(env: Env, path: string, init: RequestInit = {}): Promise<Response> {
 	const token = await getGoogleAccessToken(env);
@@ -33,49 +31,79 @@ async function sheetsFetch(env: Env, path: string, init: RequestInit = {}): Prom
 }
 
 // Every column defaulted to '' — callers overlay only the fields they actually have, instead of
-// hand-listing all ~48 columns (booking-system-expansion plan) on every SheetRow they construct.
+// hand-listing all ~70 columns (booking-system-expansion plan) on every SheetRow they construct.
 export function emptySheetRow(): SheetRow {
 	const row = {} as SheetRow;
 	for (const key of SHEET_COLUMNS) row[key] = '';
 	return row;
 }
 
-function rowToArray(row: SheetRow): string[] {
-	return SHEET_COLUMNS.map((key) => String(row[key] ?? ''));
-}
+type ColumnPositions = Map<(typeof SHEET_COLUMNS)[number], number>;
 
-function arrayToRow(values: string[]): SheetRow {
-	const row: Record<string, string> = {};
-	SHEET_COLUMNS.forEach((key, i) => (row[key] = values[i] ?? ''));
-	return row as unknown as SheetRow;
-}
-
-// Extend-only: writes labels for whatever columns don't have a header yet, leaving every existing
-// header cell untouched. Safe to call on every request that's about to write a row — cheap (one
-// read, and a write only when SHEET_COLUMNS has actually grown since the header was last touched).
-// This is what makes a schema growing (a new session-note column, say) self-healing: the next
-// booking fixes the header automatically instead of leaving new columns permanently unlabeled
-// (found live, 2026-07-23 — Madde 5's 20 new columns had no header because this function used to
-// no-op entirely once ANY header existed, so it never grew past whatever it was written with).
-export async function ensureHeaderRow(env: Env, tab: string = SHEET_TAB_NAME): Promise<void> {
-	const range = `${tab}!A1:${LAST_COLUMN_LETTER}1`;
-	const response = await sheetsFetch(env, `/values/${encodeURIComponent(range)}`);
+// The single place every read/write resolves "which column is this field in" — by matching the
+// tab's ACTUAL header row text against SHEET_COLUMN_LABELS, never by trusting SHEET_COLUMNS'
+// array position. This is what makes the sheet safe against a human manually inserting, deleting,
+// moving, or copy/pasting a column in Sayfa1 or a mirror tab: as long as the header cell's text is
+// still there somewhere, every read/write keeps finding the right cell regardless of where it
+// moved to. (This replaces the old position-based scheme, which silently wrote/read the wrong
+// column after any manual reorder — see BE-18, caused by exactly that assumption.)
+//
+// Self-healing: a key whose label isn't found anywhere in the header (a column that was deleted,
+// or a brand-new key from a schema change) gets its label appended to the end of that tab's
+// current header — same "extend-only" philosophy the old ensureHeaderRow used, just keyed by
+// label presence instead of array position, so a column that drifted to a new position is never
+// mistaken for a missing one.
+async function resolveHeaderPositions(env: Env, tab: string): Promise<ColumnPositions> {
+	const response = await sheetsFetch(env, `/values/${encodeURIComponent(`${tab}!1:1`)}`);
 	const data = (await response.json()) as { values?: string[][] };
 	const existing = data.values?.[0] ?? [];
-	if (existing.length >= SHEET_COLUMNS.length) return; // header already covers every column
 
-	const missingKeys = SHEET_COLUMNS.slice(existing.length);
-	const missingRange = `${tab}!${columnLetter(existing.length)}1:${LAST_COLUMN_LETTER}1`;
-	await sheetsFetch(env, `/values/${encodeURIComponent(missingRange)}?valueInputOption=RAW`, {
-		method: 'PUT',
-		body: JSON.stringify({ values: [missingKeys.map((key) => SHEET_COLUMN_LABELS[key])] }),
+	const indexByLabel = new Map<string, number>();
+	existing.forEach((label, i) => {
+		if (label && !indexByLabel.has(label)) indexByLabel.set(label, i);
 	});
+
+	const positions: ColumnPositions = new Map();
+	const missing: (typeof SHEET_COLUMNS)[number][] = [];
+	for (const key of SHEET_COLUMNS) {
+		const index = indexByLabel.get(SHEET_COLUMN_LABELS[key]);
+		if (index === undefined) missing.push(key);
+		else positions.set(key, index);
+	}
+
+	if (missing.length) {
+		const startIndex = existing.length;
+		const missingRange = `${tab}!${columnLetter(startIndex)}1:${columnLetter(startIndex + missing.length - 1)}1`;
+		await sheetsFetch(env, `/values/${encodeURIComponent(missingRange)}?valueInputOption=RAW`, {
+			method: 'PUT',
+			body: JSON.stringify({ values: [missing.map((key) => SHEET_COLUMN_LABELS[key])] }),
+		});
+		missing.forEach((key, i) => positions.set(key, startIndex + i));
+	}
+
+	return positions;
+}
+
+// Kept as its own export (stripe-webhook.ts calls it explicitly before appendBookingRow) — every
+// other read/write below resolves the header itself anyway, so this is just a way to warm/repair
+// the header ahead of time. Safe to call any time, on any tab.
+export async function ensureHeaderRow(env: Env, tab: string = SHEET_TAB_NAME): Promise<void> {
+	await resolveHeaderPositions(env, tab);
+}
+
+function rowFromValues(values: string[], positions: ColumnPositions): SheetRow {
+	const row = {} as SheetRow;
+	for (const key of SHEET_COLUMNS) row[key] = String(values[positions.get(key)!] ?? '');
+	return row;
 }
 
 // 1-indexed sheet row number (row 1 is the header), or null if not found. Idempotency check for
-// the Stripe webhook cascade — column A holds stripeSessionId.
+// the Stripe webhook cascade. Scans whichever column stripeSessionId's header currently resolves
+// to — not hardcoded column A, since a manual reorder can move it.
 export async function findRowBySessionId(env: Env, stripeSessionId: string, tab: string = SHEET_TAB_NAME): Promise<number | null> {
-	const range = `${tab}!A2:A`;
+	const positions = await resolveHeaderPositions(env, tab);
+	const idColumn = columnLetter(positions.get('stripeSessionId')!);
+	const range = `${tab}!${idColumn}2:${idColumn}`;
 	const response = await sheetsFetch(env, `/values/${encodeURIComponent(range)}`);
 	const data = (await response.json()) as { values?: string[][] };
 	const rows = data.values ?? [];
@@ -88,17 +116,22 @@ export async function findRowBySessionId(env: Env, stripeSessionId: string, tab:
 // 1. Originally this re-queried findRowBySessionId right after appending, which raced Sheets' own
 //    read-after-write consistency and sometimes came back null, crashing the webhook cascade with
 //    a literal "Anull:AVnull" range.
-// 2. Appending the full ~48-column row in one `values:append` call lets Google's "detect the
-//    existing table, then continue it" heuristic anchor to whatever contiguous data block it finds
-//    ANYWHERE in the A:AV search range — including stray leftover test data sitting in far-right
-//    columns from an earlier session — silently writing new bookings into the wrong columns
-//    entirely (confirmed live: a clean booking landed at AM:CH instead of A:AV).
+// 2. Appending the full row in one `values:append` call lets Google's "detect the existing table,
+//    then continue it" heuristic anchor to whatever contiguous data block it finds ANYWHERE in the
+//    search range — including stray leftover test data sitting in far-right columns from an
+//    earlier session — silently writing new bookings into the wrong columns entirely (confirmed
+//    live: a clean booking landed at AM:CH instead of A:AV).
 //
-// Fix for both: append ONLY the stripeSessionId to column A first — a single-column range Google's
-// table-detection can't misalign — which atomically reserves the next row number (read straight
-// from that call's own `updates.updatedRange`), then PUT the remaining columns to that exact row.
+// Fix for both: append ONLY stripeSessionId to its resolved column first — a single-column range
+// Google's table-detection can't misalign — which atomically reserves the next row number (read
+// straight from that call's own `updates.updatedRange`), then write the remaining fields each to
+// their own resolved column via one values:batchUpdate call (not a single contiguous PUT — after a
+// manual reorder the fields' real columns may no longer be contiguous or in SHEET_COLUMNS' order).
 export async function appendBookingRow(env: Env, row: SheetRow, tab: string = SHEET_TAB_NAME): Promise<number> {
-	const idRange = `${tab}!A:A`;
+	const positions = await resolveHeaderPositions(env, tab);
+
+	const idColumn = columnLetter(positions.get('stripeSessionId')!);
+	const idRange = `${tab}!${idColumn}:${idColumn}`;
 	const idResponse = await sheetsFetch(env, `/values/${encodeURIComponent(idRange)}:append?valueInputOption=RAW`, {
 		method: 'POST',
 		body: JSON.stringify({ values: [[row.stripeSessionId]] }),
@@ -112,10 +145,13 @@ export async function appendBookingRow(env: Env, row: SheetRow, tab: string = SH
 	}
 	const rowNumber = Number(match[1]);
 
-	const restRange = `${tab}!B${rowNumber}:${LAST_COLUMN_LETTER}${rowNumber}`;
-	await sheetsFetch(env, `/values/${encodeURIComponent(restRange)}?valueInputOption=RAW`, {
-		method: 'PUT',
-		body: JSON.stringify({ values: [rowToArray(row).slice(1)] }),
+	const data = SHEET_COLUMNS.filter((key) => key !== 'stripeSessionId').map((key) => ({
+		range: `${tab}!${columnLetter(positions.get(key)!)}${rowNumber}`,
+		values: [[String(row[key] ?? '')]],
+	}));
+	await sheetsFetch(env, '/values:batchUpdate', {
+		method: 'POST',
+		body: JSON.stringify({ valueInputOption: 'RAW', data }),
 	});
 	return rowNumber;
 }
@@ -130,8 +166,8 @@ export async function writeCell(
 	value: string,
 	tab: string = SHEET_TAB_NAME,
 ): Promise<void> {
-	const columnIndex = SHEET_COLUMNS.indexOf(column);
-	const range = `${tab}!${columnLetter(columnIndex)}${rowNumber}`;
+	const positions = await resolveHeaderPositions(env, tab);
+	const range = `${tab}!${columnLetter(positions.get(column)!)}${rowNumber}`;
 	await sheetsFetch(env, `/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
 		method: 'PUT',
 		body: JSON.stringify({ values: [[value]] }),
@@ -145,25 +181,32 @@ export const markReminderSent = (env: Env, rowNumber: number, timestampIso: stri
 	writeCell(env, rowNumber, 'reminderSentAt', timestampIso);
 
 export async function getRow(env: Env, rowNumber: number, tab: string = SHEET_TAB_NAME): Promise<SheetRow> {
-	const range = `${tab}!A${rowNumber}:${LAST_COLUMN_LETTER}${rowNumber}`;
+	const positions = await resolveHeaderPositions(env, tab);
+	const maxIndex = Math.max(...positions.values());
+	const range = `${tab}!A${rowNumber}:${columnLetter(maxIndex)}${rowNumber}`;
 	const response = await sheetsFetch(env, `/values/${encodeURIComponent(range)}`);
 	const data = (await response.json()) as { values?: string[][] };
-	return arrayToRow(data.values?.[0] ?? []);
+	return rowFromValues(data.values?.[0] ?? [], positions);
 }
 
-// Used by the cron sweep — every data row (excludes the header).
+// Used by the cron sweep — every data row (excludes the header). Header resolved once for the
+// whole scan, not per row — cheap and correct, since the header doesn't change mid-scan.
 export async function getAllRows(env: Env, tab: string = SHEET_TAB_NAME): Promise<{ rowNumber: number; row: SheetRow }[]> {
-	const range = `${tab}!A2:${LAST_COLUMN_LETTER}`;
+	const positions = await resolveHeaderPositions(env, tab);
+	const maxIndex = Math.max(...positions.values());
+	const range = `${tab}!A2:${columnLetter(maxIndex)}`;
 	const response = await sheetsFetch(env, `/values/${encodeURIComponent(range)}`);
 	const data = (await response.json()) as { values?: string[][] };
-	return (data.values ?? []).map((values, i) => ({ rowNumber: i + 2, row: arrayToRow(values) }));
+	return (data.values ?? []).map((values, i) => ({ rowNumber: i + 2, row: rowFromValues(values, positions) }));
 }
 
 // ── Madde 7: multi-session mirror ────────────────────────────────────────────────────────────────
 // Bookings with sessionCount > 1 are logged to Sayfa1 as usual AND mirrored, cell-for-cell, into a
-// per-count tab named "{N} Seans" (same 69-column schema). Sayfa1 stays the single source of truth
-// for reads; only writes are mirrored. Every mirror step is isolated (BE-19 pattern) — a mirror
-// failure is logged and never touches the authoritative Sayfa1 write.
+// per-count tab named "{N} Seans" (same schema). Sayfa1 stays the single source of truth for
+// reads; only writes are mirrored. Every mirror step is isolated (BE-19 pattern) — a mirror
+// failure is logged and never touches the authoritative Sayfa1 write. Each tab resolves its own
+// header independently (see resolveHeaderPositions), so a mirror tab whose columns have drifted
+// from Sayfa1's layout still gets every field written under its own correct header.
 
 // The tab a row mirrors to, or null for single-session bookings (which never mirror).
 function mirrorTabName(row: SheetRow): string | null {
@@ -172,7 +215,7 @@ function mirrorTabName(row: SheetRow): string | null {
 }
 
 // Create the tab if it isn't there yet (checked against live spreadsheet metadata). Only tabs a
-// real multi-session booking actually uses are created — not all of "2 Seans".."10 Seans" up front.
+// real multi-session booking actually uses are created — not all of "2 Seans".."20 Seans" up front.
 //
 // Also grows the tab's grid to fit SHEET_COLUMNS.length, for both a brand-new tab and one that
 // already existed with fewer grid columns than the schema currently has (found live, 2026-07-27:
@@ -240,6 +283,12 @@ export async function mirrorBookingRow(env: Env, row: SheetRow): Promise<void> {
 // Write-through cell write: always writes Sayfa1 (the authoritative write, un-guarded), then — only
 // for multi-session bookings — mirrors the same cell to the "{N} Seans" tab in its own try/catch.
 // Every existing writeCell(env, rowNumber, field, value) that has the row in scope becomes this.
+//
+// ponytail: each writeCell call here re-resolves the header from scratch (1 Sheets API read), so a
+// handler doing several sequential writeCellMirrored calls (e.g. cancellation.ts) re-reads the same
+// header several times over. Fine at this app's traffic (one therapist, no bulk operations) — if it
+// ever needs to be cheaper, add a per-request header cache keyed by tab, passed through instead of
+// re-resolved.
 export async function writeCellMirrored(
 	env: Env,
 	row: SheetRow,

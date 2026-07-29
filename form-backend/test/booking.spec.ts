@@ -78,8 +78,8 @@ describe('POST /booking validation', () => {
 			expect(response.status).toBe(400);
 		});
 
-		it('rejects more than 10 entries', async () => {
-			const slots = Array.from({ length: 11 }, (_, i) => `2026-08-${10 + i}T09:00:00.000Z`);
+		it('rejects more than 20 entries', async () => {
+			const slots = Array.from({ length: 21 }, (_, i) => `2026-08-${10 + i}T09:00:00.000Z`);
 			const response = await postBooking({ slotStartUtcs: slots });
 			expect(response.status).toBe(400);
 		});

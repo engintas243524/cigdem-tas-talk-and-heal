@@ -2,6 +2,7 @@
 <html lang="en" data-lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="google" content="notranslate" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Book a Session — Talk &amp; Heal</title>
 <meta name="description" content="Choose a session type and time, and book securely online with Çiğdem Taş." />
@@ -9,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=87">
+<link rel="stylesheet" href="style.css?v=95">
 </head>
 <body>
 
@@ -135,7 +136,7 @@
           <div class="recurring-note" id="recurringNote" hidden>
             <p><span data-en>You can select multiple sessions in the 'Choose a time' section below.</span><span data-tr>Aşağıdaki Saat Seç bölümünden birden çok seans seçebilirsiniz.</span></p>
             <p><span data-en>There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.</span><span data-tr>Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.</span></p>
-            <p><span data-en>To book more than 10 sessions, please contact your therapist directly.</span><span data-tr>10 seanstan fazla seçim yapmak için terapistinizle görüşün.</span></p>
+            <p><span data-en>To book more than 20 sessions, please contact your therapist directly.</span><span data-tr>20 seanstan fazla seçim yapmak için terapistinizle görüşün.</span></p>
             <p><span data-en>The day(s) and time(s) you pick in your first week will apply to every following week — only those same day/times will be selectable in later weeks.</span><span data-tr>İlk hafta seçtiğiniz gün ve saat(ler) sonraki tüm haftalar için de geçerli olur — sonraki haftalarda yalnızca bu gün/saatler seçilebilir.</span></p>
           </div>
         </fieldset>
@@ -159,10 +160,28 @@
             <input id="email" name="email" type="email" required>
           </div>
 
-          <div class="field">
-            <label for="phone"><span data-en>Phone (with country code)</span><span data-tr>Telefon (ülke koduyla)</span></label>
-            <input id="phone" name="phone" type="tel" placeholder="447911123456" required>
-            <p class="field-hint"><span data-en>Please enter digits only, with no leading + or 0 — your country code followed by your number (e.g. 447911123456 for the UK, 90537xxxxxxx for Turkey). This helps ensure your WhatsApp reminders reach you correctly.</span><span data-tr>Lütfen başında + veya 0 olmadan, yalnızca rakamlardan oluşacak şekilde giriniz — ülke kodunuz ve numaranız (örneğin İngiltere için 447911123456, Türkiye için 90537xxxxxxx gibi). Bu, WhatsApp bilgilendirmelerinin size doğru ulaşabilmesi için gereklidir.</span></p>
+          <div class="field field-phone">
+            <label id="phoneLabel"><span data-en>Phone (with country code)</span><span data-tr>Telefon (ülke koduyla)</span></label>
+            <div class="phone-input-row">
+              <div class="country-select">
+                <button type="button" class="country-btn" id="countryBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="phoneLabel countryBtn">
+                  <span id="countryBtnFlag" aria-hidden="true">🌐</span>
+                  <span id="countryBtnCode">+--</span>
+                  <svg class="country-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="country-dropdown" id="countryDropdown" hidden>
+                  <div class="country-search">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <input type="text" id="countrySearch" autocomplete="off">
+                  </div>
+                  <ul class="country-list" id="countryList" role="listbox" aria-label="Country"></ul>
+                </div>
+              </div>
+              <div class="phone-digits" id="phoneDigits" role="group" aria-labelledby="phoneLabel"></div>
+            </div>
+            <input type="hidden" id="phone" name="phone">
+            <p class="field-hint" id="phoneHint" style="display:none;"></p>
+            <p class="form-note form-note--error" id="phoneError" role="status" aria-live="polite" style="display:none;"></p>
           </div>
 
           <div class="field">
@@ -174,6 +193,12 @@
               <p class="field-hint char-count" id="charCount"></p>
               <button class="btn btn-ghost" type="button" id="translateBtn">
                 <span data-en>Translate</span><span data-tr>Çevir</span>
+              </button>
+              <button class="btn btn-ghost" type="button" id="translateToEnBtn" style="display:none;">
+                <span data-en>To English</span><span data-tr>İngilizceye</span>
+              </button>
+              <button class="btn btn-ghost" type="button" id="translateToTrBtn" style="display:none;">
+                <span data-en>To Turkish</span><span data-tr>Türkçeye</span>
               </button>
               <button class="btn btn-ghost mic-btn" type="button" id="micBtn" aria-label="Voice input / Sesli giriş">
                 <span class="mic-icon" aria-hidden="true">🎤</span>
@@ -308,6 +333,10 @@
     var submitBtn = document.getElementById('submitBtn');
     var bookingNote = document.getElementById('bookingNote');
     var summaryEl = document.getElementById('summary');
+    var phoneInput = document.getElementById('phone');
+    var phoneError = document.getElementById('phoneError');
+    var phoneHint = document.getElementById('phoneHint');
+    var phoneField = phoneInput.closest('.field');
     var charCount = document.getElementById('charCount');
     var recurringToggle = document.getElementById('recurringToggle');
     var recurringNote = document.getElementById('recurringNote');
@@ -332,11 +361,15 @@
       weekGap: { en: 'There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.', tr: 'Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.' },
       selectionTrimmed: { en: 'Your previously selected time(s) are not available for this session type — please choose again.', tr: 'Daha önce seçtiğiniz saat(ler) bu seans türü için uygun değil — lütfen tekrar seçin.' },
       needAck: { en: 'Please confirm you have read the cancellation policy.', tr: 'Lütfen iptal politikasını okuduğunu onayla.' },
+      invalidPhone: { en: 'Please enter a valid UK or Turkey mobile number and fill in all 10 digits.', tr: 'Lütfen geçerli bir İngiltere veya Türkiye cep telefonu numarası girin ve numaranızın 10 hanesini de doldurun.' },
+      selectCountry: { en: 'Please select your country code from the list.', tr: 'Lütfen ülke kodunu listeden seçiniz.' },
+      searchCountry: { en: 'Search country', tr: 'Ülke ara' },
       redirecting: { en: 'Redirecting to secure payment…', tr: 'Güvenli ödeme sayfasına yönlendiriliyor…' },
       translateEmpty: { en: 'Please write something first.', tr: 'Lütfen önce bir şeyler yaz.' },
       translating: { en: 'Translating…', tr: 'Çevriliyor…' },
       translateError: { en: 'Translation service is unavailable right now. Please try again shortly.', tr: 'Çeviri servisi şu anda kullanılamıyor. Lütfen birazdan tekrar dene.' },
       translated: { en: 'Translated.', tr: 'Çevrildi.' },
+      foreignLanguage: { en: 'This looks like it’s written in another language. Please use the Translate button to translate it into English.', tr: 'Bu not başka bir dilde yazılmış görünüyor. Lütfen Çevir butonunu kullanarak Türkçeye çevir.' },
       micListening: { en: 'Listening… speak now (tap the mic again to stop).', tr: 'Dinleniyor… konuş (durdurmak için mikrofona tekrar dokun).' },
       micError: { en: 'Microphone error. Please check your browser permissions.', tr: 'Mikrofon hatası. Lütfen tarayıcı izinlerini kontrol et.' },
       micUnsupported: { en: 'Voice input needs Google Chrome.', tr: 'Sesli giriş için Google Chrome gerekir.' },
@@ -378,8 +411,208 @@
       bookingNote.classList.toggle('form-note--error', !!isError);
     }
 
+    // Only UK and Turkey numbers are ever actually accepted (that's all the WhatsApp/backend
+    // integration supports), so validation always runs against this regex regardless of which
+    // country the user picks from the (much broader) list below — picking any other country
+    // simply can never pass, and falls through to the same "invalidPhone" message.
+    var PHONE_RE = /^(447\d{9}|905\d{9})$/;
+    function isValidPhone(v){ return PHONE_RE.test(v); }
+
+    // [iso2, dial code, English name, Turkish name]. UK and Turkey are pinned first since they're
+    // the only two countries whose numbers actually validate; the rest is a broad, searchable list
+    // so the picker still reads as a normal international phone control.
+    var COUNTRIES = [
+      ['GB','44','United Kingdom','Birleşik Krallık'],
+      ['TR','90','Turkey','Türkiye'],
+      ['AF','93','Afghanistan','Afganistan'],['AL','355','Albania','Arnavutluk'],['DZ','213','Algeria','Cezayir'],
+      ['AD','376','Andorra','Andorra'],['AO','244','Angola','Angola'],['AR','54','Argentina','Arjantin'],
+      ['AM','374','Armenia','Ermenistan'],['AU','61','Australia','Avustralya'],['AT','43','Austria','Avusturya'],
+      ['AZ','994','Azerbaijan','Azerbaycan'],['BS','1','Bahamas','Bahamalar'],['BH','973','Bahrain','Bahreyn'],
+      ['BD','880','Bangladesh','Bangladeş'],['BB','1','Barbados','Barbados'],['BY','375','Belarus','Belarus'],
+      ['BE','32','Belgium','Belçika'],['BZ','501','Belize','Belize'],['BJ','229','Benin','Benin'],
+      ['BT','975','Bhutan','Bhutan'],['BO','591','Bolivia','Bolivya'],['BA','387','Bosnia and Herzegovina','Bosna Hersek'],
+      ['BW','267','Botswana','Botsvana'],['BR','55','Brazil','Brezilya'],['BN','673','Brunei','Brunei'],
+      ['BG','359','Bulgaria','Bulgaristan'],['BF','226','Burkina Faso','Burkina Faso'],['BI','257','Burundi','Burundi'],
+      ['KH','855','Cambodia','Kamboçya'],['CM','237','Cameroon','Kamerun'],['CA','1','Canada','Kanada'],
+      ['CV','238','Cape Verde','Yeşil Burun Adaları'],['CF','236','Central African Republic','Orta Afrika Cumhuriyeti'],
+      ['TD','235','Chad','Çad'],['CL','56','Chile','Şili'],['CN','86','China','Çin'],['CO','57','Colombia','Kolombiya'],
+      ['KM','269','Comoros','Komorlar'],['CG','242','Congo','Kongo'],['CD','243','Congo (DRC)','Kongo Demokratik Cumhuriyeti'],
+      ['CR','506','Costa Rica','Kosta Rika'],['CI','225','Ivory Coast','Fildişi Sahili'],['HR','385','Croatia','Hırvatistan'],
+      ['CU','53','Cuba','Küba'],['CY','357','Cyprus','Kıbrıs'],['CZ','420','Czechia','Çekya'],['DK','45','Denmark','Danimarka'],
+      ['DJ','253','Djibouti','Cibuti'],['DO','1','Dominican Republic','Dominik Cumhuriyeti'],['EC','593','Ecuador','Ekvador'],
+      ['EG','20','Egypt','Mısır'],['SV','503','El Salvador','El Salvador'],['GQ','240','Equatorial Guinea','Ekvator Ginesi'],
+      ['ER','291','Eritrea','Eritre'],['EE','372','Estonia','Estonya'],['SZ','268','Eswatini','Esvatini'],
+      ['ET','251','Ethiopia','Etiyopya'],['FJ','679','Fiji','Fiji'],['FI','358','Finland','Finlandiya'],
+      ['FR','33','France','Fransa'],['GA','241','Gabon','Gabon'],['GM','220','Gambia','Gambiya'],
+      ['GE','995','Georgia','Gürcistan'],['DE','49','Germany','Almanya'],['GH','233','Ghana','Gana'],
+      ['GR','30','Greece','Yunanistan'],['GT','502','Guatemala','Guatemala'],['GN','224','Guinea','Gine'],
+      ['GW','245','Guinea-Bissau','Gine-Bissau'],['GY','592','Guyana','Guyana'],['HT','509','Haiti','Haiti'],
+      ['HN','504','Honduras','Honduras'],['HK','852','Hong Kong','Hong Kong'],['HU','36','Hungary','Macaristan'],
+      ['IS','354','Iceland','İzlanda'],['IN','91','India','Hindistan'],['ID','62','Indonesia','Endonezya'],
+      ['IR','98','Iran','İran'],['IQ','964','Iraq','Irak'],['IE','353','Ireland','İrlanda'],['IL','972','Israel','İsrail'],
+      ['IT','39','Italy','İtalya'],['JM','1','Jamaica','Jamaika'],['JP','81','Japan','Japonya'],['JO','962','Jordan','Ürdün'],
+      ['KZ','7','Kazakhstan','Kazakistan'],['KE','254','Kenya','Kenya'],['KI','686','Kiribati','Kiribati'],
+      ['KW','965','Kuwait','Kuveyt'],['KG','996','Kyrgyzstan','Kırgızistan'],['LA','856','Laos','Laos'],
+      ['LV','371','Latvia','Letonya'],['LB','961','Lebanon','Lübnan'],['LS','266','Lesotho','Lesoto'],
+      ['LR','231','Liberia','Liberya'],['LY','218','Libya','Libya'],['LI','423','Liechtenstein','Lihtenştayn'],
+      ['LT','370','Lithuania','Litvanya'],['LU','352','Luxembourg','Lüksemburg'],['MO','853','Macau','Makao'],
+      ['MG','261','Madagascar','Madagaskar'],['MW','265','Malawi','Malavi'],['MY','60','Malaysia','Malezya'],
+      ['MV','960','Maldives','Maldivler'],['ML','223','Mali','Mali'],['MT','356','Malta','Malta'],
+      ['MH','692','Marshall Islands','Marshall Adaları'],['MR','222','Mauritania','Moritanya'],['MU','230','Mauritius','Mauritius'],
+      ['MX','52','Mexico','Meksika'],['FM','691','Micronesia','Mikronezya'],['MD','373','Moldova','Moldova'],
+      ['MC','377','Monaco','Monako'],['MN','976','Mongolia','Moğolistan'],['ME','382','Montenegro','Karadağ'],
+      ['MA','212','Morocco','Fas'],['MZ','258','Mozambique','Mozambik'],['MM','95','Myanmar','Myanmar'],
+      ['NA','264','Namibia','Namibya'],['NR','674','Nauru','Nauru'],['NP','977','Nepal','Nepal'],
+      ['NL','31','Netherlands','Hollanda'],['NZ','64','New Zealand','Yeni Zelanda'],['NI','505','Nicaragua','Nikaragua'],
+      ['NE','227','Niger','Nijer'],['NG','234','Nigeria','Nijerya'],['KP','850','North Korea','Kuzey Kore'],
+      ['MK','389','North Macedonia','Kuzey Makedonya'],['NO','47','Norway','Norveç'],['OM','968','Oman','Umman'],
+      ['PK','92','Pakistan','Pakistan'],['PW','680','Palau','Palau'],['PS','970','Palestine','Filistin'],
+      ['PA','507','Panama','Panama'],['PG','675','Papua New Guinea','Papua Yeni Gine'],['PY','595','Paraguay','Paraguay'],
+      ['PE','51','Peru','Peru'],['PH','63','Philippines','Filipinler'],['PL','48','Poland','Polonya'],
+      ['PT','351','Portugal','Portekiz'],['PR','1','Puerto Rico','Porto Riko'],['QA','974','Qatar','Katar'],
+      ['RO','40','Romania','Romanya'],['RU','7','Russia','Rusya'],['RW','250','Rwanda','Ruanda'],
+      ['WS','685','Samoa','Samoa'],['SM','378','San Marino','San Marino'],['ST','239','São Tomé and Príncipe','Sao Tome ve Principe'],
+      ['SA','966','Saudi Arabia','Suudi Arabistan'],['SN','221','Senegal','Senegal'],['RS','381','Serbia','Sırbistan'],
+      ['SC','248','Seychelles','Seyşeller'],['SL','232','Sierra Leone','Sierra Leone'],['SG','65','Singapore','Singapur'],
+      ['SK','421','Slovakia','Slovakya'],['SI','386','Slovenia','Slovenya'],['SB','677','Solomon Islands','Solomon Adaları'],
+      ['SO','252','Somalia','Somali'],['ZA','27','South Africa','Güney Afrika'],['KR','82','South Korea','Güney Kore'],
+      ['SS','211','South Sudan','Güney Sudan'],['ES','34','Spain','İspanya'],['LK','94','Sri Lanka','Sri Lanka'],
+      ['SD','249','Sudan','Sudan'],['SR','597','Suriname','Surinam'],['SE','46','Sweden','İsveç'],
+      ['CH','41','Switzerland','İsviçre'],['SY','963','Syria','Suriye'],['TW','886','Taiwan','Tayvan'],
+      ['TJ','992','Tajikistan','Tacikistan'],['TZ','255','Tanzania','Tanzanya'],['TH','66','Thailand','Tayland'],
+      ['TL','670','Timor-Leste','Doğu Timor'],['TG','228','Togo','Togo'],['TO','676','Tonga','Tonga'],
+      ['TT','1','Trinidad and Tobago','Trinidad ve Tobago'],['TN','216','Tunisia','Tunus'],['TM','993','Turkmenistan','Türkmenistan'],
+      ['TV','688','Tuvalu','Tuvalu'],['UG','256','Uganda','Uganda'],['UA','380','Ukraine','Ukrayna'],
+      ['AE','971','United Arab Emirates','Birleşik Arap Emirlikleri'],['US','1','United States','Amerika Birleşik Devletleri'],
+      ['UY','598','Uruguay','Uruguay'],['UZ','998','Uzbekistan','Özbekistan'],['VU','678','Vanuatu','Vanuatu'],
+      ['VA','379','Vatican City','Vatikan'],['VE','58','Venezuela','Venezuela'],['VN','84','Vietnam','Vietnam'],
+      ['YE','967','Yemen','Yemen'],['ZM','260','Zambia','Zambiya'],['ZW','263','Zimbabwe','Zimbabve']
+    ];
+
+    function flagEmoji(iso2){
+      return String.fromCodePoint.apply(null, iso2.split('').map(function(c){ return 127397 + c.charCodeAt(0); }));
+    }
+    var TR_FOLD = { 'ı':'i', 'İ':'i', 'ğ':'g', 'ş':'s', 'ç':'c', 'ö':'o', 'ü':'u' };
+    // Common colloquial names that don't match the formal country name (e.g. Turkish speakers
+    // searching for the UK usually type "İngiltere", not "Birleşik Krallık").
+    var COUNTRY_ALIASES = { GB: 'ingiltere uk england', US: 'amerika abd' };
+    function foldSearch(s){
+      return s.toLowerCase().replace(/[ığşçöü]/g, function(ch){ return TR_FOLD[ch]; });
+    }
+
+    var countryBtn = document.getElementById('countryBtn');
+    var countryBtnFlag = document.getElementById('countryBtnFlag');
+    var countryBtnCode = document.getElementById('countryBtnCode');
+    var countryDropdown = document.getElementById('countryDropdown');
+    var countrySearch = document.getElementById('countrySearch');
+    var countryList = document.getElementById('countryList');
+    var phoneDigitsEl = document.getElementById('phoneDigits');
+    var PHONE_DIGIT_COUNT = 10; // UK and Turkey mobile numbers are both 10 digits after the country code
+    var digitInputs = [];
+    for (var di = 0; di < PHONE_DIGIT_COUNT; di++) {
+      var digitInput = document.createElement('input');
+      digitInput.type = 'tel';
+      digitInput.inputMode = 'numeric';
+      digitInput.maxLength = 1;
+      digitInput.className = 'phone-digit';
+      digitInput.setAttribute('aria-label', 'digit ' + (di + 1));
+      phoneDigitsEl.appendChild(digitInput);
+      digitInputs.push(digitInput);
+    }
+
+    var selectedCountry = null;
+    var phoneTouched = false; // country/length errors only show once the user leaves the widget or tries to submit — not on every partial keystroke
+
+    function composePhone(){
+      var digits = digitInputs.map(function(inp){ return inp.value; }).join('');
+      phoneInput.value = selectedCountry ? (selectedCountry[1] + digits) : '';
+    }
+
+    function refreshPhoneMessages(){
+      var digits = digitInputs.map(function(inp){ return inp.value; }).join('');
+      var showNoCountry = !selectedCountry && (digits.length > 0 || phoneTouched);
+      var showLengthError = !!selectedCountry && phoneTouched && !PHONE_RE.test(selectedCountry[1] + digits);
+      phoneHint.textContent = STRINGS.selectCountry[currentLang()];
+      phoneHint.style.display = showNoCountry ? 'block' : 'none';
+      phoneError.textContent = STRINGS.invalidPhone[currentLang()];
+      phoneError.style.display = showLengthError ? 'block' : 'none';
+      phoneField.classList.toggle('has-message', showNoCountry || showLengthError);
+    }
+
+    function selectCountry(c){
+      selectedCountry = c;
+      countryBtnFlag.textContent = flagEmoji(c[0]);
+      countryBtnCode.textContent = '+' + c[1];
+      composePhone();
+      refreshPhoneMessages();
+    }
+
+    function renderCountryList(filter){
+      var q = foldSearch(filter || '');
+      countryList.innerHTML = '';
+      COUNTRIES.forEach(function(c){
+        var name = currentLang() === 'tr' ? c[3] : c[2];
+        if (q && foldSearch(name).indexOf(q) === -1 && c[1].indexOf(q) === -1 && foldSearch(COUNTRY_ALIASES[c[0]] || '').indexOf(q) === -1) return;
+        var li = document.createElement('li');
+        li.setAttribute('role', 'option');
+        li.textContent = flagEmoji(c[0]) + ' ' + name + ' +' + c[1];
+        li.addEventListener('click', function(){ selectCountry(c); closeCountryDropdown(); });
+        countryList.appendChild(li);
+      });
+    }
+
+    function openCountryDropdown(){
+      countryDropdown.hidden = false;
+      countryBtn.setAttribute('aria-expanded', 'true');
+      countrySearch.value = '';
+      countrySearch.placeholder = STRINGS.searchCountry[currentLang()];
+      renderCountryList('');
+      countrySearch.focus();
+    }
+    function closeCountryDropdown(){
+      countryDropdown.hidden = true;
+      countryBtn.setAttribute('aria-expanded', 'false');
+    }
+    countryBtn.addEventListener('click', function(){
+      if (countryDropdown.hidden) openCountryDropdown(); else closeCountryDropdown();
+    });
+    countrySearch.addEventListener('input', function(){ renderCountryList(countrySearch.value); });
+    document.addEventListener('click', function(e){
+      if (!countryDropdown.hidden && !countryDropdown.contains(e.target) && e.target !== countryBtn && !countryBtn.contains(e.target)) closeCountryDropdown();
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && !countryDropdown.hidden) { closeCountryDropdown(); countryBtn.focus(); }
+    });
+
+    digitInputs.forEach(function(inp, idx){
+      inp.addEventListener('input', function(){
+        inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 1);
+        if (inp.value && idx < PHONE_DIGIT_COUNT - 1) digitInputs[idx + 1].focus();
+        composePhone();
+        refreshPhoneMessages();
+      });
+      inp.addEventListener('keydown', function(e){
+        if (e.key === 'Backspace' && !inp.value && idx > 0) digitInputs[idx - 1].focus();
+      });
+      inp.addEventListener('paste', function(e){
+        var text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+        if (!text) return;
+        e.preventDefault();
+        for (var j = 0; j < text.length && idx + j < PHONE_DIGIT_COUNT; j++) digitInputs[idx + j].value = text[j];
+        digitInputs[Math.min(idx + text.length, PHONE_DIGIT_COUNT - 1)].focus();
+        composePhone();
+        refreshPhoneMessages();
+      });
+      inp.addEventListener('blur', function(){ phoneTouched = true; refreshPhoneMessages(); });
+    });
+
     var SLOT_MAX_WEEKS = 10; // calendar lookahead cap — a booking can hit MAX_SESSION_COUNT well before 10 weeks now that a week can hold more than one session
     var DAY_MS = 86400000;
+    // ponytail: decorative only, never selectable — mirrors config.ts's BUSINESS_HOURS (09/10/11,
+    // lunch break, 14/15/16) as plain HH:MM strings rather than real Date/timezone math, since a
+    // past day's placeholder chips carry no real bookable instant. Both display locales (en-GB,
+    // tr-TR) already render times in 24h HH:MM, so one static list covers both languages.
+    var PAST_DAY_PLACEHOLDER_TIMES = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
 
     // ---- Week-carousel state (one week visible at a time; all weeks live in the DOM at
     // once and are slid via translateX, so every slot input stays queryable and
@@ -597,6 +830,10 @@
       var headDowFmt = { weekday: 'short', timeZone: displayTimeZone() };
       var headDomFmt = { day: 'numeric', timeZone: displayTimeZone() };
 
+      // Local-noon anchor (matches weekStart/colDate below) so a same-day comparison never flips
+      // across a DST boundary or midnight rounding.
+      var todayNoon = new Date(); todayNoon.setHours(12, 0, 0, 0);
+
       calWeekStarts = [];
       weekOrder.forEach(function(weekKey){
         var weekStart = new Date(weekKey); weekStart.setHours(12, 0, 0, 0); // local-noon anchor: DST/TZ-safe
@@ -623,6 +860,20 @@
             holEl.className = 'slot-day-holiday';
             holEl.textContent = holiday.holidayTitle;
             listEl.appendChild(holEl);
+          }
+          // A day that's already past — or today, which the backend also never offers (it only
+          // ever returns tomorrow-or-later, see earliestBookableDayOffset) — always has empty
+          // `details` here, which without this left the week grid's earlier/current day blank.
+          // Placeholder-only, never selectable, styled distinctly (.slot-chip--past) so it reads
+          // as "this day is over", not as a broken/empty column.
+          if (!details.length && colDate.getTime() <= todayNoon.getTime()) {
+            PAST_DAY_PLACEHOLDER_TIMES.forEach(function(timeText, i){
+              if (i === 3) { var gap = document.createElement('div'); gap.className = 'slot-gap'; listEl.appendChild(gap); }
+              var past = document.createElement('div');
+              past.className = 'slot-chip slot-chip--past';
+              past.textContent = timeText;
+              listEl.appendChild(past);
+            });
           }
           details.forEach(function(detail, i){
             var iso = detail.iso;
@@ -744,6 +995,8 @@
     // into whichever language the page's own flag toggle is currently showing.
     (function(){
       var translateBtn = document.getElementById('translateBtn');
+      var translateToEnBtn = document.getElementById('translateToEnBtn');
+      var translateToTrBtn = document.getElementById('translateToTrBtn');
       var translateNote = document.getElementById('translateNote');
       if (!translateBtn || !summaryEl || !translateNote) return;
 
@@ -780,23 +1033,80 @@
           });
       }
 
-      translateBtn.addEventListener('click', function(){
-        var text = summaryEl.value.trim();
+      // Every Translate click (including a later flip between En/Tr) must translate FROM this
+      // same stable snapshot, never from whatever the box currently shows — otherwise a second
+      // click re-translates the FIRST translation instead of the visitor's real note, compounding
+      // translation drift with every click (found live: a foreign-language note, translated to
+      // English, then "flipped" to Turkish, drifted further from the original meaning each time
+      // because the second call was translating the English translation, not the original text).
+      // Cleared on any manual edit (below) so a genuinely new note gets its own fresh snapshot.
+      var originalText = '';
+
+      function doTranslate(tl, busyBtns){
+        if (!originalText) originalText = summaryEl.value.trim();
+        var text = originalText;
         if (!text) { showTranslateNote('translateEmpty', true); return; }
         showTranslateNote('translating', false);
-        translateBtn.disabled = true;
-        requestTranslation(text, currentLang())
+        busyBtns.forEach(function(b){ b.disabled = true; });
+        requestTranslation(text, tl)
           .then(function(translated){
             summaryEl.value = translated;
             if (charCount) charCount.textContent = summaryEl.value.length + ' / ' + summaryEl.getAttribute('maxlength');
             showTranslateNote('translated', false);
+            foreignDetected = false;
+            lastDetectedText = translated;
+            showLanguageChoice(false);
           })
           .catch(function(){
             showTranslateNote('translateError', true);
           })
           .finally(function(){
-            translateBtn.disabled = false;
+            busyBtns.forEach(function(b){ b.disabled = false; });
           });
+      }
+
+      function showLanguageChoice(show){
+        translateBtn.style.display = show ? 'none' : '';
+        translateToEnBtn.style.display = show ? '' : 'none';
+        translateToTrBtn.style.display = show ? '' : 'none';
+      }
+
+      translateBtn.addEventListener('click', function(){
+        if (!summaryEl.value.trim()) { showTranslateNote('translateEmpty', true); return; }
+        if (foreignDetected) { showLanguageChoice(true); return; }
+        doTranslate(currentLang(), [translateBtn]);
+      });
+      translateToEnBtn.addEventListener('click', function(){ doTranslate('en', [translateToEnBtn, translateToTrBtn]); });
+      translateToTrBtn.addEventListener('click', function(){ doTranslate('tr', [translateToEnBtn, translateToTrBtn]); });
+
+      // Clients booking from outside the UK/Turkey may write their note in neither English nor
+      // Turkish — Çiğdem can only read those two. Detect this on blur (the /translate proxy's
+      // response already carries the detected source language for free, data[2], so no extra
+      // endpoint is needed), warn the visitor, and once they press Translate let them pick which
+      // of the two languages to convert into rather than guessing for them.
+      var lastDetectedText = '';
+      var foreignDetected = false;
+      summaryEl.addEventListener('blur', function(){
+        var text = summaryEl.value.trim();
+        if (!text || text === lastDetectedText) return;
+        lastDetectedText = text;
+        fetch(API_BASE + '/translate?sl=auto&tl=' + currentLang() + '&q=' + encodeURIComponent(text))
+          .then(function(res){ return res.ok ? res.json() : null; })
+          .then(function(data){
+            var detected = data && data[2];
+            if (!detected || detected === 'en' || detected === 'tr') return;
+            foreignDetected = true;
+            showTranslateNote('foreignLanguage', true);
+          })
+          .catch(function(){ /* detection is a soft nicety — fail silently, no hard gate */ });
+      });
+      summaryEl.addEventListener('input', function(){
+        originalText = ''; // any manual edit invalidates the translation snapshot — start fresh
+        if (!foreignDetected) return;
+        foreignDetected = false;
+        lastDetectedText = ''; // force a fresh check on the next blur
+        translateNote.style.display = 'none';
+        showLanguageChoice(false);
       });
     })();
 
@@ -940,6 +1250,10 @@
       var sessionType = form.querySelector('input[name="sessionType"]:checked');
       if (!sessionType || selectedSlots.length < 1) { showNote('needSlot', true); return; }
       if (!document.getElementById('cancellationAck').checked) { showNote('needAck', true); return; }
+      phoneTouched = true;
+      refreshPhoneMessages();
+      if (!selectedCountry) { showNote('selectCountry', true); countryBtn.focus(); return; }
+      if (!isValidPhone(phoneInput.value.trim())) { showNote('invalidPhone', true); digitInputs[0].focus(); return; }
       if (!form.reportValidity()) return;
 
       var slots = selectedSlots.slice().sort(); // ascending ISO order, matches server-side sort

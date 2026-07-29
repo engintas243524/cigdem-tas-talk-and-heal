@@ -103,6 +103,7 @@ export async function handleCancelPost(request: Request, env: Env): Promise<Resp
 			refundGBP: refund.refundGBP,
 			refundPercent: refund.refundPercent,
 			reason,
+			cancelledBy: 'Danışan',
 			markBookingCancelled: refund.remaining.length === allRemainingCount,
 		});
 		return json({ cancelled: true, refundGBP: refund.refundGBP, refundPercent: refund.refundPercent }, request);

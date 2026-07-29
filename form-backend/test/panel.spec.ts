@@ -5,6 +5,7 @@ import { handlePanelNotePost, handlePanelPending, handlePanelCancel } from '../s
 import { runSessionNoteFallback } from '../src/scheduled';
 import { signPanelToken } from '../src/lib/panel-auth';
 import { SHEET_COLUMNS } from '../src/config';
+import { CANONICAL_HEADER_ROW } from './sheets-test-header';
 import type { SheetRow } from '../src/types';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -55,11 +56,22 @@ function stubApis(rows: SheetRow[]) {
 			return new Response(JSON.stringify({ id: 'cs_1', payment_intent: 'pi_test_123' }), { status: 200 });
 		}
 		if (url.includes('api.stripe.com/v1/refunds')) {
-			return new Response(JSON.stringify({ id: 're_test_1' }), { status: 200 });
+			// Real Stripe returns the SAME refund id for a retried idempotency key and a NEW one for a
+			// genuinely different action — mirror that here (rather than always 're_test_1') so a test
+			// can tell two distinct partial cancellations apart from a retry of the same one.
+			const idemKey = new Headers(init?.headers as HeadersInit).get('Idempotency-Key') ?? 'no-key';
+			return new Response(JSON.stringify({ id: `re_${idemKey}` }), { status: 200 });
 		}
 		if (url.includes('/calendar/v3')) return new Response('{}', { status: 200 });
 		if (url.includes('sheets.googleapis.com')) {
+			// ensureSheetTab's spreadsheet-metadata probe has no `/values/` segment — same as before this
+			// rewrite, it isn't stubbed here; writeCellMirrored's isolation swallows the resulting throw,
+			// so the mirror step silently no-ops while the authoritative Sayfa1 write still goes through.
+			if (!url.includes('/values/')) throw new Error('unstubbed metadata call (expected, caught by mirror isolation)');
 			const range = decodeURIComponent(url.split('/values/')[1].split('?')[0]);
+			if (range.endsWith('!1:1')) {
+				return new Response(JSON.stringify({ values: [CANONICAL_HEADER_ROW] }), { status: 200 }); // resolveHeaderPositions
+			}
 			if (method === 'PUT') {
 				const m = range.match(/!([A-Z]+)(\d+)$/)!;
 				const colIdx = letterToIndex(m[1]);
@@ -356,6 +368,42 @@ describe('POST /panel/cancel (manual override)', () => {
 		expect(store[0].session3StartUtc).toBe('');
 		expect(store[0].cancelledAt).not.toBe('');
 		expect(puts.some((p) => p.column === 'cancelledAt')).toBe(true);
+	});
+
+	it('accumulates refundAmount/refundPercent/stripeRefundId across two separate partial cancellations (BE-37)', async () => {
+		const { store } = stubApis([
+			makeRow({
+				stripeSessionId: 'cs_1',
+				name: 'Ada',
+				phone: '447911123456',
+				sessionType: 'standard',
+				sessionMode: 'online',
+				clientTimeZone: 'Europe/London',
+				sessionCount: '3',
+				priceGBP: '120',
+				appointmentStartUtc: future(5),
+				session2StartUtc: future(12),
+				session3StartUtc: future(19),
+			}),
+		]);
+
+		const first = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [2], refundPercent: 100, reason: 'Vefat' });
+		expect(first.status).toBe(200);
+		// £120 of a £360 (3×£120) original booking refunded so far.
+		expect(store[0].refundAmount).toBe('120');
+		expect(store[0].refundPercent).toBe('33');
+		const firstRefundId = store[0].stripeRefundId;
+		expect(firstRefundId).not.toBe('');
+
+		const second = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [3], refundPercent: 100, reason: 'Vefat' });
+		expect(second.status).toBe(200);
+		// Cumulative, not overwritten: £120 + £120 = £240 of £360 = 67%, and both refund ids kept.
+		expect(store[0].refundAmount).toBe('240');
+		expect(store[0].refundPercent).toBe('67');
+		const ids = store[0].stripeRefundId.split(', ');
+		expect(ids).toHaveLength(2);
+		expect(ids[0]).toBe(firstRefundId);
+		expect(ids[1]).not.toBe(firstRefundId);
 	});
 
 	it('rejects an empty sessionIndexes array', async () => {

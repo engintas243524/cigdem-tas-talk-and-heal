@@ -2286,3 +2286,95 @@ ile migrate et (her etkilenen sekmede), (2) hücre hücre doğrula, (3) ANCAK ON
 (`SHEET_COLUMNS`) güncellensin. Sırayı asla tersine çevirme — kodu önce değiştirip "extend-only
 self-healing nasılsa düzeltir" varsaymak tam olarak bu bug'ın kendisiydi.
 
+## Kullanıcı isteği — birebir (2026-07-27)
+
+> 1- iptal in müşteri tarafından ya da çiğdem tarafından yapılıp yapılmadığını belirten bir sütunu da
+> google sheet te AU sütununa ekleyelim ve AU da ve sağında bulunan sütunları 1'er tane sağa
+> kaydıralım.
+> 2- google sheet te iptal politikası kademesi olarak en son Aysel için yaptığımızda 24 yazıyor,
+> bizim 72 dışında bir İptal politikası kademesi var mı?
+
+**Yapılan (Madde 1):** Canlı Sheet'te (Sayfa1 + 3/4/5/6/9/10 Seans sekmeleri) native `insertDimension`
+ile AU'ya yeni bir sütun eklendi, hücre hücre doğrulandı (AS/AT sabit kaldı, AU-sağı bir kaydı),
+ANCAK ONDAN SONRA kod güncellendi: `config.ts`'e `cancelledBy` (AU, "İptal Eden (Danışan/Çiğdem)")
+eklendi; `lib/cancellation.ts`'in `performCancellation`'ı artık bunu yazıyor; `routes/cancel.ts`
+(müşteri linki) `'Danışan'`, `routes/panel.ts` (Çiğdem'in manuel iptali) `'Çiğdem'` gönderiyor.
+`test/cancel.spec.ts` ve `test/sheets.spec.ts`'teki sabit sütun harfi/PUT sayısı referansları
+(AX→AY, BR→BS, 16→18, 9→10 PUT) kaydırmaya göre güncellendi. `tsc`/`prettier`/tam suite (125/125)
+temiz.
+
+**Madde 2 cevabı:** Evet, `lib/policy.ts`'teki `computePolicyTier` üç kademe döndürür: 72/48/24 saat.
+Ama bu değer BOOKING ANINDA hesaplanıp `policyTier` sütununa yazılıyor (rezervasyon ilk seanstan
+kaç saat önce yapıldı) — İPTAL anındaki iade oranıyla hiç ilgisi yok. Asıl iade hesaplaması
+(`lib/refund.ts`'teki `computeRefund`/`computeOverrideRefund`) 2026-07-26'dan beri sadece iptal
+anında seansa kalan süreye bakıyor ve iki sonuca çöküyor: ≥72 saat → %100, <72 saat → %0 (48/24
+alt-kademeleri artık iade oranını hiç etkilemiyor). Aysel'in kaydındaki "24" sadece onun rezervasyonu
+ilk seansına 48 saatten az kala yapıldığını gösteriyor, yaptığımız iptalin iade oranıyla alakasız.
+
+## Kullanıcı isteği — 10 seans sınırının kaldırılması + Sheet veri bütünlüğü garantisi (2026-07-28, birebir)
+
+> 10 seastan fazla seçememe kuralını kaldıralım, müşteri istediği kadar seans seçebilsin.
+
+Netleştirme sonrası (aynı gün): "İstediği kadar" mimarinin (her seans için sabit sütun üçlüsü) izin
+verdiği somut bir sayıya çevrildi — kullanıcı **20 seans** üst sınırını seçti.
+
+Ardından kullanıcı isteği genişledi, birebir:
+
+> evet seans sayısının artması google sheet teki sütun sayısını çarpan etkisi ile arttıracak, bu
+> manuel veri araması için sorun olur ancak veriyi senin aracılığınla çekmek istediğimizde doğru
+> başlıklar altında doğru verileri işlediğin sürece sorun olmayacaktır. Bu konuda senden şu garantiyi
+> istiyorum; Bundan sonra hem benim hem Çiğdem in hesabına tanımlı google sheet e eklenecek veriler
+> ve veri bağlantılı başlıkların doğru konumlandırması yapılsın, sütunlara ya da satırlara ekleme,
+> çıkarma,silme, kopyalama, yapıştırma yapıldığında yapılan işlem satır,sütun kaymasına ya da aynı
+> verinin sayfa 1 dışında başka sayfalarda(session sayfaları) aynı şekilde düzenlenmesi otomatik ve
+> eksiksiz şekilde gerçekleşsin. Bunun için kod bloğuna güçlü ve atlanamaz bir yapı eklemen
+> gerekiyorsa ekle. Bu çok önemli çünkü ileride bu verilerle işletmenin büyümesi, küçülmesi,
+> yatırımcı alması, ortak alması, devir edilmesi, vs kritik kararlarda bu veriler çok ama çok
+> önemli-kritik olacak.
+
+**Durum:** Plan hazırlanıp kullanıcı onayına sunuldu, onaylandı ve uygulandı — bkz. altındaki
+"Uygulandı" girdisi.
+
+## Uygulandı — 20 seans limiti + başlık-adı bazlı dinamik sütun çözümlemesi (2026-07-28)
+
+**Seans limiti:** `form-backend/src/config.ts`'te `MAX_SESSION_COUNT` 10 → 20. `booking.html`'deki
+"10 seanstan fazla..." uyarı metni (hem `data-en` hem `data-tr`) "20" olarak güncellendi.
+
+**Veri bütünlüğü garantisi (asıl büyük değişiklik):** `form-backend/src/lib/sheets.ts` baştan
+yazıldı — artık her okuma/yazma, hedef sekmenin (Sayfa1 veya bir "N Seans" mirror sekmesi) GERÇEK
+1. satırını okuyup her alanı `SHEET_COLUMN_LABELS`'teki metinle eşleştirerek buluyor
+(`resolveHeaderPositions`), `SHEET_COLUMNS` dizisindeki sabit pozisyona güvenmek yerine. Etiketi
+hiç bulunamayan bir anahtar (silinmiş/yeni sütun) o sekmenin başlığının mevcut sonuna eklenerek
+self-heal ediliyor. Bu, bir insanın Sheet'te elle sütun ekleme/silme/taşıma/kopyala-yapıştır
+yapması durumunda verinin artık sessizce yanlış başlığın altına düşmeyeceği anlamına geliyor
+(BE-18'in kök nedenini kalıcı olarak kapatıyor). Etkilenen fonksiyonlar: `ensureHeaderRow`,
+`findRowBySessionId`, `getRow`, `getAllRows`, `writeCell`, `appendBookingRow` — hepsi AYNI export
+imzasıyla kaldı, hiçbir route/lib dosyasında (`scheduled.ts`, `notes.ts`, `panel.ts`,
+`cancellation.ts`, `cancel.ts`, `stripe-webhook.ts`) satır değişmedi.
+
+**Testler:** `test/sheets.spec.ts`, `test/sheet-mirror.spec.ts`, `test/panel.spec.ts`,
+`test/cancel.spec.ts`, `test/scheduled.spec.ts`, `test/stripe-webhook.spec.ts`, `test/booking.spec.ts`
+güncellendi (yeni paylaşılan `test/sheets-test-header.ts` fixture'ı ile); yeni
+`test/sheets-header-order.spec.ts` eklendi — başlık KARIŞIK sırada verildiğinde
+`writeCell`/`getRow`/`appendBookingRow`'un yine de doğru alanı doğru başlığın altına yazdığını
+kanıtlıyor. `cancel.spec.ts`'teki sabit sütun harfi referansları (yeni sütunlar araya girdiği için
+kaydı: `AU`→`BY` cancelledBy, `AY`→`CC` activeSessionCount) güncellendi. Tam suite 130/130 yeşil,
+`tsc`/`prettier` temiz.
+
+**Canlı Sheet migrasyonu (kullanıcı onayıyla çalıştırıldı):** Sayfa1 + 6 mevcut mirror sekmesinde
+(3/4/5/6/9/10 Seans) native `insertDimension` ile index 44'e (AS sütunu, `session10ReminderSentAt`
+ile `cancelledAt` arası) 30 yeni sütun (`session11StartUtc`..`session20ReminderSentAt`) açıldı, grid
+121 sütuna büyütüldü, yeni başlık etiketleri yazıldı. `session11Note`..`session20NoteSubmittedAt`
+(dizinin en sonunda) için migrasyon YAPILMADI — kod tasarımı gereği ilk gerçek yazımda self-heal ile
+otomatik eklenecekler. Doğrulama: her sekmenin başlığı hücre hücre `SHEET_COLUMNS`'a karşı
+karşılaştırıldı (sadece kasıtlı olarak ertelenen 20 kuyruk kolonu eksik çıktı, beklenen), veri
+satırları kontrol edildi (yeni açılan 44-73 aralığında hiçbir sekmede sızan veri yok, örnek satırlar
+gerçek Stripe ID/iptal zamanı/iade tutarı ile tutarlı).
+
+**Yan bulgu (migrasyon doğrulaması sırasında yakalandı):** Sayfa1'in A1 başlığı "Stripe İşlem No"
+yazıyordu, kodun beklediği (ve `stripeRefundId`'nin "Stripe İşlem No (İade)" etiketinden ayırt etmek
+için gerekli) tam metin ise "Stripe İşlem No (İlk Ödeme)" idi — eski statik-pozisyon kod bunu hiç
+fark etmiyordu, yeni başlık-metni-bazlı kod ilk yazımda bunu "eksik" sanıp A1'i kaybederdi. Sadece
+başlık metni düzeltildi (veri dokunulmadı), migrasyon sonrası doğrulamada yakalandı — yeni
+mimarinin tam olarak önlemek için tasarlandığı hata sınıfının canlı bir örneği.
+

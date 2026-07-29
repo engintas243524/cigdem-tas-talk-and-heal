@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { handleStripeWebhook } from '../src/routes/stripe-webhook';
 import { constructStripeEvent } from '../src/lib/stripe';
 import { SHEET_COLUMNS } from '../src/config';
+import { isHeaderRequest, headerResponse } from './sheets-test-header';
 
 vi.mock('../src/lib/stripe', () => ({ constructStripeEvent: vi.fn() }));
 
@@ -65,9 +66,13 @@ function stubApis(confirmationAlreadySent: boolean, failClientEmail = false) {
 			return new Response(JSON.stringify({ access_token: 'fake', expires_in: 3600 }), { status: 200 });
 		if (url.includes('/calendar/v3')) return new Response('{}', { status: 200 });
 		if (url.includes('sheets.googleapis.com')) {
-			// Capture the follow-up PUT body (B<row>:<last><row>) so a test can assert derived cell
-			// values like sessionDurationMinutes actually land in the row.
+			if (isHeaderRequest(url)) return headerResponse();
+			// Capture the row-population body — appendBookingRow now writes it via a single
+			// values:batchUpdate POST (one entry per field) instead of one contiguous PUT — plus any
+			// later single-cell PUT (guard timestamps etc.) — so a test can assert derived cell values
+			// like sessionDurationMinutes actually land somewhere in the row.
 			if (init?.method === 'PUT' && !url.includes(':append')) putBodies.push(String(init.body ?? ''));
+			if (init?.method === 'POST' && url.includes(':batchUpdate')) putBodies.push(String(init.body ?? ''));
 			if (url.includes(':append')) {
 				appended = true;
 				// Real shape of a Sheets values:append response — appendBookingRow reads the row

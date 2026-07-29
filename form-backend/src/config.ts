@@ -73,7 +73,9 @@ export const EMAIL_FROM = 'Talk and Heal <onboarding@resend.dev>';
 export const SHEET_TAB_NAME = 'Sayfa1';
 
 // Maximum sessions in one recurring/multi-session purchase (booking-system-expansion plan).
-export const MAX_SESSION_COUNT = 10;
+// Raised 10 -> 20 (2026-07-28, INTEGRASYON_TODO.md) — the Sheet's per-session fixed-column layout
+// can't go truly unlimited, 20 is the agreed practical cap.
+export const MAX_SESSION_COUNT = 20;
 
 // Column layout for the "Talk and Heal – Danışan Kayıtları" Google Sheet.
 // lib/sheets.ts is the only module that should need to know this order.
@@ -120,6 +122,7 @@ export const SHEET_COLUMNS = [
 	...SESSION_NUMBER_COLUMNS,
 	'cancelledAt',
 	'cancellationReason',
+	'cancelledBy',
 	'stripeRefundId',
 	'refundPercent',
 	'refundAmount',
@@ -181,6 +184,7 @@ export const SHEET_COLUMN_LABELS: Record<(typeof SHEET_COLUMNS)[number], string>
 	...SESSION_NUMBER_LABELS,
 	cancelledAt: 'İptal Edilme Zamanı',
 	cancellationReason: 'İptal Nedeni',
+	cancelledBy: 'İptal Eden (Danışan/Çiğdem)',
 	stripeRefundId: 'Stripe İşlem No (İade)',
 	refundPercent: 'İade Oranı (%)',
 	refundAmount: 'İade Tutarı (GBP)',

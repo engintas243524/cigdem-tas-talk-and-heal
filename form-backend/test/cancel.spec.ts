@@ -4,6 +4,7 @@ import { handleCancelGet, handleCancelPost } from '../src/routes/cancel';
 import { computeRefund } from '../src/lib/refund';
 import { signCancelToken } from '../src/lib/cancel-link';
 import { SHEET_COLUMNS } from '../src/config';
+import { isHeaderRequest, headerResponse } from './sheets-test-header';
 import type { SheetRow } from '../src/types';
 
 afterEach(() => {
@@ -156,6 +157,7 @@ function stubApis(row: SheetRow, failWhatsApp = false) {
 			return new Response(JSON.stringify({ access_token: 'fake', expires_in: 3600 }), { status: 200 });
 		}
 		if (url.includes('sheets.googleapis.com')) {
+			if (isHeaderRequest(url)) return headerResponse();
 			if (url.endsWith('A2%3AA')) return new Response(JSON.stringify({ values: [[row.stripeSessionId]] }), { status: 200 }); // findRow -> row 2
 			if (method === 'PUT') return new Response('{}', { status: 200 }); // writeCell
 			return new Response(JSON.stringify({ values: [rowArray(row)] }), { status: 200 }); // getRow
@@ -315,9 +317,10 @@ describe('POST /cancel', () => {
 		// The parts that actually matter still went through despite the WhatsApp failure.
 		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/refunds'))).toBe(true);
 		expect(calls.filter((c) => c.url.includes('/calendar/v3') && c.method === 'DELETE').length).toBe(1);
-		// cancellationReason/stripeRefundId/refundPercent/refundAmount/activeSessionCount/cancelledAt +
-		// the 3 cleared session-1 columns (appointmentStartUtc/reminderDueUtc/reminderSentAt) = 9 writes.
-		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(9);
+		// cancellationReason/cancelledBy/stripeRefundId/refundPercent/refundAmount/activeSessionCount/
+		// cancelledAt + the 3 cleared session-1 columns (appointmentStartUtc/reminderDueUtc/
+		// reminderSentAt) = 10 writes.
+		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(10);
 	});
 
 	it('is idempotent: an already-cancelled row does not refund or notify again', async () => {
@@ -390,14 +393,17 @@ describe('POST /cancel', () => {
 		expect(data.refundGBP).toBe(120); // just session 2's price, ample notice
 
 		expect(calls.filter((c) => c.url.includes('/calendar/v3') && c.method === 'DELETE').length).toBe(1);
-		// Partial cancellation: cancellationReason/stripeRefundId/refundPercent/refundAmount/
-		// activeSessionCount (5) + session 2's 3 cleared columns = 8 fields, each mirrored to the
-		// "3 Seans" tab (sessionCount>1) = 16 PUTs. cancelledAt must NOT be among them — the booking
+		// Partial cancellation: cancellationReason/cancelledBy/stripeRefundId/refundPercent/refundAmount/
+		// activeSessionCount (6) + session 2's 3 cleared columns = 9 fields, each mirrored to the
+		// "3 Seans" tab (sessionCount>1) = 18 PUTs. cancelledAt must NOT be among them — the booking
 		// as a whole is still live.
-		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(16);
-		// activeSessionCount = 3 populated sessions - 1 just cancelled = 2 (column AX, per SHEET_COLUMNS).
-		const activeCountWrite = calls.find((c) => c.method === 'PUT' && c.url.includes('AX2'));
+		expect(calls.filter((c) => c.url.includes('sheets.googleapis.com') && c.method === 'PUT').length).toBe(18);
+		// activeSessionCount = 3 populated sessions - 1 just cancelled = 2 (column CC, per SHEET_COLUMNS).
+		const activeCountWrite = calls.find((c) => c.method === 'PUT' && c.url.includes('CC2'));
 		expect(activeCountWrite?.body).toBe('{"values":[["2"]]}');
+		// cancelledBy: the client's own /cancel link always records 'Danışan', never 'Çiğdem'.
+		const cancelledByWrite = calls.find((c) => c.method === 'PUT' && c.url.includes('BY2'));
+		expect(cancelledByWrite?.body).toBe('{"values":[["Danışan"]]}');
 	});
 
 	it('rejects a sessionIndexes selection that includes an already-past/invalid session', async () => {
