@@ -320,11 +320,18 @@
     return line;
   }
 
+  // Diacritic-insensitive: international clients' names (Lucía, María, Chloé, Müller...) must be
+  // findable by their unaccented spelling too, since that's what a therapist typing fast will use.
+  // NFD + strip combining marks after the 'tr' lowercase (so İ's combining dot also strips).
+  function normalizeSearch(s) {
+    return (s || '').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
   function renderClients(q) {
-    q = (q || '').toLocaleLowerCase('tr');
+    q = normalizeSearch(q);
     var field = clientSearchField.value;
     clientList.innerHTML = '';
-    var matches = allClients.filter(function (c) { return fieldText(c, field).toLocaleLowerCase('tr').indexOf(q) !== -1; });
+    var matches = allClients.filter(function (c) { return normalizeSearch(fieldText(c, field)).indexOf(q) !== -1; });
     if (!matches.length) { clientList.innerHTML = '<div class="client muted">Eşleşen danışan yok.</div>'; return; }
     matches.forEach(function (c) {
       var div = document.createElement('div');
@@ -349,7 +356,11 @@
         b.addEventListener('click', function () { openSession(c.stripeSessionId, s.sessionIndex); });
         div.appendChild(b);
       });
-      if (!c.cancelled) {
+      // Only offer "İptal Et" when at least one session is still in the future — a booking whose
+      // every session is already past has nothing computeOverrideRefund (lib/refund.ts) would ever
+      // treat as cancellable, so showing the button would just lead to a confusing empty picker.
+      var hasFutureSession = (c.sessions || []).some(function (s) { return s.startUtc && new Date(s.startUtc).getTime() > Date.now(); });
+      if (!c.cancelled && hasFutureSession) {
         var cancelBtn = document.createElement('button');
         cancelBtn.type = 'button';
         cancelBtn.className = 'sess cancel-trigger';
@@ -406,13 +417,23 @@
     cancelTarget = { stripeSessionId: stripeSessionId, name: name };
     cancelContextLine.textContent = name + ' — iptal edilecek seansı/seansları seçin';
     cancelSessionsList.innerHTML = '';
+    var now = Date.now();
     (sessions || []).forEach(function (s) {
+      // Backend (lib/refund.ts's remainingSessions) only ever refunds FUTURE sessions — a past
+      // one checked here would 400 with no visible reason otherwise. Show it, but not as
+      // selectable, so it can't silently fail a cancel attempt.
+      var isPast = s.startUtc && new Date(s.startUtc).getTime() <= now;
       var label = document.createElement('label');
-      var cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.value = String(s.sessionIndex);
-      cb.addEventListener('change', function () { updateRefundPreview('auto'); });
-      label.appendChild(cb);
-      label.appendChild(document.createTextNode(s.sessionIndex + '. seans' + (s.startUtc ? ' — ' + fmt(s.startUtc) : '')));
+      if (isPast) {
+        label.className = 'muted';
+        label.textContent = s.sessionIndex + '. seans — ' + fmt(s.startUtc) + ' (geçmiş tarihli, iptal edilemez)';
+      } else {
+        var cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = String(s.sessionIndex);
+        cb.addEventListener('change', function () { updateRefundPreview('auto'); });
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(s.sessionIndex + '. seans' + (s.startUtc ? ' — ' + fmt(s.startUtc) : '')));
+      }
       cancelSessionsList.appendChild(label);
     });
     cancelReason.value = 'Ağır hastalık';
@@ -447,7 +468,7 @@
       body: JSON.stringify({ stripeSessionId: cancelTarget.stripeSessionId, sessionIndexes: indexes, refundPercent: percent, reason: reason, reasonDetail: detail })
     }).then(function (r) {
       if (r.status === 409) { setStatus(cancelStatus, 'Bu randevu zaten iptal edilmiş.', 'err'); cancelTarget = null; return; }
-      if (!r.ok) throw new Error('fail');
+      if (!r.ok) return r.json().then(function (data) { throw new Error(data.error || 'İptal edilemedi.'); }, function () { throw new Error('İptal edilemedi.'); });
       return r.json().then(function (data) {
         // Clear the target so a stray extra click on this (now stale) confirm button can never
         // silently re-fire against the just-cancelled booking — found live: a leftover open box
@@ -455,7 +476,7 @@
         cancelTarget = null;
         setStatus(cancelStatus, apptWord + ' iptal edildi. İade: £' + data.refundGBP + ' (%' + data.refundPercent + ').', 'ok');
       });
-    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(cancelStatus, 'İptal edilemedi.', 'err'); });
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(cancelStatus, e.message, 'err'); });
   });
 
   function openSession(stripeSessionId, sessionIndex) {
