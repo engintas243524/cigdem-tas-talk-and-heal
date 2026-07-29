@@ -79,7 +79,7 @@ export async function runSessionNoteFallback(env: Env, now: Date = new Date()): 
 	for (const { rowNumber, row } of rows) {
 		if (row.cancelledAt) continue;
 		for (const index of bookedSessionIndexes(row)) {
-			const { startUtcField, guardField } = sessionFields(index);
+			const { startUtcField, guardField, noteField } = sessionFields(index);
 			if (row[guardField]) continue; // already closed (manual "Ekle" or an earlier tick)
 
 			const { year, month, day } = getLocalDateParts(new Date(row[startUtcField]), PANEL_TIMEZONE);
@@ -87,7 +87,12 @@ export async function runSessionNoteFallback(env: Env, now: Date = new Date()): 
 			if (now <= endOfDay) continue; // the session's day (London) isn't over yet
 
 			try {
-				await closeOutSessionNote(env, rowNumber, row, index, ''); // '' -> default note applied inside
+				// BE-40: pass the CELL'S OWN current text, not '' — Çiğdem may already have saved a
+				// note via the panel's unguarded "replace" mode and simply never clicked "Ekle". '' here
+				// would blow that already-persisted note away with DEFAULT_NOTE inside closeOutSessionNote
+				// (text.trim() || DEFAULT_NOTE). Passing row[noteField] preserves it when present, and
+				// still falls through to DEFAULT_NOTE when the cell was genuinely never touched.
+				await closeOutSessionNote(env, rowNumber, row, index, row[noteField]);
 			} catch (err) {
 				console.error(`Note fallback failed for row ${rowNumber} (${row.stripeSessionId}), session ${index}`, err);
 			}

@@ -1,8 +1,9 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { runReminderSweep } from '../src/scheduled';
+import { runReminderSweep, runSessionNoteFallback } from '../src/scheduled';
 import { SHEET_COLUMNS } from '../src/config';
 import { emptySheetRow } from '../src/lib/sheets';
+import { DEFAULT_NOTE } from '../src/lib/notes';
 import { isHeaderRequest, headerResponse } from './sheets-test-header';
 import type { SheetRow } from '../src/types';
 
@@ -147,5 +148,46 @@ describe('runReminderSweep', () => {
 		const mirrorWrites = writes.filter((w) => w.range.startsWith('3 Seans!'));
 		expect(sayfa1Writes).toEqual([{ range: 'Sayfa1!T2', value: now.toISOString() }]);
 		expect(mirrorWrites).toEqual([{ range: '3 Seans!T2', value: now.toISOString() }]);
+	});
+});
+
+describe('runSessionNoteFallback', () => {
+	// Session's own London day is long over in every case below (appointment 2026-07-01,
+	// "now" the next day) — the 23:59 fallback window has passed.
+	const now = new Date('2026-07-02T00:00:00.000Z');
+	const OVER_ROW: SheetRow = { ...BASE_ROW, appointmentStartUtc: '2026-07-01T09:00:00.000Z', sessionCount: '1' };
+
+	it('a session with no note ever entered gets the default note + guard stamp', async () => {
+		const { writes } = stubSheetsAndWhatsapp([{ ...OVER_ROW, sessionNote: '', sessionNoteSubmittedAt: '' }]);
+
+		await runSessionNoteFallback(env, now);
+
+		expect(writes).toEqual([
+			{ range: expect.stringContaining('Sayfa1!'), value: DEFAULT_NOTE },
+			{ range: expect.stringContaining('Sayfa1!'), value: expect.any(String) }, // guard timestamp: real Date.now(), not the `now` sweep param
+		]);
+	});
+
+	// BE-40: previously this cron always closed out with '', which inside closeOutSessionNote
+	// falls back to DEFAULT_NOTE regardless of what's already in the cell — silently destroying a
+	// note Çiğdem had already saved via the panel's unguarded "replace" (just never clicked "Ekle").
+	it('preserves an already-saved note (panel "replace", guard never set) instead of overwriting it with the default', async () => {
+		const existingNote = 'Danışan bu hafta ilerleme kaydetti.';
+		const { writes } = stubSheetsAndWhatsapp([{ ...OVER_ROW, sessionNote: existingNote, sessionNoteSubmittedAt: '' }]);
+
+		await runSessionNoteFallback(env, now);
+
+		expect(writes).toEqual([
+			{ range: expect.stringContaining('Sayfa1!'), value: existingNote },
+			{ range: expect.stringContaining('Sayfa1!'), value: expect.any(String) }, // guard timestamp: real Date.now(), not the `now` sweep param
+		]);
+	});
+
+	it('skips a session that was already closed out (guard already set)', async () => {
+		const { writes } = stubSheetsAndWhatsapp([{ ...OVER_ROW, sessionNote: 'existing', sessionNoteSubmittedAt: '2026-07-01T23:59:00.000Z' }]);
+
+		await runSessionNoteFallback(env, now);
+
+		expect(writes).toEqual([]);
 	});
 });
