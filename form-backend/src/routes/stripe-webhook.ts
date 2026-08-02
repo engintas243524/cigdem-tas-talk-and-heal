@@ -1,5 +1,12 @@
 import type Stripe from 'stripe';
-import { WHATSAPP_TEMPLATES, SUMMARY_MAX_LENGTH, getSessionMinutes, locationFor, type SessionType } from '../config';
+import {
+	WHATSAPP_TEMPLATES,
+	SUMMARY_MAX_LENGTH,
+	getSessionMinutes,
+	locationFor,
+	TEMP_EMAIL_TO_WHATSAPP_NUMBER,
+	type SessionType,
+} from '../config';
 import { constructStripeEvent } from '../lib/stripe';
 import { createCalendarEvent } from '../lib/calendar';
 import { computeReminderDueUtc } from '../lib/timezone';
@@ -12,7 +19,7 @@ import {
 	ensureHeaderRow,
 	mirrorBookingRow,
 } from '../lib/sheets';
-import { sendTemplate } from '../lib/whatsapp';
+import { sendTemplate, sendText } from '../lib/whatsapp';
 import { sendEmail } from '../lib/email';
 import { buildCancelUrl } from '../lib/cancel-link';
 import { summarizeNote } from '../lib/summarize';
@@ -148,18 +155,33 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 			// every Stripe webhook retry would re-send the WhatsApp confirmation above to the client —
 			// exactly the double-message-the-client bug Session 6 guarded against. Swallow + log
 			// instead, so a broken email channel never blocks the guard or repeats the WhatsApp send.
+			const cancelUrl = await buildCancelUrl(env, stripeSessionId);
+			// List every selected slot explicitly (not just the first) — the client should see the
+			// full set of dates/times they picked, not a truncated "first of N" summary.
+			const slotDates = plan.map((s) => formatAppointment(s.startUtc, md.clientTimeZone)).join('\n- ');
+			const bodyIntro =
+				`Hi ${md.name},\n\nYour booking is confirmed.\nYour selected session${sessionCount > 1 ? 's are' : ' is'}:\n- ${slotDates}\n${locationFor(md.sessionMode)}\n\n` +
+				`Cancellation policy: you may cancel at any time. If you cancel at least 72 hours before a session, you'll receive a full refund for it. If you cancel less than 72 hours before, no refund will be given for that session.\n\n`;
+			const emailBody = bodyIntro + `To cancel or change your booking, use this secure link:\n${cancelUrl}\n\nWarm wishes,\nTalk and Heal`;
 			try {
-				const cancelUrl = await buildCancelUrl(env, stripeSessionId);
-				await sendEmail(
-					env,
-					md.email,
-					'Your Talk and Heal booking is confirmed',
-					`Hi ${md.name},\n\nYour booking is confirmed.\nAppointment: ${appointmentLabel}\n${locationFor(md.sessionMode)}\n\n` +
-						`Cancellation policy: you may cancel at any time. If you cancel at least 72 hours before a session, you'll receive a full refund for it. If you cancel less than 72 hours before, no refund will be given for that session.\n\n` +
-						`To cancel or change your booking, use this secure link:\n${cancelUrl}\n\nWarm wishes,\nTalk and Heal`,
-				);
+				await sendEmail(env, md.email, 'Your Talk and Heal booking is confirmed', emailBody);
 			} catch (err) {
 				console.error(`Client confirmation email failed for ${stripeSessionId}:`, err);
+			}
+			// ponytail: see TEMP_EMAIL_TO_WHATSAPP_NUMBER in config.ts — mirrors the email above as a
+			// WhatsApp text (own isolated try/catch, same reasoning as the email isolation) so the
+			// fallback number can see the email attempt happened while Resend can't email real
+			// clients. Deliberately does NOT include cancelUrl: that link is a bearer capability token
+			// (whoever holds it can cancel + trigger a refund for this booking), so fanning it out to
+			// a fixed non-client number would leak that capability for every booking made while
+			// Resend stays in sandbox mode (found in security review, 2026-08-02).
+			const whatsappPreviewBody =
+				bodyIntro +
+				`To cancel or change your booking, contact Talk and Heal directly — this preview does not include the cancellation link.\n\nWarm wishes,\nTalk and Heal`;
+			try {
+				await sendText(env, TEMP_EMAIL_TO_WHATSAPP_NUMBER, `[Email preview for ${md.email}]\n\n${whatsappPreviewBody}`);
+			} catch (err) {
+				console.error(`Email-to-WhatsApp fallback failed for ${stripeSessionId}:`, err);
 			}
 			await writeCellMirrored(env, existingRow, rowNumber!, 'confirmationSentAt', new Date().toISOString());
 		}

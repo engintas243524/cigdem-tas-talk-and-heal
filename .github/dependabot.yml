@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # form-backend is the only npm project in this repo (root is plain HTML/CSS/JS, no build step).
+  - package-ecosystem: "npm"
+    directory: "/form-backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # This is a Cloudflare Worker with no CI pipeline yet — Dependabot PRs land as regular
+    # branches for a human to review and merge, they don't auto-deploy anything.
+    labels:
+      - "dependencies"

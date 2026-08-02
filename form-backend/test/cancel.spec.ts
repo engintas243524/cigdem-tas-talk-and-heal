@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { handleCancelGet, handleCancelPost } from '../src/routes/cancel';
 import { computeRefund } from '../src/lib/refund';
 import { signCancelToken } from '../src/lib/cancel-link';
-import { SHEET_COLUMNS } from '../src/config';
+import { SHEET_COLUMNS, TEMP_EMAIL_TO_WHATSAPP_NUMBER } from '../src/config';
 import { isHeaderRequest, headerResponse } from './sheets-test-header';
 import type { SheetRow } from '../src/types';
 
@@ -146,7 +146,7 @@ interface Call {
 // Stateful fake so the full cancel cascade can run against `fetch`. `row` is what getRow returns.
 // `failWhatsApp` simulates the real, currently-expected state (the 2 cancellation templates aren't
 // Meta-approved yet, so a real send 132001s) without needing a second stub function.
-function stubApis(row: SheetRow, failWhatsApp = false) {
+function stubApis(row: SheetRow, failWhatsApp = false, failEmailToWhatsAppFallback = false) {
 	const calls: Call[] = [];
 	const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 		const url = String(input);
@@ -172,6 +172,12 @@ function stubApis(row: SheetRow, failWhatsApp = false) {
 		if (url.includes('graph.facebook.com')) {
 			if (failWhatsApp) {
 				return new Response('{"error":{"message":"template name does not exist","code":132001}}', { status: 404 });
+			}
+			if (failEmailToWhatsAppFallback) {
+				const parsedBody = JSON.parse(String(init?.body ?? '{}'));
+				if (parsedBody.type === 'text' && parsedBody.to === TEMP_EMAIL_TO_WHATSAPP_NUMBER) {
+					return new Response('{"error":{"message":"outside 24h window","code":131047}}', { status: 400 });
+				}
 			}
 			return new Response('{}', { status: 200 });
 		}
@@ -263,7 +269,7 @@ describe('POST /cancel', () => {
 		expect(response.status).toBe(401);
 	});
 
-	it('performs the full cancellation: Stripe refund + calendar delete + sheets writes + 2 WhatsApp', async () => {
+	it('performs the full cancellation: Stripe refund + calendar delete + sheets writes + 3 WhatsApp', async () => {
 		const row = makeRow({
 			stripeSessionId: SESSION_ID,
 			name: 'Ada',
@@ -287,7 +293,40 @@ describe('POST /cancel', () => {
 		expect(refundCall).toBeDefined();
 		expect(refundCall!.body).toContain('amount=12000'); // £120 in pence
 		expect(calls.filter((c) => c.url.includes('/calendar/v3') && c.method === 'DELETE').length).toBe(1);
-		expect(calls.filter((c) => c.url.includes('graph.facebook.com')).length).toBe(2); // client + Selen
+		expect(calls.filter((c) => c.url.includes('graph.facebook.com')).length).toBe(3); // client + Selen + email-to-WhatsApp fallback
+
+		const textMessages = calls
+			.filter((c) => c.url.includes('graph.facebook.com'))
+			.map((c) => JSON.parse(c.body))
+			.filter((body) => body.type === 'text');
+		expect(textMessages.length).toBe(1);
+		expect(textMessages[0].to).toBe(TEMP_EMAIL_TO_WHATSAPP_NUMBER);
+		expect(textMessages[0].text.body).toContain('Ada');
+		expect(textMessages[0].text.body).toContain('cancellation has been processed');
+	});
+
+	it('still completes the cancellation when only the email-to-WhatsApp fallback fails', async () => {
+		// Own try/catch around the fallback send (cancellation.ts) must isolate its failure from the
+		// refund/calendar/sheets work already committed above it.
+		const row = makeRow({
+			stripeSessionId: SESSION_ID,
+			name: 'Ada',
+			phone: '447911123456',
+			sessionCount: '1',
+			priceGBP: '120',
+			policyTier: '72',
+			appointmentStartUtc: future(5),
+			clientTimeZone: 'Europe/London',
+		});
+		const calls = stubApis(row, false, true);
+		const token = await signCancelToken(env, SESSION_ID);
+
+		const response = await postCancel(token, 'Feeling better, thank you');
+
+		expect(response.status).toBe(200); // fallback failing must not undo the refund/calendar/sheets work
+		const data = (await response.json()) as { cancelled: boolean };
+		expect(data.cancelled).toBe(true);
+		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/refunds'))).toBe(true);
 	});
 
 	it('still reports success when the (not-yet-Meta-approved) WhatsApp templates fail', async () => {
@@ -367,7 +406,7 @@ describe('POST /cancel', () => {
 		expect(data.refundGBP).toBe(0);
 		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/refunds'))).toBe(false); // Stripe rejects a 0 refund
 		expect(calls.some((c) => c.url.includes('api.stripe.com/v1/checkout/sessions'))).toBe(false); // not even retrieved
-		expect(calls.filter((c) => c.url.includes('graph.facebook.com')).length).toBe(2); // still notified
+		expect(calls.filter((c) => c.url.includes('graph.facebook.com')).length).toBe(3); // still notified + email-to-WhatsApp fallback
 	});
 
 	it('cancels only the chosen sessions, leaving the booking (and the other sessions) live', async () => {

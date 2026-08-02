@@ -1,6 +1,8 @@
 .DS_Store
 .gstack/
-.claude/
+**/.claude/**
+!/.claude/skills/
+!/.claude/skills/**
 talk-and-heal-hata-gunlugu/
 API/
 node_modules/

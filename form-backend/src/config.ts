@@ -68,6 +68,12 @@ export const WHATSAPP_TEMPLATE_LANGUAGE = 'en';
 // `help@talkandheal.co.uk` once Çiğdem's own Resend account has that domain DNS-verified.
 export const EMAIL_FROM = 'Talk and Heal <onboarding@resend.dev>';
 
+// ponytail: Resend sandbox can't email real clients yet (see EMAIL_FROM above) — until the domain
+// is verified, the client confirmation email's content is also mirrored as a WhatsApp text to this
+// number so the cancel link stays reachable for testing. Remove this + its call site once
+// EMAIL_FROM moves off the sandbox address.
+export const TEMP_EMAIL_TO_WHATSAPP_NUMBER = '905373220224';
+
 // Default tab name — confirmed against the real sheet (2026-07-21): Turkish-locale Google
 // accounts name the default tab "Sayfa1", not "Sheet1".
 export const SHEET_TAB_NAME = 'Sayfa1';

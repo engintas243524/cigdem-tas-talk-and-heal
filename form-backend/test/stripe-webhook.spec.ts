@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { handleStripeWebhook } from '../src/routes/stripe-webhook';
 import { constructStripeEvent } from '../src/lib/stripe';
-import { SHEET_COLUMNS } from '../src/config';
+import { SHEET_COLUMNS, TEMP_EMAIL_TO_WHATSAPP_NUMBER } from '../src/config';
 import { isHeaderRequest, headerResponse } from './sheets-test-header';
 
 vi.mock('../src/lib/stripe', () => ({ constructStripeEvent: vi.fn() }));
@@ -53,7 +53,7 @@ function postWebhook() {
 
 // Stateful fake of Calendar/Sheets/WhatsApp/Email/OAuth so the full cascade can run against
 // `fetch` without hitting real APIs. `confirmationAlreadySent` simulates a retried delivery.
-function stubApis(confirmationAlreadySent: boolean, failClientEmail = false) {
+function stubApis(confirmationAlreadySent: boolean, failClientEmail = false, failEmailToWhatsAppFallback = false) {
 	const row = new Array(SHEET_COLUMNS.length).fill('');
 	row[SHEET_COLUMNS.indexOf('stripeSessionId')] = 'cs_test_123';
 	if (confirmationAlreadySent) row[SHEET_COLUMNS.indexOf('confirmationSentAt')] = '2026-08-01T00:00:00.000Z';
@@ -88,7 +88,18 @@ function stubApis(confirmationAlreadySent: boolean, failClientEmail = false) {
 			}
 			return new Response(JSON.stringify({ values: appended ? [row] : [] }), { status: 200 }); // getRow
 		}
-		if (url.includes('graph.facebook.com')) return new Response('{}', { status: 200 });
+		if (url.includes('graph.facebook.com')) {
+			// Match the fallback specifically by its `type: "text"` + `to` fields (not just any
+			// graph.facebook.com call) — the template sends (client confirm + Selen x2) must keep
+			// succeeding even when only the fallback is made to fail.
+			if (failEmailToWhatsAppFallback) {
+				const body = JSON.parse(String(init?.body ?? '{}'));
+				if (body.type === 'text' && body.to === TEMP_EMAIL_TO_WHATSAPP_NUMBER) {
+					return new Response('{"error":{"message":"outside 24h window","code":131047}}', { status: 400 });
+				}
+			}
+			return new Response('{}', { status: 200 });
+		}
 		if (url.includes('api.resend.com')) {
 			// Optionally simulate Resend's real sandbox restriction (send-to-client fails, e.g.
 			// unverified domain) without touching Selen's own email — the real constraint documented
@@ -125,7 +136,7 @@ describe('POST /webhook/stripe', () => {
 		expect(response.status).toBe(200);
 	});
 
-	it('runs the full booking cascade on a first delivery: calendar + sheets + 3 WhatsApp sends + 2 emails', async () => {
+	it('runs the full booking cascade on a first delivery: calendar + sheets + 4 WhatsApp sends + 2 emails', async () => {
 		vi.mocked(constructStripeEvent).mockResolvedValue(completedEvent() as never);
 		stubAi();
 		const { fetchMock, putBodies } = stubApis(false);
@@ -136,10 +147,53 @@ describe('POST /webhook/stripe', () => {
 		const calls = fetchMock.mock.calls.map(([u]) => String(u));
 		expect(calls.some((u) => u.includes('/calendar/v3'))).toBe(true);
 		expect(calls.some((u) => u.includes(':append'))).toBe(true);
-		expect(calls.filter((u) => u.includes('graph.facebook.com')).length).toBe(3); // client confirm + Selen x2
+		expect(calls.filter((u) => u.includes('graph.facebook.com')).length).toBe(4); // client confirm + email-to-WhatsApp fallback + Selen x2
 		expect(calls.filter((u) => u.includes('api.resend.com')).length).toBe(2); // client confirmation + Selen notice
 		// The derived "Seans Süresi" cell lands in the appended row (standard => "50 dk").
 		expect(putBodies.some((b) => b.includes('50 dk'))).toBe(true);
+	});
+
+	it('sends the email-to-WhatsApp fallback to TEMP_EMAIL_TO_WHATSAPP_NUMBER, but never leaks the cancel link there', async () => {
+		// The existing "4 WhatsApp sends" test above only counts calls — it would still pass if the
+		// fallback silently went to the wrong number or leaked the cancel link. This asserts on the
+		// actual destination/content of that specific call. The cancel link is a bearer capability
+		// token (whoever has it can cancel + trigger a refund for this booking) — it must only ever
+		// reach the client's real email, never the fixed fallback number (security review finding,
+		// 2026-08-02).
+		vi.mocked(constructStripeEvent).mockResolvedValue(completedEvent() as never);
+		stubAi();
+		const { fetchMock } = stubApis(false);
+
+		await postWebhook();
+
+		const textMessages = fetchMock.mock.calls
+			.filter(([u]) => String(u).includes('graph.facebook.com'))
+			.map(([, init]) => JSON.parse(String((init as RequestInit | undefined)?.body ?? '{}')))
+			.filter((body) => body.type === 'text');
+		expect(textMessages.length).toBe(1);
+		expect(textMessages[0].to).toBe(TEMP_EMAIL_TO_WHATSAPP_NUMBER);
+		expect(textMessages[0].text.body).toContain(METADATA.name);
+		expect(textMessages[0].text.body).toContain('Your booking is confirmed');
+		expect(textMessages[0].text.body).not.toContain('/cancel?session='); // no cancel-link path leaked
+
+		const emailCall = fetchMock.mock.calls.find(([u]) => String(u).includes('api.resend.com'));
+		expect(String(emailCall?.[1]?.body ?? '')).toContain('/cancel?session='); // the real email still gets it
+	});
+
+	it('still writes the confirmation guard cell when only the email-to-WhatsApp fallback fails', async () => {
+		// Own try/catch around the fallback send (stripe-webhook.ts) must isolate its failure from
+		// the guard write, same as the client-email isolation tested below — otherwise a retry would
+		// re-send the client's real WhatsApp template confirmation forever.
+		vi.mocked(constructStripeEvent).mockResolvedValue(completedEvent() as never);
+		stubAi();
+		const { fetchMock, putBodies } = stubApis(false, false, true);
+
+		const response = await postWebhook();
+
+		expect(response.status).toBe(200); // fallback failing must not break the booking cascade
+		const calls = fetchMock.mock.calls.map(([u]) => String(u));
+		expect(calls.filter((u) => u.includes('graph.facebook.com')).length).toBe(4); // attempted, even though the fallback one 400s
+		expect(putBodies.length).toBeGreaterThanOrEqual(2); // guard cell (confirmationSentAt) still written
 	});
 
 	it("sends the AI-condensed summary — not the client's raw note — to Sheets and Selen", async () => {
@@ -180,7 +234,7 @@ describe('POST /webhook/stripe', () => {
 		expect(response.status).toBe(200); // the whole cascade must not 500 just because email failed
 
 		const calls = fetchMock.mock.calls.map(([u]) => String(u));
-		expect(calls.filter((u) => u.includes('graph.facebook.com')).length).toBe(3); // client confirm + Selen x2, unaffected
+		expect(calls.filter((u) => u.includes('graph.facebook.com')).length).toBe(4); // client confirm + email-to-WhatsApp fallback + Selen x2, unaffected
 		// confirmationSentAt must still get written (guard cell) even though the email failed —
 		// otherwise a Stripe webhook retry would re-send the WhatsApp confirmation to the client
 		// on every retry, forever, since the email will keep failing until Phase 5's domain switch.

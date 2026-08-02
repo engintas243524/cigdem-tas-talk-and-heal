@@ -1,7 +1,10 @@
 import { WHATSAPP_TEMPLATE_LANGUAGE } from '../config';
 import type { Env } from '../types';
 
-const GRAPH_API_VERSION = 'v20.0';
+// Meta's Graph API versions expire ~2 years after release (see
+// developers.facebook.com/docs/graph-api/changelog/versions) — v20.0 (used until 2026-08-02)
+// was set to expire 2026-09-24. Bumped to the current version ahead of that deadline.
+const GRAPH_API_VERSION = 'v26.0';
 
 async function sendMessage(env: Env, payload: Record<string, unknown>): Promise<void> {
 	const response = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`, {
