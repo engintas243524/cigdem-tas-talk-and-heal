@@ -135,7 +135,6 @@
           </label>
           <div class="recurring-note" id="recurringNote" hidden>
             <p><span data-en>You can select multiple sessions in the 'Choose a time' section below.</span><span data-tr>Aşağıdaki Saat Seç bölümünden birden çok seans seçebilirsiniz.</span></p>
-            <p><span data-en>There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.</span><span data-tr>Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.</span></p>
             <p><span data-en>To book more than 20 sessions, please contact your therapist directly.</span><span data-tr>20 seanstan fazla seçim yapmak için terapistinizle görüşün.</span></p>
             <p><span data-en>The day(s) and time(s) you pick in your first week will apply to every following week — only those same day/times will be selectable in later weeks.</span><span data-tr>İlk hafta seçtiğiniz gün ve saat(ler) sonraki tüm haftalar için de geçerli olur — sonraki haftalarda yalnızca bu gün/saatler seçilebilir.</span></p>
           </div>
@@ -318,14 +317,11 @@
   (function(){
     // Local-dev convenience: derive the Worker origin from whatever host served this page, so
     // the same URL works via localhost AND via the Mac's LAN IP (phone-on-same-Wi-Fi QA — a
-    // hardcoded 'localhost' would resolve to the phone itself, not the Mac running the Worker).
-    // TBD: this whole scheme must be replaced at deploy time (Session 8, INTEGRASYON_TODO.md /
-    // plan doc) with the real production API origin (the deployed workers.dev / custom domain).
-    // TEMP (2026-07-23 multi-device test session, revert after): a Cloudflare quick tunnel can't
-    // reuse the ":8787" trick since the frontend/backend tunnels are unrelated hostnames.
-    var API_BASE = window.location.hostname.indexOf('trycloudflare.com') !== -1
-      ? 'https://stanley-relate-trial-web.trycloudflare.com'
-      : 'http://' + window.location.hostname + ':8787';
+    // Local dev (python3 -m http.server + wrangler dev) uses localhost:8787; every other origin
+    // (GitHub Pages, custom domain) hits the deployed Worker.
+    var API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+      ? 'http://localhost:8787'
+      : 'https://form-backend.engintass19-358.workers.dev';
 
     var form = document.getElementById('bookingForm');
     var slotContainer = document.getElementById('slotContainer');
@@ -358,7 +354,6 @@
       slotTaken: { en: 'That time was just taken by someone else — please pick another below.', tr: 'Bu saat az önce başkası tarafından alındı — lütfen aşağıdan başka bir saat seç.' },
       genericError: { en: 'Something went wrong. Please try again shortly.', tr: 'Bir şeyler ters gitti. Lütfen birazdan tekrar dene.' },
       needSlot: { en: 'Please choose a session type and a time above.', tr: 'Lütfen yukarıdan bir seans türü ve saat seç.' },
-      weekGap: { en: 'There cannot be more than a one-week gap between sessions — please choose your sessions accordingly.', tr: 'Seanslar arasında bir haftadan fazla boşluk olamaz, seans seçimlerinizi buna göre yapınız.' },
       selectionTrimmed: { en: 'Your previously selected time(s) are not available for this session type — please choose again.', tr: 'Daha önce seçtiğiniz saat(ler) bu seans türü için uygun değil — lütfen tekrar seçin.' },
       needAck: { en: 'Please confirm you have read the cancellation policy.', tr: 'Lütfen iptal politikasını okuduğunu onayla.' },
       invalidPhone: { en: 'Please enter a valid UK or Turkey mobile number and fill in all 10 digits.', tr: 'Lütfen geçerli bir İngiltere veya Türkiye cep telefonu numarası girin ve numaranızın 10 hanesini de doldurun.' },
@@ -760,22 +755,9 @@
       }
     });
 
-    // Gap check only — mirrors the gap portion of validateConsecutiveWeeks() server-side for
-    // instant client feedback. Pattern validity itself needs no client mirror: renderSlots already
-    // renders an out-of-pattern chip as non-interactive, so that class of bad input can't reach
-    // submit in the first place.
-    function hasWeekGap(sortedIsos){
-      var weekKeys = [];
-      sortedIsos.forEach(function(iso){
-        var wk = mondayKey(new Date(iso));
-        if (weekKeys.indexOf(wk) === -1) weekKeys.push(wk);
-      });
-      for (var i = 1; i < weekKeys.length; i++) {
-        var days = (new Date(weekKeys[i]).getTime() - new Date(weekKeys[i - 1]).getTime()) / 86400000;
-        if (days > 7) return true;
-      }
-      return false;
-    }
+    // Pattern validity needs no client-side gap check: renderSlots already renders an
+    // out-of-pattern chip as non-interactive, so that class of bad input can't reach submit in
+    // the first place, and later weeks may be any distance apart (skipping weeks is allowed).
 
     function renderSlots(slotDetails){
       if (!slotDetails.length) {
@@ -1257,7 +1239,6 @@
       if (!form.reportValidity()) return;
 
       var slots = selectedSlots.slice().sort(); // ascending ISO order, matches server-side sort
-      if (hasWeekGap(slots)) { showNote('weekGap', true); return; } // no-op for single slot
 
       var payload = {
         name: document.getElementById('name').value.trim(),

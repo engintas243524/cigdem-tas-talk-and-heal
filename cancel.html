@@ -169,11 +169,11 @@
   }
 
   (function(){
-    // Same local-dev origin scheme as booking.html — replaced at deploy time with the real API host.
-    // TEMP (2026-07-23 multi-device test session, revert after): see booking.html note.
-    var API_BASE = window.location.hostname.indexOf('trycloudflare.com') !== -1
-      ? 'https://stanley-relate-trial-web.trycloudflare.com'
-      : 'http://' + window.location.hostname + ':8787';
+    // Local dev (python3 -m http.server + wrangler dev) uses localhost:8787; every other origin
+    // (GitHub Pages, custom domain) hits the deployed Worker.
+    var API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+      ? 'http://localhost:8787'
+      : 'https://form-backend.engintass19-358.workers.dev';
 
     var params = new URLSearchParams(window.location.search);
     var sessionId = params.get('session') || '';

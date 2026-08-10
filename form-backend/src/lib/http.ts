@@ -6,9 +6,10 @@
 // the frontend, so phones/other devices/Çiğdem off-LAN can hit this Worker through the tunnel.
 const ALLOWED_ORIGINS = [
 	'https://talkandheal.co.uk',
+	'https://engintas243524.github.io',
 	'http://localhost:5173',
 	'http://192.168.1.27:5173',
-	'https://guam-serial-unlimited-labs.trycloudflare.com',
+	'https://atom-exceptions-assign-careful.trycloudflare.com',
 ];
 
 export function corsHeaders(request: Request): HeadersInit {
