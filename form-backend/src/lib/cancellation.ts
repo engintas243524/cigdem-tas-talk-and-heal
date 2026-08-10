@@ -43,6 +43,10 @@ export async function performCancellation(
 		reason: string;
 		cancelledBy: 'Danışan' | 'Çiğdem';
 		markBookingCancelled?: boolean;
+		// Çiğdem's own freeform note for a manual cancellation (Madde 11, 2026-08-10) — e.g. a
+		// condolence message or a no-show remark. Optional; only Çiğdem's panel override ever sets
+		// this (the client's own self-service /cancel link never does).
+		clientMessage?: string;
 	},
 ): Promise<{ refundId: string }> {
 	const refundPence = Math.round(params.refundGBP * 100);
@@ -84,6 +88,9 @@ export async function performCancellation(
 	// reads, and must only mean "no future sessions remain on this booking".
 	await writeCellMirrored(env, row, rowNumber, 'cancellationReason', params.reason);
 	await writeCellMirrored(env, row, rowNumber, 'cancelledBy', params.cancelledBy);
+	if (params.clientMessage) {
+		await writeCellMirrored(env, row, rowNumber, 'cancellationClientMessage', params.clientMessage);
+	}
 	// refundAmount/refundPercent/stripeRefundId are CUMULATIVE across every partial cancellation this
 	// booking ever goes through (BE-37, 2026-07-27) — a booking can be partially cancelled more than
 	// once (different sessions, different days), and overwriting these with just the latest call's
@@ -132,6 +139,16 @@ export async function performCancellation(
 		await sendTemplate(env, env.SELEN_WHATSAPP_NUMBER, WHATSAPP_TEMPLATES.cancellationNotice, [row.name, appointment, refundText]);
 	} catch (err) {
 		console.error(`Cancellation WhatsApp notice failed for ${stripeSessionId}:`, err);
+	}
+
+	// Çiğdem's own freeform personal note (Madde 11) — separate template, separate isolation: a
+	// failure here must never affect the standard cancellation confirmation above or vice versa.
+	if (params.clientMessage) {
+		try {
+			await sendTemplate(env, row.phone, WHATSAPP_TEMPLATES.cancellationPersonalNote, [params.clientMessage]);
+		} catch (err) {
+			console.error(`Cancellation personal-note WhatsApp failed for ${stripeSessionId}:`, err);
+		}
 	}
 
 	// Client cancellation email — same isolation reasoning as the booking confirmation email

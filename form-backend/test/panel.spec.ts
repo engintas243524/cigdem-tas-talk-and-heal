@@ -301,6 +301,58 @@ describe('POST /panel/cancel (manual override)', () => {
 		expect(whatsapp).toHaveLength(3); // client + Selen + email-to-WhatsApp fallback
 	});
 
+	it('Madde 11: an optional clientMessage sends its own WhatsApp template and is logged to its own Sheet column', async () => {
+		const { store, whatsapp } = stubApis([
+			makeRow({
+				stripeSessionId: 'cs_1',
+				name: 'Ada',
+				phone: '447911123456',
+				sessionType: 'standard',
+				sessionMode: 'online',
+				clientTimeZone: 'Europe/London',
+				sessionCount: '1',
+				priceGBP: '120',
+				appointmentStartUtc: future(0.1),
+			}),
+		]);
+
+		const response = await cancelPost({
+			stripeSessionId: 'cs_1',
+			sessionIndexes: [1],
+			refundPercent: 100,
+			reason: 'Habersiz gelmedi',
+			clientMessage: 'Geçmiş olsun, kendine iyi bak.',
+		});
+		expect(response.status).toBe(200);
+		expect(store[0].cancellationClientMessage).toBe('Geçmiş olsun, kendine iyi bak.');
+		// client cancellation confirmation + Selen notice + email-to-WhatsApp fallback + the personal
+		// note itself, sent only to the client.
+		expect(whatsapp).toHaveLength(4);
+		const personalNote = whatsapp.find((w) => w.bodyParams?.length === 1 && w.bodyParams[0] === 'Geçmiş olsun, kendine iyi bak.');
+		expect(personalNote?.to).toBe('447911123456');
+	});
+
+	it('Madde 11: omitting clientMessage sends no extra WhatsApp and writes nothing to that column', async () => {
+		const { store, whatsapp } = stubApis([
+			makeRow({
+				stripeSessionId: 'cs_1',
+				name: 'Ada',
+				phone: '447911123456',
+				sessionType: 'standard',
+				sessionMode: 'online',
+				clientTimeZone: 'Europe/London',
+				sessionCount: '1',
+				priceGBP: '120',
+				appointmentStartUtc: future(0.1),
+			}),
+		]);
+
+		const response = await cancelPost({ stripeSessionId: 'cs_1', sessionIndexes: [1], refundPercent: 100, reason: 'Vefat' });
+		expect(response.status).toBe(200);
+		expect(store[0].cancellationClientMessage).toBe('');
+		expect(whatsapp).toHaveLength(3); // client + Selen + email-to-WhatsApp fallback, no personal note
+	});
+
 	it('partial: cancelling just session 2 of 3 leaves sessions 1 and 3 untouched and does not close the booking', async () => {
 		const session1Start = future(5);
 		const session2Start = future(12);

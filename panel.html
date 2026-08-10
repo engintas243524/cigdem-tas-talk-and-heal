@@ -63,6 +63,12 @@
   .cancel-box { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.85rem; margin-top: var(--space-2); }
   #cancelSessionsList label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 400; color: var(--ink); margin: 0.3rem 0; }
   #cancelSessionsList input[type="checkbox"] { width: auto; }
+  /* Visually distinct from the plain .field boxes around it — a sage-accented frame so it never
+     reads as "just another note field" (see the HTML comment above #cancelClientMessage). */
+  .cancel-message-box { border: 1px solid var(--sage); border-radius: var(--radius-sm); padding: 0.75rem; background: var(--surface); }
+  .cancel-message-box label { color: var(--sage); font-weight: 600; }
+  .cancel-message-box textarea { min-height: 90px; }
+  .hint { color: var(--taupe); font-size: 0.78rem; margin: 0.35rem 0 0; }
 </style>
 </head>
 <body>
@@ -133,6 +139,7 @@
           <option value="Doğum">Doğum</option>
           <option value="Kaza / Hastane yatışı">Kaza / Hastane yatışı</option>
           <option value="Ailevi acil durum">Ailevi acil durum</option>
+          <option value="Habersiz gelmedi">Habersiz gelmedi</option>
           <option value="Diğer">Diğer</option>
         </select>
       </div>
@@ -143,6 +150,13 @@
       <div class="field">
         <label for="cancelPercent">İade oranı</label>
         <select id="cancelPercent"></select>
+      </div>
+      <!-- Deliberately its own framed box, separate from the general session-note textarea below —
+           Çiğdem could otherwise think filling in the session note also sends this to the client. -->
+      <div class="field cancel-message-box">
+        <label for="cancelClientMessage">Danışana giden kişisel not (opsiyonel)</label>
+        <textarea id="cancelClientMessage" maxlength="450" placeholder="Örn: Geçmiş olsun, kendine iyi bak. Herhangi bir konuda destek gerekirse buradayım."></textarea>
+        <p class="hint">Bu metin, WhatsApp mesajı olarak danışana gönderilir ve Google Sheet'e ayrı bir sütun olarak işlenir.</p>
       </div>
       <div class="actions">
         <button class="btn-secondary" id="cancelCloseBtn" type="button">Vazgeç</button>
@@ -377,6 +391,7 @@
   var cancelBox = el('cancelBox'), cancelContextLine = el('cancelContextLine'), cancelSessionsList = el('cancelSessionsList');
   var cancelReason = el('cancelReason'), cancelDetailField = el('cancelDetailField'), cancelDetail = el('cancelDetail');
   var cancelPercent = el('cancelPercent'), cancelStatus = el('cancelStatus'), cancelRefundPreview = el('cancelRefundPreview');
+  var cancelClientMessage = el('cancelClientMessage');
   var cancelTarget = null; // { stripeSessionId, name }
 
   for (var pct = 100; pct >= 0; pct -= 5) {
@@ -449,6 +464,7 @@
     cancelDetailField.classList.add('hidden');
     cancelDetail.value = '';
     cancelPercent.value = '100';
+    cancelClientMessage.value = '';
     cancelRefundPreview.textContent = '';
     setStatus(cancelStatus, '', '');
     picker.classList.add('hidden');
@@ -474,7 +490,7 @@
     setStatus(cancelStatus, apptWord + ' iptal ediliyor...', '');
     authFetch('/panel/cancel', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stripeSessionId: cancelTarget.stripeSessionId, sessionIndexes: indexes, refundPercent: percent, reason: reason, reasonDetail: detail })
+      body: JSON.stringify({ stripeSessionId: cancelTarget.stripeSessionId, sessionIndexes: indexes, refundPercent: percent, reason: reason, reasonDetail: detail, clientMessage: cancelClientMessage.value.trim() })
     }).then(function (r) {
       if (r.status === 409) { setStatus(cancelStatus, 'Bu randevu zaten iptal edilmiş.', 'err'); cancelTarget = null; return; }
       if (!r.ok) return r.json().then(function (data) { throw new Error(data.error || 'İptal edilemedi.'); }, function () { throw new Error('İptal edilemedi.'); });

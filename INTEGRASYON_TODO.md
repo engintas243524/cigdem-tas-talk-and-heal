@@ -956,9 +956,32 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
     kilitleniyor, saat serbest — yani o gün istediği kadar (başkası almadıysa) slot seçilebiliyor.
     Backend (`routes/booking.ts` `validateConsecutiveWeeks`) ve frontend (`booking.html`
     `referencePattern`/`recomputeSelection`/`renderSlots`) aynı mantıkla güncellendi, 2 yeni test
-    eklendi (21/21 yeşil), `tsc`/`prettier` temiz. Tarayıcıda canlı UI testi henüz yapılmadı.
-11. (16) Panelden manuel iptalde Çiğdem'in kendi yazacağı/seçeceği metnin WhatsApp şablonu
-    olarak danışana gitmesi + Sheet'e işlenmesi — yeni özellik.
+    eklendi (21/21 yeşil), `tsc`/`prettier` temiz. Backend deploy edildi (`wrangler deploy`),
+    frontend push edildi (GitHub Pages build başarılı, doğru commit onaylandı) — CDN cache
+    yayılımı birkaç dakika sürebilir. Kullanıcının canlıda tekrar test edip son onayı bekleniyor.
+11. (16) ✅ KOD TAMAMLANDI, ⏳ META ONAYI BEKLENIYOR (2026-08-10) — Panelden manuel iptalde
+    Çiğdem'in kendi yazacağı metnin danışana WhatsApp ile gitmesi + Sheet'e işlenmesi. Kullanıcının
+    netleştirdiği kesişim: hem Çiğdem'in kendi tetiklediği iptalde (herhangi bir sebeple) hem de
+    "habersiz gelmedi" (no-show) durumunda kullanılabilir bir not kutusu. Yapılanlar:
+    - `panel.html`: `#cancelBox` içine, mevcut seans-notu kutusundan (`#noteBox`) TAMAMEN AYRI,
+      sage-çerçeveli kendi başlıklı bir kutu (`#cancelClientMessage`) eklendi — Çiğdem'in bu ikisini
+      karıştırmaması için (kullanıcının açık isteği). `#cancelReason`'a "Habersiz gelmedi" seçeneği
+      eklendi.
+    - Backend: yeni Sheet sütunu `cancellationClientMessage` ("Danışana Giden Kişisel İptal Notu")
+      — mevcut iptal sütunlarının yanına DEĞİL, listenin sonuna eklendi (bilinçli tercih: production
+      Sheet'te canlı `insertDimension` migrasyonu riski almamak için — bkz. `config.ts`'teki yorum;
+      CLAUDE.md'nin BE-18 uyarısı bu projede iki kez yaşanmış). Ek olarak sütun sona eklendiği için
+      `ensureHeaderRow`'un extend-only self-healing'i başlığı otomatik yazıyor, elle Sheet düzenlemesi
+      GEREKMEDİ.
+    - `lib/cancellation.ts`/`routes/panel.ts`: `clientMessage` opsiyonel alanı Sheet'e yazılıyor,
+      dolu ise ayrı bir WhatsApp şablonuyla (izole try/catch, mevcut iptal onayını asla etkilemez)
+      danışana gönderiliyor.
+    - **Yeni Meta şablonu `iptal_kisisel_not_danisan` API üzerinden gönderildi (2026-08-10, durum:
+      PENDING)** — gövde: sabit giriş/kapanış metni + tek `{{1}}` değişkeni (Çiğdem'in serbest
+      metni). Onay gelene kadar bu özellik gerçek WhatsApp göndermez (kod hazır, WhatsApp Manager'da
+      "Değerlendiriliyor" durumunu kontrol et).
+    - 2 yeni test (137/137 yeşil), `tsc`/`prettier` temiz. Backend deploy edildi, frontend push
+      edildi (CDN yayılımı birkaç dakika sürebilir).
 12. (8) Çiğdem'in bilgisayarında İngilizce dikte bozuk çıkıyor (Selen'in bilgisayarında Türkçe
     dikte sorunsuz) — kök neden araştırılacak (tarayıcı/mikrofon/dil ayarı ihtimali).
 13. (9) Dikte temizleme (duraksama/"ee" dolgu kelimelerini eleme) + gramer/noktalama düzeltme

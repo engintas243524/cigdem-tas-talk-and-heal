@@ -56,6 +56,10 @@ export const WHATSAPP_TEMPLATES = {
 	// 2026-07-27) — this comment used to say "not yet drafted/submitted", which was stale.
 	cancellationConfirmed: 'iptal_onay_danisan',
 	cancellationNotice: 'iptal_bildirimi_selen',
+	// Submitted to Meta 2026-08-10 (Madde 11) — status PENDING, awaiting approval before it can
+	// actually send. Single {{1}} variable holds Çiğdem's own freeform note (condolence/no-show/
+	// general concern), wrapped in enough static text to pass Meta's "not variable-only" body rule.
+	cancellationPersonalNote: 'iptal_kisisel_not_danisan',
 } as const;
 
 // Confirmed against the real WABA via the Graph API message_templates endpoint (2026-07-22):
@@ -137,6 +141,12 @@ export const SHEET_COLUMNS = [
 	// has something in it, so a stale label left behind by an old insertion never fixes itself).
 	'activeSessionCount',
 	...SESSION_NOTE_COLUMNS,
+	// Appended (not inserted next to the other cancellation columns above) — 2026-08-10, Madde 11:
+	// deliberately safe-but-scattered rather than risking a live insertDimension migration on the
+	// production Sheet under time pressure (see the BE-18 warning above; this project has corrupted
+	// header rows from a mid-array insert twice already). Move it next to cancellationReason later
+	// if it's ever worth the migration.
+	'cancellationClientMessage',
 ] as const;
 
 // Human-readable Turkish header text for the real Google Sheet — Selen reads this sheet directly,
@@ -190,6 +200,7 @@ export const SHEET_COLUMN_LABELS: Record<(typeof SHEET_COLUMNS)[number], string>
 	refundAmount: 'İade Tutarı (GBP)',
 	activeSessionCount: 'İptal Sonrası Kalan Seans Sayısı',
 	...SESSION_NOTE_LABELS,
+	cancellationClientMessage: 'Danışana Giden Kişisel İptal Notu',
 };
 
 // Reminder is sent the day before the appointment, at this local hour in the client's
@@ -216,6 +227,7 @@ export const CANCELLATION_OVERRIDE_REASONS = [
 	'Doğum',
 	'Kaza / Hastane yatışı',
 	'Ailevi acil durum',
+	'Habersiz gelmedi',
 	'Diğer',
 ] as const;
 

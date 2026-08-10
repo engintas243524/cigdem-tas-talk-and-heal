@@ -194,7 +194,14 @@ export async function handlePanelRefundPreview(request: Request, env: Env): Prom
 // implementation, and why `markBookingCancelled` must be false for a partial (not-all-sessions)
 // cancellation.
 export async function handlePanelCancel(request: Request, env: Env): Promise<Response> {
-	let body: { stripeSessionId?: unknown; sessionIndexes?: unknown; refundPercent?: unknown; reason?: unknown; reasonDetail?: unknown };
+	let body: {
+		stripeSessionId?: unknown;
+		sessionIndexes?: unknown;
+		refundPercent?: unknown;
+		reason?: unknown;
+		reasonDetail?: unknown;
+		clientMessage?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -205,6 +212,11 @@ export async function handlePanelCancel(request: Request, env: Env): Promise<Res
 	const refundPercent = Number(body.refundPercent);
 	const reason = String(body.reason ?? '');
 	const reasonDetail = String(body.reasonDetail ?? '').slice(0, SUMMARY_MAX_LENGTH);
+	// Çiğdem's optional freeform note to the client (Madde 11) — sent as its own WhatsApp template
+	// and logged in its own Sheet column, kept separate from reason/reasonDetail.
+	const clientMessage = String(body.clientMessage ?? '')
+		.trim()
+		.slice(0, SUMMARY_MAX_LENGTH);
 	if (!stripeSessionId) return errorResponse(request, 400, 'Geçersiz kayıt.');
 	if (!sessionIndexes.length || sessionIndexes.some((i) => !Number.isInteger(i) || i < 1 || i > MAX_SESSION_COUNT)) {
 		return errorResponse(request, 400, 'En az bir geçerli seans seçilmeli.');
@@ -238,6 +250,7 @@ export async function handlePanelCancel(request: Request, env: Env): Promise<Res
 		reason: reason === 'Diğer' ? `Diğer: ${reasonDetail}` : reason,
 		cancelledBy: 'Çiğdem',
 		markBookingCancelled: chosen.remaining.length === allRemainingCount,
+		clientMessage: clientMessage || undefined,
 	});
 	return json({ cancelled: true, refundGBP: chosen.refundGBP, refundPercent: chosen.refundPercent }, request);
 }
