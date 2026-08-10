@@ -298,7 +298,7 @@ describe('POST /panel/cancel (manual override)', () => {
 		expect(store[0].cancellationReason).toBe('Vefat');
 		expect(store[0].refundAmount).toBe('120');
 		expect(store[0].cancelledAt).not.toBe(''); // the only session — cancelling it closes the whole booking
-		expect(whatsapp).toHaveLength(2); // client + Selen
+		expect(whatsapp).toHaveLength(3); // client + Selen + email-to-WhatsApp fallback
 	});
 
 	it('partial: cancelling just session 2 of 3 leaves sessions 1 and 3 untouched and does not close the booking', async () => {

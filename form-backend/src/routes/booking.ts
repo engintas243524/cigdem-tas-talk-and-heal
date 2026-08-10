@@ -43,6 +43,13 @@ function patternKey(date: Date): string {
 // (skipping weeks entirely is allowed; decided 2026-07-31, dropping the old "consecutive weeks
 // only" cap). Generalizes the old "exactly one slot per week, identical weekday+hour every week"
 // rule to N weekly patterns. Single-session bookings (length 1) skip this check entirely.
+//
+// Day-only mode (2026-08-10, Madde 10/11): if the reference week has exactly ONE slot, later
+// weeks are constrained to that slot's WEEKDAY only (any hour, any number of sessions that day),
+// not its exact hour. With a single reference slot the strict same-pattern rule would itself
+// forbid ever picking more than one session in a later week — contradicting wanting to grow
+// session count later while only having committed to one day up front. With 2+ reference slots
+// the exact weekday+hour rule is unchanged.
 function validateConsecutiveWeeks(slotStartUtcs: string[]): string | null {
 	if (slotStartUtcs.length <= 1) return null;
 
@@ -65,16 +72,25 @@ function validateConsecutiveWeeks(slotStartUtcs: string[]): string | null {
 		return 'Duplicate day/time selected in the same week.';
 	}
 
+	const dayOnlyMode = referenceSlots.length === 1;
+	const referenceWeekdays = new Set(referenceSlots.map((d) => getLocalDateParts(d, BUSINESS_HOURS.timeZone).isoWeekday));
+
 	for (let i = 1; i < weekOrder.length; i++) {
 		const weekSlots = byWeek.get(weekOrder[i])!;
 		const seen = new Set<string>();
 		for (const d of weekSlots) {
 			const key = patternKey(d);
-			if (!referencePatterns.has(key)) {
-				return 'Only day/times from your first week can be selected in later weeks.';
-			}
 			if (seen.has(key)) return 'Duplicate day/time selected in the same week.';
 			seen.add(key);
+
+			if (dayOnlyMode) {
+				const weekday = getLocalDateParts(d, BUSINESS_HOURS.timeZone).isoWeekday;
+				if (!referenceWeekdays.has(weekday)) {
+					return "Only your first week's day can be selected in later weeks.";
+				}
+			} else if (!referencePatterns.has(key)) {
+				return 'Only day/times from your first week can be selected in later weeks.';
+			}
 		}
 	}
 	return null;

@@ -114,10 +114,11 @@ describe('POST /booking validation', () => {
 			expect(response.status).not.toBe(400);
 		});
 
-		it('rejects sessions with more than a week between them', async () => {
-			// 2026-08-03 and 2026-08-24 are three weeks apart.
+		it('allows sessions more than a week apart, as long as the day/time pattern matches', async () => {
+			// 2026-08-03 and 2026-08-24 are three weeks apart (both Mondays 09:00) — skipping weeks
+			// is allowed as long as the pattern from the reference week is kept.
 			const response = await postBooking({ slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-24T09:00:00.000Z'] });
-			expect(response.status).toBe(400);
+			expect(response.status).not.toBe(400);
 		});
 
 		it('accepts sessions exactly one week apart, in order', async () => {
@@ -126,6 +127,24 @@ describe('POST /booking validation', () => {
 			// consecutive-week check wrongly rejected a valid weekly selection.
 			const response = await postBooking({ slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-10T09:00:00.000Z'] });
 			expect(response.status).not.toBe(400);
+		});
+
+		it('day-only mode: a single reference-week slot lets a later week pick multiple hours on that same weekday', async () => {
+			// Week 1: Monday 09:00 only (single slot => day-only mode). Week 2: Monday 09:00 + 10:00 —
+			// same weekday as the reference, different hours, more than one session that week.
+			const response = await postBooking({
+				slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-10T09:00:00.000Z', '2026-08-10T10:00:00.000Z'],
+			});
+			expect(response.status).not.toBe(400);
+		});
+
+		it('day-only mode: a later week still cannot use a different weekday than the single reference slot', async () => {
+			// Week 1: Monday 09:00 only. Week 2: Wednesday 09:00 + 10:00 — wrong weekday entirely,
+			// day-only mode only relaxes the HOUR restriction, not the weekday one.
+			const response = await postBooking({
+				slotStartUtcs: ['2026-08-03T09:00:00.000Z', '2026-08-12T09:00:00.000Z', '2026-08-12T10:00:00.000Z'],
+			});
+			expect(response.status).toBe(400);
 		});
 	});
 });

@@ -56,7 +56,37 @@
     try { active.currentTime = pos; } catch (e) {}
   }
 
+  // If a page load's silent auto-resume gets blocked by the browser's autoplay policy (no user
+  // gesture yet on this fresh page), retry once on the visitor's very next click/key/touch
+  // anywhere on the page — that gesture is enough to unblock playback, so this makes the resume
+  // land on the first interaction instead of leaving the track stopped until the music icon
+  // itself happens to be clicked again.
+  var gestureRetryCleanup = null;
+
+  function clearGestureRetry() {
+    if (gestureRetryCleanup) {
+      gestureRetryCleanup();
+      gestureRetryCleanup = null;
+    }
+  }
+
+  function armGestureRetry() {
+    function retry() {
+      clearGestureRetry();
+      start();
+    }
+    document.addEventListener('click', retry, { once: true });
+    document.addEventListener('keydown', retry, { once: true });
+    document.addEventListener('touchstart', retry, { once: true });
+    gestureRetryCleanup = function () {
+      document.removeEventListener('click', retry);
+      document.removeEventListener('keydown', retry);
+      document.removeEventListener('touchstart', retry);
+    };
+  }
+
   function start() {
+    clearGestureRetry();
     btn.classList.add('playing');
     if (active.readyState >= 1) {
       seekToStored();
@@ -67,6 +97,7 @@
       fade(active, targetVolume, 800);
     }).catch(function () {
       btn.classList.remove('playing');
+      armGestureRetry();
     });
   }
 

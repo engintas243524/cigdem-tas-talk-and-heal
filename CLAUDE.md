@@ -133,6 +133,14 @@ even though the developer/user are in Turkey.
   multi-part user request (kept verbatim on purpose — summaries lose exact numbered lists across
   context compaction, the raw file doesn't). Check here first for "why does this code do X."
   Session 13 (cancellation/refunds) and Madde 5 (notes panel) are done as of the latest entries.
+  **Archiving (2026-08-10):** this file was ballooning (~111K tokens, auto-loaded every session) —
+  fully-closed 2026-07-22→07-31 session records were moved verbatim (nothing deleted/shortened)
+  to `INTEGRASYON_TODO_ARSIV.md`, with a pointer table left in this file's place. Only grep the
+  archive when you need an old record's exact text; don't read it by default. When this file
+  grows large again with a clearly-closed date range, repeat the same move — pick the range,
+  confirm every `[ ]` in it is actually resolved (grep for stray `- [ ]`), cut with `sed`, and
+  leave a pointer table (see `git log -- INTEGRASYON_TODO.md` around 2026-08-10 for the exact
+  method).
 - `talk-and-heal-hata-gunlugu/` — the bug/QA log, one file per phase of
   `AI_DESTEKLI_WEB_GELISTIRME_REHBERI.md`'s 10-stage process (`04-Frontend` = frontend bugs only,
   `05-Backend-Entegrasyon` = backend-only, etc.). File a bug in the phase it actually belongs to,

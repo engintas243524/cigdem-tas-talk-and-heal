@@ -718,7 +718,14 @@
       var refWeek = mondayKey(earliest.date);
       var patterns = {};
       withDates.forEach(function(s){ if (mondayKey(s.date) === refWeek) patterns[slotKey(s.iso)] = true; });
-      return { weekKey: refWeek, patterns: patterns };
+      // Day-only mode (Madde 10/11): a single reference-week slot only locks later weeks to that
+      // slot's WEEKDAY (any hour, any count that day) — otherwise the exact-pattern rule below
+      // would itself forbid ever picking more than one session in a later week.
+      var patternKeys = Object.keys(patterns);
+      var dayOnly = patternKeys.length === 1;
+      var weekdays = {};
+      if (dayOnly) weekdays[patternKeys[0].split('-')[0]] = true;
+      return { weekKey: refWeek, patterns: patterns, dayOnly: dayOnly, weekdays: weekdays };
     }
 
     // Drops any pick that no longer fits the current reference pattern — e.g. the client unchecked
@@ -728,7 +735,9 @@
       var ref = referencePattern();
       if (!ref) return;
       selectedSlots = selectedSlots.filter(function(iso){
-        return mondayKey(new Date(iso)) === ref.weekKey || ref.patterns[slotKey(iso)];
+        if (mondayKey(new Date(iso)) === ref.weekKey) return true;
+        if (ref.dayOnly) return !!ref.weekdays[slotKey(iso).split('-')[0]];
+        return ref.patterns[slotKey(iso)];
       });
     }
 
@@ -868,7 +877,8 @@
             // Madde 6 (generalized): outside the reference week, only chips matching one of its
             // patterns stay selectable — rendered the same muted/non-interactive way as a
             // genuinely reserved slot, just with a different tooltip explaining why.
-            var lockedToOtherDay = ref && mondayKey(new Date(iso)) !== ref.weekKey && !ref.patterns[slotKey(iso)];
+            var lockedToOtherDay = ref && mondayKey(new Date(iso)) !== ref.weekKey &&
+              (ref.dayOnly ? !ref.weekdays[slotKey(iso).split('-')[0]] : !ref.patterns[slotKey(iso)]);
             if (detail.status !== 'available' || lockedToOtherDay) {
               var taken = document.createElement('div');
               taken.className = 'slot-chip slot-chip--reserved';
