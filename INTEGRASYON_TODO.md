@@ -2378,3 +2378,357 @@ fark etmiyordu, yeni başlık-metni-bazlı kod ilk yazımda bunu "eksik" sanıp 
 başlık metni düzeltildi (veri dokunulmadı), migrasyon sonrası doğrulamada yakalandı — yeni
 mimarinin tam olarak önlemek için tasarlandığı hata sınıfının canlı bir örneği.
 
+## Kullanıcı isteği — GitHub public/private + 100 kişilik test verisi planı (2026-07-31, birebir metin)
+
+**Bağlam:** Kullanıcı önceki bir oturumda (iddiaya göre farklı bir wifi/cihazdan, "geçmişe dönük"
+bir hafta boyunca) 100 farklı kişi için (farklı ülke/mail/telefon, tekli-çoklu seans, tek-çift,
+standart-extended terapi) randevu oluşturulup Google Sheet'e eklendiğini ve bu veriden istatistik
+çıkarıldığını söyledi. Bu oturumda Sheet'in sürüm geçmişi kontrol edildi: 30 Temmuz (dün) tarihinde
+sheet'e HİÇBİR düzenleme girmemiş (29 Temmuz 19:29'dan bugün 31 Temmuz 14:29'a doğrudan atlıyor),
+şu an Sayfa1'de sadece başlık satırı var. Ayrıca `https://engintas243524.github.io/cigdem-tas-talk-and-heal/`
+linkinin 404 verdiği bulundu — repo 24 Temmuz'da private yapıldığı için (`has_pages: false`,
+GitHub Pages ücretsiz planda private repo'da çalışmıyor).
+
+Kullanıcının bu duruma cevabı, birebir:
+
+> şeyleri işe yarar hale dönüştürmek. GitHub üzerinde projeye ulaşıp bazı şeylere commit push edip
+> sonra senden linkler istediğimde linkleri çalıştırmak, ondan sonra senden istediğim bu 100 kişilik
+> istatistik verilerin veya randevuların Google Sheet'e eklenmesi, senin Google Sheet'ten o verileri
+> almanın falan. Bunları biz private'ken yapalım. En son zaten biz onu public yapalım. En son biz
+> private'a aldığımızda zaten GitHub'ın aylık ücretlendirmesi neyse onları hepsini yapar, öyle yol
+> izler, sonra deploy'a geçeriz.
+
+**Durum:** Netleştirme bekleniyor — 100 kişilik verinin nasıl üretileceği (gerçek booking akışından
+mı yoksa doğrudan Sheet'e seed script ile mi) ve GitHub Pro ödemesinin kullanıcı tarafından mı
+yapılacağı henüz teyit edilmedi, aşağıda soruldu.
+
+## Düzeltme — "kayıp" 100 kişi aslında Sheet'te duruyormuş + kazara sızan test verisi (2026-07-31)
+
+Kullanıcı "doğrudan seed script" seçeneğini onayladı. `form-backend/scripts/seed-test-clients.ts`
+yazıldı (mevcut `lib/sheets.ts`'teki `appendBookingRow`/`mirrorBookingRow` fonksiyonları reuse
+edilerek, Stripe/WhatsApp/Calendar'a hiç dokunmadan doğrudan Sheets API'ye 100 sentetik satır
+yazıyor). 3 kayıtlık bir denemeyle test edilirken **Sayfa1'in tamamı okunduğunda** (önceki
+version-history ekranının yanlış yorumlandığı ortaya çıktı — o ekran sadece o revizyonun diff'ini
+gösteriyormuş, sheet'in gerçek anlık halini değil) 15-113. satırlarda `test_cs_002`..`test_cs_100`
+ID'leriyle **99 kişilik gerçek, önceden var olan uluslararası test verisi bulundu** — yani
+kullanıcının bahsettiği 100 kişi kayıp değilmiş, zaten oradaymış.
+
+**Yan etki (düzeltildi):** Deneme scriptinin 3 sıralı `appendBookingRow` çağrısı, Google Sheets
+`values:append` API'sinin bilinen bir kusuru yüzünden (arka arkaya hızlı çağrılarda aynı "sıradaki
+boş satır" tespitine düşüp yarışması) hepsi aynı satıra (14 — tam olarak `test_cs_001`'in olması
+gereken, önceden boş olan tek boşluk) yazmaya çalıştı; sadece sonuncusu (`seed_003`, "Chloé Martin")
+kalıcı oldu, ayrıca "9 Seans" (satır 3, `seed_001`, "Elif Şahin") ve "20 Seans" (satır 2, `seed_003`,
+"Chloé Martin") mirror sekmelerine de sızdı. Her üç sızıntı da `values:clear` ile temizlendi
+(Sayfa1!14:14, '9 Seans'!3:3, '20 Seans'!2:2) — gerçek veriye dokunulmadı, sadece kendi test
+satırlarım silindi. `test_cs_001` satırının orijinalde dolu mu boş mu olduğu doğrulanamadı (mevcut
+API scope'u sadece Sheets/Calendar, Drive revizyon geçmişine erişim yok) — kullanıcıya UI'dan
+version history ile bu tek satırı kontrol etmesi önerildi.
+
+**Sonuç:** 100 kişilik seed script artık gereksiz (veri zaten var) — kullanıcıya durum bildirildi.
+
+**Tamamlandı:** Kullanıcı eksik tek kaydın `test_cs_001` formatında tamamlanmasını istedi.
+Sayfa1 satır 14'e `test_cs_001_333117` / "Nadia Ibrahim" yazıldı (appendBookingRow ile, tek çağrı
+olduğu için önceki 3'lü denemedeki yarış durumu oluşmadı, doğrudan boşluğa/14. satıra düştü,
+doğrulandı). `sessionCount=1` olduğu için mirror tab'a yazılmadı (mirrorTabName sessionCount<=1'de
+null döner, beklenen davranış). Sayfa1 artık satır 14-113 = test_cs_001..test_cs_100, 100 kişi
+eksiksiz.
+
+**Not (yan bulgu):** Kullanıcı gerçek booking.html üzerinden bir randevu tamamladı (Sümeyra Çelik,
+inPerson/couple/extended, £425) ama `wrangler dev` yerelde Stripe webhook'unu alamıyordu (Stripe
+sunucudan localhost'a ulaşamaz) — `stripe listen --forward-to localhost:8787/webhook/stripe`
+kurulup `.dev.vars`'taki `STRIPE_WEBHOOK_SECRET` yeni oturumun ürettiği secret ile güncellendi,
+kaçırılan event `stripe events resend` ile tekrar gönderildi. Bu ikinci deneme sırasında
+appendBookingRow'un tek-sütun `:append` numarası YİNE 14. satıra (bu kez zaten dolu olan
+test_cs_001'in üstüne) yazdı — ikinci kez aynı yarış durumu görüldü, gerçek veriyle test verisi
+karıştı. `writeCell` ile her ikisi de doğru satırlara (14 = test_cs_001 geri yüklendi, 114 = gerçek
+Sümeyra Çelik kaydı) manuel olarak düzeltildi. **Kalıcı risk, henüz kod düzeyinde çözülmedi:**
+`appendBookingRow`'un id-only `:append` tekniği, sheet'te (nedeni tam netleşmemiş olsa da) tekrar
+tekrar aynı düşük satır numarasına yazma eğiliminde — ileride bu iki kez yaşanan sorunun kök
+nedenini bulup kalıcı bir düzeltme (örn. append yerine `getAllRows`'tan sonraki gerçek boş satırı
+hesaplayıp doğrudan o satıra yazmak) yapmak gerekebilir.
+
+Ayrıca bu test sırasında bulunan, kodla ilgisi olmayan iki hesap sorunu: (1) WhatsApp gönderimi
+401 "OAuthException" (code 190) ile başarısız — `WHATSAPP_ACCESS_TOKEN` süresi dolmuş, Meta
+hesabından yenilenmesi lazım. (2) E-posta gönderimi 403 ile başarısız — Resend sandbox kısıtlaması,
+sadece hesap sahibinin kendi doğrulanmış adresine (`engintass19@gmail.com`) gönderebiliyor.
+
+**Yapıldı — email içeriği geçici olarak WhatsApp'a da gönderiliyor:** `form-backend/src/config.ts`'e
+`TEMP_EMAIL_TO_WHATSAPP_NUMBER = '905373220224'` sabiti eklendi (ponytail comment ile: Resend
+sandbox kısıtlaması kalkınca kaldırılacak). `stripe-webhook.ts`'te client email gövdesi bir
+değişkene (`emailBody`) çıkarıldı, email denemesi aynen kalırken (başarısız da olsa loglanıp
+yutuluyor), AYRICA izole kendi try/catch'inde `sendText` ile aynı içerik bu numaraya WhatsApp
+serbest metin olarak gönderiliyor — email başarılı/başarısız fark etmeksizin her zaman denenir.
+`test/stripe-webhook.spec.ts`'teki WhatsApp çağrı sayısı beklentileri (3→4) güncellendi. Tam suite
+133/133 yeşil. **Bilinen kısıtlama:** WhatsApp serbest metin (`sendText`) mesajları Meta'nın 24 saatlik
+müşteri hizmeti penceresi dışında başarısız olur — 905373220224 numarasının test WhatsApp iş
+numarasına en son 24 saat içinde mesaj atmış olması gerekir, yoksa bu gönderim de hata verir
+(farklı bir hata koduyla, ayrı bir sorun).
+
+WhatsApp token yenileme için kullanıcıya Meta for Developers üzerinden adım adım rehberlik
+verildi (chat içinde). Kullanıcı "Try it out" sayfasından yeni geçici token'ı aldı, `.dev.vars`'taki
+`WHATSAPP_ACCESS_TOKEN` güncellendi, backend yeniden başlatıldı. Doğrulama: hem şablon
+(`randevu_onay_danisan`) hem serbest metin gönderimi 905373220224'e doğrudan Graph API çağrısıyla
+test edildi, ikisi de 200 OK/accepted — token çalışıyor, 24 saatlik serbest metin penceresi de şu an
+açık.
+
+## Uygulandı — çok haftalı randevularda "hafta atlama" serbest bırakıldı (2026-07-31)
+
+Kullanıcı isteği, birebir: "aynı hafta içerisinde istediği adette, eğer rezerve edilmemişse diğer
+randevular, seans alabilme şansı olsun. Ama sadece, sadece bir sonraki hafta, bir önceki haftada
+seçtiği slotların aynı gün ve saatteki olanları sonraki haftalarda görünsün, sadece onlardan
+seçebilsin. Böylece kişinin bir hafta önce seçtiği, bir hafta sonra, daha sonraki veya daha daha
+daha ilerideki, boş bırakarak, atlayarak haftalarda seçebileceği slotlar, ilk seçimini yaptığı
+haftaki slotlarla aynı gün ve saatte olacak şekilde ayarlansın."
+
+İnceleme sonucu bu özelliğin büyük kısmı zaten var olduğu ortaya çıktı ("Madde 6" — referans
+(ilk) haftada serbest çoklu gün/saat seçimi, sonraki haftalarda sadece o desenin seçilebilmesi,
+`booking.html`'de `referencePattern`/`lockedToOtherDay` ve `form-backend/src/routes/booking.ts`'te
+`validateConsecutiveWeeks`). Tek çelişki: kodda ayrıca "haftalar arasında en fazla 1 hafta boşluk
+olabilir" sabit kuralı vardı (`hasWeekGap` client + `validateConsecutiveWeeks`'in son döngüsü).
+Kullanıcıya soruldu, bu kısıtlamanın kaldırılması (haftaların tamamen atlanabilmesi) istendiği
+teyit edildi.
+
+**Yapılan değişiklik:** `form-backend/src/routes/booking.ts`'te `validateConsecutiveWeeks`'in
+"ardışık hafta, 7 günden fazla olamaz" kontrolü kaldırıldı (gün/saat-deseni kontrolü aynen kaldı).
+`booking.html`'de client-side `hasWeekGap` fonksiyonu, çağrı yeri, `weekGap` mesaj anahtarı ve
+"Seanslar arasında bir haftadan fazla boşluk olamaz" banner metni kaldırıldı. `test/booking.spec.ts`
+güncellendi: "rejects sessions with more than a week between them" testi artık "allows sessions
+more than a week apart, as long as the day/time pattern matches" olarak tersine çevrildi (400
+yerine 400-olmayan bekleniyor). Tam suite 133/133 yeşil, `tsc`/`prettier` temiz. Yerel backend
+(`wrangler dev --config wrangler.test.jsonc`) yeniden başlatılıp değişiklik canlıya alındı.
+
+## Kullanıcı isteği — karşılıklı erişim/test/bildirim altyapısı (2026-08-10, birebir metin)
+
+Kullanıcı isteği, birebir: "talk and heal linkini hem ben hem çiğdem in saatlerce karşılıklı
+olarak her sayfasını inceleyebileceği ve her ikimizinde (o Londra daki bilgisayarı ve cep
+telefonunda ya da başka bir cihazda), ben kendi bilgisayarımda gerekli bütün testleri karşılıklı
+olarak aynı anda-sırayla yapabileceğimiz, birimizin yaptığı değişiklik ya da testin sonucunu onun
+ve benim bilgisayarımda ya da whatsapp ımızda ya da verdiğin linkteki web sitesinde
+görebileceğimiz şekilde ayarlama yap ve sitenin linkini ver. tascigdem1977@gmail.com ortak
+olduğu için onun üzerinden ilerleyebiliriz, ayarlamalarda bunu da göz önünde bulundur, whatsapp
+bildirim ve hatırlatma mesajları için bazen benim cep numaram bazen onun ingiltere cep numarasına
+mesajlar gidecek şekilde ayarlama yapabiliriz bunun için hangimizi telefonun mesaj gitsin diye
+istersek o aşamada gerekli ayarlamaları adım adım bana yaptırırsın. dediğim gibi web sitesinden o
+da ben de karşılıklı teams görüşmesi esnasında birbirmizle iletişim halinde iken sayfaların
+UI/UX tasarımları, randevu alma panelden randevu notu ekleme/silme randevu iptal etme vs
+karşılıklı olarak yapabilelim."
+
+Henüz faz planına işlenmedi — bir sonraki adım kullanıcıyla netleştirme (hangi parçalar zaten
+mevcut altyapıyla karşılanıyor — GitHub Pages linki, panel.html — hangi parçalar yeni
+kurulum/kod gerektiriyor — WhatsApp bildirim hedef numarası seçilebilirliği, tascigdem1977@gmail.com
+hesabına geçiş).
+
+4 bağımsız parçaya ayrıldı, kullanıcı 1. parçayla başlanmasını istedi: (1) WhatsApp bildirim
+hedefi, (2) tascigdem1977@gmail.com ortak hesabına geçiş (Faz 5 ile örtüşüyor), (3) erişim/link
+durumu doğrulama, (4) karşılıklı canlı test/inceleme oturumu (Teams sırasında) — bu son madde
+altyapı kurulumu değil, mevcut linkle zaten yapılabilecek bir çalışma biçimi.
+
+### Karar (2026-08-10) — WhatsApp bildirim hedef numarası: tek aktif numara, elle değiştirilebilir
+
+Kullanıcı "bazen benim numarama bazen Çiğdem'in numarasına" ifadesini netleştirdi: aynı anda
+SADECE bir numara bildirim alacak (ikisine birden veya bildirim-tipine-göre DEĞİL). Bu zaten
+mevcut mimariyle karşılanıyor — `env.SELEN_WHATSAPP_NUMBER` tek bir Worker secret'ı, yeni
+randevu/iptal/hatırlatma-gönderildi bildirimlerinin üçü de bu tek numarayı okuyor
+(`stripe-webhook.ts`, `cancellation.ts`, `scheduled.ts`). **Kod değişikliği gerekmiyor** — numara
+değişimi = secret değerini değiştirmek: canlıda `wrangler secret put SELEN_WHATSAPP_NUMBER`,
+yerelde `.dev.vars`'taki satırı elle güncelleyip `wrangler dev`'i yeniden başlatmak.
+
+**Çiğdem'in numarası kullanıcıdan alındı:** `+44 7595 455398` (E.164/no-plus format:
+`447595455398`). İlk test mesajı buraya gidecek, kullanıcı isterse sonra kendi numarasına
+çevirecek — bu geçiş her seferinde tek komutluk bir işlem olacak.
+
+### Blocker bulundu ve çözülüyor — WhatsApp access token süresi dolmuş (2026-08-10)
+
+Numara değişimini test etmeden önce token geçerliliği kontrol edildi (Graph API'ye HTTP isteğiyle,
+token hiç ekrana yazdırılmadan): `401 OAuthException` — "Session has expired on Friday,
+31-Jul-26 07:00:00 PDT." 31 Temmuz'da (BE-19/reminder testleri sırasında) kullanılan token
+kalıcı değil, Meta'nın "Try it out" sayfasından alınan **24 saatlik geçici** bir tokenmiş.
+
+**Bu sefer kalıcı çözüm:** 21 Temmuz'da zaten kurulmuş olan System User (`form-backend`, Admin
+erişimi, WABA'ya "Test WhatsApp Business Account" + "Talk and Heal" app'ine Tam erişim atanmış —
+ekran görüntüsüyle doğrulandı) üzerinden **"Asla süresi dolmasın"** seçeneğiyle yeni bir kalıcı
+token üretiliyor. Kullanıcı Business Settings → Sistem kullanıcıları → form-backend sayfasında,
+"Jeton oluştur" adımında. Devamı: izin seçimi (whatsapp_business_messaging +
+whatsapp_business_management), süre="Never", `.dev.vars`'a yapıştırma, doğrulama.
+
+## Kullanıcı isteği — Çiğdem ile birlikte tespit edilen 18 maddelik eksik/hata/geliştirme listesi (2026-08-10, birebir metin)
+
+Kullanıcının talimatı, birebir: "Çiğdem ile birlikte aşağıdaki 17 eksik ve ileride web sitesine
+eklenmesi gerekenleri içerek 18 maddeyi olduğu gibi talk and heal ın ilgili dosyasına kaydet,
+listeyi öncelik sıralamaısı ve bağlam hiyerarşisine göre yine 18 madde olacak şekilde  kaydet.
+Hatta basit olanları şimdi hallederek ilerleyebilriz. Önce dediğim şekilde listele, sonra her
+madde için bana sor şimdi mi sonra mı halledelim diye her bir adım tamamladnığında onay alıp
+diğerine geçelim."
+
+18 maddenin birebir metni:
+
+1- Şu anda Çiğdem'le karşılıklı sayfayı incelerken book a consultation butonunun yanındaki notadan
+müziği kendisi açtı ama sayfayı değiştirirken müziğin kaldığı yerden devam etmesi gerekiyordu. Bu
+gerçekleşmedi. Yeni girdiği sayfada tekrar o nota simgesine bastığında müzik devam etmeye başladı.
+Bu bir bug, bir hata. Öncelikle bu düzeltilecek. Bu bir.
+
+2- Çiğdem'in sitesinde zaman zaman sosyal medyasında da paylaşabileceği reklamlar için Çiğdem'in
+sitesinde veya sosyal medyasında yapacağı reklamlarla alakalı veya tanıtımlarla alakalı video
+çekimleri ve bunların editlenmesi için video editi ekleyeceğiz. Aynı Open Cut'ı Sparrow'a
+eklentilediğimiz gibi bu ikinci madde olarak kayıt edilsin.
+
+3- Ayrıca Çiğdem'in sitesine kendisinden randevu alan danışanlardan gerekli yasal izni alarak
+danışanlarının özel bilgilerini, danışanlarının isimlerini paylaşmadan ileride oluşturacağı bir
+teze konu yapmak için danışanların bu verilerini depolamayı da istiyoruz. Bununla ilgili de bir
+altyapı oluşturmamız lazım.
+
+4- Şimdi ileriki aşamada da çok önemli ve ilk bir uygulama yapacağız. Sanırım dünyada örneği
+yoktur bunu gerekirse araştıracağız. Örneklerinden de kendimize bazı fikirler klonlayabiliriz.
+Bir app geliştireceğiz. Bu app'te insanlar danışana gelmeden önce veya danışanla seansları
+sırasında veya danışanla psikoterapistle, psikoloğuyla görüşmesinden sonra kendi mevcut psikolojik
+durumuyla alakalı mevcut app'ten destek alabileceği, kendi kendine uygulayabileceği mini tedavi
+yöntemlerini aslında kendisi yapıyor olacak. Bunun için de altını desteklemek için her psikolojik
+tedavi, kişisel tedavi veya danışanla yapılan tedaviye ait gerekli uluslararası referansları
+yüksek olan klinik çalışmaların da atıflarını, referanslarını her uygulamada ve her kendi kendine
+uygulamada kişi açıp isterse tamamını isterse kendi istediği dilde ve özet şekilde de görebilecek
+şekilde ve kendisiyle alakalı tedavinin de tüm sürecini not alabileceği ileride aynı sorunla
+karşılaştığında tekrar bunu uygulayabileceği bir depolama, raporlama alanı da olsun.
+
+5- Bu yazdırdığım maddeler veya bundan sonra yazdıracağım maddeleri şu anda sistemimizdeki
+uygunluk durumuna, iş sırasına göre zaman hiyerarşisini ekle. Hangisini önce, hangisini sonra
+yapacağımız konusunda maddeleri sırala.
+
+6- BACP Registered 20+ Years in practice Existential-Phenomenological · CBT · ACTEnglish &
+Turkish hero nun altındaki bu bantta BACP Registered yerine BACP Acretided  20+ Years yerine de 3
+Decades yazılacak Existential-Phenomenological · CBT · ACT . EMDRCBT · ACT ·
+Existential-Phenomenological olacak
+
+7- Hero kısmı altındaki Services(Servsiler) kımsındaki ilk 2 paragraf 'Individual therapy,
+couples counselling, and organisational consultation — delivered in person in London or online,
+wherever you are.
+Every first conversation is a chance to see whether the fit is right, with no pressure to
+continue.' şöyle değişecek : 'Individual therapy, couples counselling, group psychotherapy,
+somatic craticve practice, supervision organisational consultation, workshops/ Trainings and
+Re-treats
+Every initial consultation is an inviting opportunity to share what you're looking for and see if
+we feel like the right match.'
+
+8- Not panelinde Çiğdem İngilizce bir dikte yazdırmak istedi ama not panelinde yazdırmaya
+çalışırken neredeyse Almanca kelimeler bile gördüm ben yazının içerisinde. Ben sana zaten bunu
+veriyor olacağım. Onu bir incele. Ama ben kendi bilgisayarımda not panelinde bir dikte not
+yazdırmak istediğimde Türkçe olarak tamamen doğru olarak kayıt aldı. Çiğdem'de bu sorunun neden
+yaşandığını anlamak istiyorum. Varsa bir sorun bunu çöz ki var. Ona göre bir çözüm üretelim.
+Çiğdem in bozuk şekilde not paneline dikta edilen konuşması ''İngilizce okay ameli ya dedin come
+tu her Station Tutay endişe dedin sen en iyi en Formation States Sessions mest Defor centro Mail
+edecek en aşırı Meinhard unattended sesiniz Vedat Notice Estepe invest ''
+
+9- Panel sekmesinde bir danışana ait danışan notunu mikrofonla dikte ettiğimde doğal olarak
+konuşma içerisinde duraksadığımda "ee" gibi eklemeler görünüyor. Bunların elenip ona göre
+diktenin Google Sheet'e gönderilmesi için bir araç, ücretli araç bulmamız gerekiyor. Ayrıca aynı
+araç gramatik ve noktalama imla hatalarını da düzeltebilmeli, Yani düzgün bir aktarım yapacak,
+dili düzgün aktaracak bir araç. Bu İngilizce için de geçerli olacak bu arada. Örnek ''Ameliye
+Brown bu oturumuna gelmedi Eee o nedenle kendisine bir hatırlatma Eee maili mesajı göndermek
+istiyorum Eee ayrıca Eee kendisine bu iptali yapmadığı için son 72 saatte bilgilendirme yapmadığı
+için Eee seans ücretinin tamamını kesileceği bilgisini de iletmeni istiyorum''.
+
+10- Çiğdem kendi bilgisayarında karşı tarafta Londra'da randevu oluştururken sesli not kısmında
+İngilizce diktede bir sorun yaşamadı ancak translate'e bastığında şu anda translate yapılamıyor
+uyarısı verdi. Bunu da hata olarak hataların içerisine diyelim.
+
+11- Randevu alma bölümünde ilk hafta seçtiğim tekli seansla bir sonraki haftalarda aslında çoklu
+seçime devam etmek için sonraki haftaya girdiğimde sadece kural gereği o gün ve o saatteki tek
+seans görüyor. Ancak ben bir sonraki hafta seans sayımı artırmak isteyebilirim. Bu durumu çözmek
+için çoklu seçimlerde ilk haftada tek seans, sonraki haftalarda çoklu seçim yapabilmesi için bu
+algoritmada bir düzenleme yapmamız gerekiyor.
+
+12- Şu anda karşılıklı olarak Çiğdem Londra'daki bilgisayarında, ben buradaki bilgisayarımda
+birer randevu oluşturduk. Onun oluşturduğu randevudaki veriler de, benim oluşturduğum randevu
+verileri de hiçbiri Stripe aşamasında ödemeyi yapıp ödemenin alınmasına rağmen ne Google Sheet'e
+eklendi ne de Çiğdem'in İngiltere numarasına hem müşteriye hem Çiğdem'in kendisine gitmesi
+gereken WhatsApp şablon mesajları gitmedi ve Google Sheet'te de her ikimizin yaptığı randevu
+kayıtları eklenmedi.
+
+13- İleride Çiğdem bir psikoterapi, psikokliniği kliniği gibi İçerisinde aynı zamanda
+fizyoterapistlerin de bulunduğu çok çeşitli bir klinik gibi düşün bunu. gibi çalışacağı için kendi
+altında çalıştıracağı psikoterapistler ve psikologlar olacak. Dolayısıyla onların da Hem kişisel
+verilerin hem çalışma alanlarının ek sayfalarda görüneceği bir altyapı olacak Talk and Heal web
+sitemizde. Şimdiden onun altyapısı için de gerekli notları, gerekli dosyalara işleyelim ve o
+aşamaya geçtiğimizde bana neler yapılması gerektiğini, front end, back end, debug ve deploy
+aşamaları, tüm o aşama için hangi önlemleri almamız gerektiği konusunda beni uyar.
+
+14- Web sitesindeki randevu oluştur panelinden iki kişi veya üç kişi yani birden çok kişi aynı
+anda ödeme yapıp çıktıklarında sistem bunu aynı satıra, aynı kişiye veya önceliklendirdiği
+kişinin bilgilerini eklememesi lazım. Bu çok ciddi bir hata olur. Bu hem mevcut toplamdaki
+danışan sayısında hem de aynı anda işlem giren danışanların verilerinin birbirinin içerisine
+girip kaybolmasına ve Çiğdem panelden istediği ve aynı anda giriş yapmış herhangi bir danışanın
+notlarını almak istediğinde, bunlar üzerinde düzeltme yapmak istediğinde ve kişiye tıbbi bir
+teşhis koymak istediğinde çok ciddi sorunlar yaratır. Aynı anda ödeme yapılması durumunda Google
+Sheet'e ve Çiğdem'e veya danışanlara gitmesi gereken notların her birini ayrı ayrı satıra,
+WhatsApp'ına ve Çiğdem'e bilgi olarak gitmesi gerektiği konusunda çok ciddi bir filtre
+uygulamamız ve araç koymamız, gerekirse oraya bir hook eklememiz gerekiyor. Bu çok önemli bir
+detay.
+
+15- Google Sheet'te iptal politikası kademeleri olan 72 saat başlığındaki 48 ve 24'ün artık
+elenmesi lazım. Her şey 72 saat politikasına döndü ve onun altındaki veriler de 48 ve 24
+verilerinin işlenmesine gerek yok. Otomatik olarak hepsi 72 olarak doldurulması gerekiyor.
+
+16- Not panelinde Çiğdem kendisi manuel olarak bir danışanının bir veya birden fazla randevusunu
+iptal ettiğinde, iptal nedeni eğer hastalık, ailevi durum veya herhangi bir şeyse fark etmez,
+seçtiğinde altında kişiye konu ile alakalı geçmiş olsun veya kendi belirleyeceği bir içeriği
+WhatsApp mesajı olarak gönderebileceği bir mesaj yazsın ve bunu gönder dediğinde hem kişinin
+iptal nedenleri ile ilgili veriler Google Sheet'e işlensin hem de WhatsApp tetiklenerek kişiye
+Çiğdem'in gönderdiği geçmiş olsun veya yazacağı herhangi bir mesaj WhatsApp şablon mesajı olarak
+gitmiş olsun.
+
+17- Öncelikle senin en son yaptığın düzenlemeden sonra Google Sheet'e randevular verileri düştü.
+Fakat iptal etmek istediğimizde, özellikle Rıza Keskin'in 8. randevusunu iptal etmek
+istediğimizde ve iptal içinde diğer seçeneği ile çocuğu rahatsız notu ekleyerek iptal sürecini
+işlettik. Fakat ne Çiğdem bu iptali yapabildi Londra'da bilgisayarıyla, pardon iptali yaptı ama
+Google Sheet'e işlenmedi iptal değişiklikleri, ne de ben kendi bilgisayarımda yine Rıza Keskin 8.
+seans ile ilgili aynı diğer deyip bu hasta seçeneği ile ilerleyip iptali yaptığımda gerçekleşti
+fakat Google Sheet'e yine eklenmedi. Ayrıca Stripe ödemesi sonrası Çiğdem'e gitmesi gereken
+şeyler, randevu bilgilerinin hiçbiri cep telefonuna, WhatsApp'ına gitmedi.
+
+18- Şu anda Çiğdem Londra'daki bilgisayarından Hasan Taş isimli randevuyu oluşturdu. Not
+panelinden bunu iptal etmek isterken 11 Ağustos saat 16:00 için yapılan seansı iptale geçtiğinde
+%100 iade yapılacak onaylıyor musun çıktı. Ama 72 saat kuralına göre böyle bir iptalde %100
+kesinti yapılması gerekiyor. Tam tersi bir durum var. Böyle bir hata var. Bunun düzeltilmesi
+gerekiyor ve bu tarz hataların bir daha olmaması için gerekli bütün şeylerin yapılması gerek.
+
+### Öncelik sıralaması ve bağlam hiyerarşisine göre yeniden sıralanmış liste (18 madde, aynı içerik — Claude'un analizi, 2026-08-10)
+
+Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numarasıdır.
+
+1. (18) İade mantığı ters dönmüş — 72 saatten az kala iptalde %100 İADE çıkıyor, olması gereken
+   %100 KESİNTİ. Yanlış para iadesi riski, EN KRİTİK.
+2. (14) Eşzamanlı/çoklu ödemede satır çakışması — bugün canlı yaşandı, geçici olarak elle
+   düzeltildi ama kod seviyesinde kalıcı çözüm (idempotent/kilitli satır ataması) yapılmadı.
+3. (12) Stripe sonrası Sheet/WhatsApp hiç işlenmiyordu — bu oturumda kök nedeni bulunup
+   (webhook endpoint hiç kayıtlı değilmiş) çözüldü; doğrulama için listede tutuluyor.
+4. (17) İptal Sheet'e işlenmedi + WhatsApp gitmedi — bu oturumda kök nedenleri (aktif filtre +
+   bozuk başlık hücresi + WhatsApp test numarası izin listesi) bulunup çözüldü; doğrulama için
+   listede tutuluyor.
+5. (10) Randevu oluşturma ekranındaki "Translate" özelliği çalışmıyor (canlıda aktif bug).
+6. (15) İptal politikası kademesi sadeleştirme — Sheet'te ve kodda 48/24 seçenekleri kaldırılıp
+   her şey otomatik 72 olacak.
+7. (1) Hero'daki müzik nota ikonu sayfa geçişinde duruyor, kaldığı yerden devam etmiyor (UX bug).
+8. (6) Hero altı bant metni güncelleme — "BACP Registered"→"BACP Accredited", "20+ Years"→
+   "3 Decades", "CBT · ACT"→ EMDR eklenip sıralama değişecek. Basit, hemen yapılabilir.
+9. (7) Services (Hero altı) ilk 2 paragraf metni güncelleme — verilen yeni İngilizce metinle
+   değiştirilecek. Basit, hemen yapılabilir.
+10. (11) Çok haftalı randevu seçiminde, ilk hafta tekli seçilmişse sonraki haftalarda seans
+    SAYISINI artırma imkânı yok — algoritma güncellemesi gerekiyor.
+11. (16) Panelden manuel iptalde Çiğdem'in kendi yazacağı/seçeceği metnin WhatsApp şablonu
+    olarak danışana gitmesi + Sheet'e işlenmesi — yeni özellik.
+12. (8) Çiğdem'in bilgisayarında İngilizce dikte bozuk çıkıyor (Selen'in bilgisayarında Türkçe
+    dikte sorunsuz) — kök neden araştırılacak (tarayıcı/mikrofon/dil ayarı ihtimali).
+13. (9) Dikte temizleme (duraksama/"ee" dolgu kelimelerini eleme) + gramer/noktalama düzeltme
+    aracı seçimi (ücretli, EN ve TR için) — araç araştırması + entegrasyon gerekiyor, madde 8
+    ile ilişkili olabilir.
+14. (13) Çoklu terapist/klinik altyapısı (Çiğdem'in yanına psikoterapist/psikolog ekleyeceği,
+    her biri için ayrı sayfa/veri alanı) — büyük mimari değişiklik, ileride; o aşamaya
+    geçilmeden önce front-end/back-end/debug/deploy önlemleri ayrıca çıkarılacak.
+15. (3) Danışan verilerini isim paylaşmadan, yasal izinle, teze konu olacak şekilde saklama
+    altyapısı — büyük, yasal + teknik, ileride.
+16. (2) Video edit aracı entegrasyonu (Sparrow'daki OpenCut benzeri) reklam/tanıtım videoları
+    için — ayrı proje kapsamı, ileride.
+17. (4) Kendi-kendine-uygulanabilir mini tedavi + klinik referans/atıf + kişisel rapor/not
+    alanı içeren app — en büyük, en uzun vadeli vizyon maddesi, muhtemelen benzersiz.
+18. (5) [Süreç talimatı, ayrı bir görev değil] — bu ve sonraki maddelerin iş sırası/zaman
+    hiyerarşisine göre sıralanması isteği; bu bölüm onun uygulanmış halidir.
+
