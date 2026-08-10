@@ -144,3 +144,13 @@ even though the developer/user are in Turkey.
 - `AI_DESTEKLI_WEB_GELISTIRME_REHBERI.md` — the 10-stage development framework this whole project
   follows; `INTEGRASYON_TODO.md`'s phases map onto stage 5 (backend), with stages 6/10 to be
   updated once new endpoints exist.
+
+## Mimari Yaklaşım Notu (2026-08-09 analizi — herhangi bir yeni aşama/entegrasyona geçmeden önce oku)
+
+Bu proje **canlıda**, gerçek müşteri (Çiğdem Taş) + ödeme + randevu + kişisel veri işliyor —
+Çoklu Ajan Mimarisi'ne (kalıcı paralel domain-ajanları) GEÇME. Mevcut 10-aşama +
+`INTEGRASYON_TODO.md` kademeli-onay disiplinini sürdür; bu, canlı/riskli/zincirleme-bağımlı
+(ödeme→bildirim→log gibi) projeler için doğru kalıp. Sadece gerçekten bağımsız iki iş varsa
+(ör. DNS devri ile WhatsApp şablon onayı bekleme) ayrı promptlarda ele al — kalıcı ajan mimarisi
+kurmaya gerek yok. Detaylı gerekçe ve alternatif seçenekler:
+`/Users/selencelik/Desktop/10 AŞAMALI ÜRÜN DÖNGÜSÜ/10 AŞAMALI ÜRÜN DÖNGÜSÜ-1/hibrit_10_asama_ajan_takimi_rehberi.md`

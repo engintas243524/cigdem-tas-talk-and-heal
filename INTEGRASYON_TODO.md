@@ -2698,14 +2698,18 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
    %100 KESİNTİ. Yanlış para iadesi riski, EN KRİTİK.
 2. (14) Eşzamanlı/çoklu ödemede satır çakışması — bugün canlı yaşandı, geçici olarak elle
    düzeltildi ama kod seviyesinde kalıcı çözüm (idempotent/kilitli satır ataması) yapılmadı.
-3. (12) Stripe sonrası Sheet/WhatsApp hiç işlenmiyordu — bu oturumda kök nedeni bulunup
-   (webhook endpoint hiç kayıtlı değilmiş) çözüldü; doğrulama için listede tutuluyor.
-4. (17) İptal Sheet'e işlenmedi + WhatsApp gitmedi — bu oturumda kök nedenleri (aktif filtre +
-   bozuk başlık hücresi + WhatsApp test numarası izin listesi) bulunup çözüldü; doğrulama için
-   listede tutuluyor.
-5. (10) Randevu oluşturma ekranındaki "Translate" özelliği çalışmıyor (canlıda aktif bug).
-6. (15) İptal politikası kademesi sadeleştirme — Sheet'te ve kodda 48/24 seçenekleri kaldırılıp
-   her şey otomatik 72 olacak.
+3. (12) ✅ ÇÖZÜLDÜ (2026-08-10) — Stripe sonrası Sheet/WhatsApp hiç işlenmiyordu, kök neden
+   (webhook endpoint hiç kayıtlı değilmiş) bulunup kalıcı endpoint kuruldu.
+4. (17) ✅ ÇÖZÜLDÜ (2026-08-10) — İptal Sheet'e işlenmedi + WhatsApp gitmedi, kök nedenleri
+   (aktif filtre + bozuk başlık hücresi + WhatsApp test numarası izin listesi) bulunup çözüldü.
+5. (10) ✅ ÇÖZÜLDÜ (2026-08-10) — Randevu ekranındaki "Translate" özelliği canlı test edildi
+   (EN→TR ve EN→EN), ikisi de 200 dönüyor; muhtemelen aynı gün erken saatte düzeltilen eski
+   tünel-adresi sorunuyla aynı kökten kaynaklanıyordu.
+6. (15) ✅ ÇÖZÜLDÜ (2026-08-10) — İptal politikası kademesi sadeleştirildi: Sheet başlığı
+   "İptal Politikası Kademesi (72/48/24s)" → "İptal Politikası Kademesi" (Sayfa1 + 9 mirror
+   sekmesinde, eski 24/48/72 veriler dokunulmadan kaldı), yeni randevularda alan artık her zaman
+   "72"; `lib/policy.ts` (computePolicyTier/PolicyTier) tamamen kaldırıldı, `lib/refund.ts`
+   doğrudan 72 saat eşiğini kontrol ediyor.
 7. (1) Hero'daki müzik nota ikonu sayfa geçişinde duruyor, kaldığı yerden devam etmiyor (UX bug).
 8. (6) Hero altı bant metni güncelleme — "BACP Registered"→"BACP Accredited", "20+ Years"→
    "3 Decades", "CBT · ACT"→ EMDR eklenip sıralama değişecek. Basit, hemen yapılabilir.
