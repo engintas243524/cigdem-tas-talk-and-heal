@@ -66,19 +66,21 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 	const appointment = formatAppointment(firstSession.startUtc, md.clientTimeZone);
 	const sessionCount = plan.length;
 	const appointmentLabel = sessionCount > 1 ? `${appointment} (first of ${sessionCount} weekly sessions)` : appointment;
-	// Madde 500 (2026-08-11): routes/booking.ts already decided, at submit time, whether the
-	// client's note fit under Stripe metadata's 500-char cap as-is (`summaryWasSummarized ===
-	// 'false'`, Sheet gets it verbatim) or had to be AI-summarized before Checkout was even
-	// created (`'true'`, Sheet gets that summary). Either way, a grammar/spelling/punctuation pass
-	// always runs here as a safety net — whether or not the visitor used "Metni Düzelt" themselves
-	// — never altering names/context/clinical terms (see textCleanup.ts). This is what actually
-	// goes to Sheets/Calendar.
-	const summaryWasSummarized = md.summaryWasSummarized === 'true';
-	const sheetSummary = await fixGrammar(env, md.summary ?? '');
+	// Madde 500 (2026-08-11, revised after a live test): Sheets must NEVER get a summarized note —
+	// routes/booking.ts split it across as many `summaryN` metadata fields as needed (Stripe's
+	// 500-char value cap), reassembled losslessly here. A grammar/spelling/punctuation pass always
+	// runs as a safety net (whether or not the visitor used "Metni Düzelt" themselves), never
+	// altering names/context/clinical terms (see textCleanup.ts) — this is what goes to
+	// Sheets/Calendar. Known issue (2026-08-11, flagged by user after a live test): fixGrammar's
+	// output sometimes drifts further than pure grammar fixing (word substitutions that shift
+	// meaning) — acceptable for now, revisit the prompt later.
+	const chunkCount = Number(md.summaryChunkCount) || 0;
+	const rawSummary = Array.from({ length: chunkCount }, (_, i) => md[`summary${i}`] ?? '').join('');
+	const sheetSummary = await fixGrammar(env, rawSummary);
 	// Çiğdem's WhatsApp/email notification ALWAYS gets a genuine short summary, unconditionally —
-	// reuse sheetSummary directly when it's already an AI summary; otherwise (Sheet got the full
-	// text) summarize it fresh just for this notification, so the two can legitimately differ.
-	const notifySummary = summaryWasSummarized ? sheetSummary : await summarizeNote(env, sheetSummary);
+	// deliberately a SEPARATE value from sheetSummary (Sheets gets the full text, the notification
+	// never does).
+	const notifySummary = await summarizeNote(env, sheetSummary);
 
 	try {
 		// 1. Calendar events — idempotent (deterministic id per session index derived from the

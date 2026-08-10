@@ -248,10 +248,10 @@ export function locationFor(sessionMode: string): string {
 // even though the frontend form also caps "Sorun Özeti" client-side.
 export const SUMMARY_MAX_LENGTH = 450;
 
-// The real Stripe metadata value cap (source: https://docs.stripe.com/metadata) — used as the
-// decision boundary for the booking summary's full-text-vs-AI-summary rule (2026-08-11, Madde
-// 500): at or under this many characters (checked at submit time, AFTER any Translate/Metni
-// Düzelt edit — not frozen at whatever the visitor first typed), the summary fits Stripe metadata
-// as-is and the Sheet gets the FULL text; over it, metadata can't hold the raw text at all, so
-// it's AI-summarized before Checkout is even created (see routes/booking.ts).
-export const SUMMARY_SUMMARIZE_THRESHOLD = 500;
+// The real Stripe metadata value cap (source: https://docs.stripe.com/metadata) — Google Sheets
+// must NEVER receive a summarized version of the client's note, only the full (grammar-corrected)
+// text, regardless of length (2026-08-11, revised after a live test showed the Sheet getting an
+// unwanted AI summary). Since a single metadata value can't hold more than this many characters,
+// routes/booking.ts splits the summary across as many `summaryN` fields as needed (up to Stripe's
+// 50-key cap) and routes/stripe-webhook.ts reassembles them — nothing is ever condensed here.
+export const STRIPE_METADATA_VALUE_MAX = 500;

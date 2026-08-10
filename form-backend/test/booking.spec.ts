@@ -159,7 +159,7 @@ describe('POST /booking validation', () => {
 			expect(response.status).not.toBe(400);
 		});
 
-		it('a summary over 500 chars (forcing the AI-summarize-before-Checkout path) is not rejected', async () => {
+		it('a summary over 500 chars (forcing the multi-chunk metadata split) is not rejected', async () => {
 			const response = await postBooking({ summary: 'a'.repeat(700) });
 			expect(response.status).not.toBe(400);
 		});

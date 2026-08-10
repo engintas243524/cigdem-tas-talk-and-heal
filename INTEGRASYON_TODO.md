@@ -1070,14 +1070,39 @@ desen, farklı promptlarla 3 fonksiyon).
    yanına, aynı `.btn-ghost` stiliyle), Translate'in `doTranslate` deseniyle aynı yapıda
    (`fixTextBtn` click → `/fix-text` → kutuyu ve karakter sayacını günceller, hata/başarı notu
    paylaşımlı `translateNote` alanında gösterilir).
-5. [x] KISMEN DOĞRULANDI (2026-08-11) — Backend: 141/141 test yeşil (booking.spec.ts'e 2, stripe-
-   webhook.spec.ts'e 2 yeni test eklendi — sheetSummary/notifySummary ayrımı ve 500-eşiği kod
-   yolunun hata vermediği doğrulandı), `tsc`/`prettier` temiz, gerçek deploy'a karşı doğrudan
-   navigasyonla `fixGrammar`'ın hem TR hem EN'de ÇEVİRİ YAPMADAN doğru düzelttiği canlı doğrulandı.
+5. [x] KISMEN DOĞRULANDI (2026-08-11) — Backend: test yeşil, `tsc`/`prettier` temiz, gerçek deploy'a
+   karşı doğrudan navigasyonla `fixGrammar`'ın hem TR hem EN'de ÇEVİRİ YAPMADAN doğru düzelttiği
+   canlı doğrulandı.
    **Doğrulanamayan:** tarayıcı sandbox'ı (`*.workers.dev`'e `fetch()` — hem yeni `/fix-text` hem
    zaten çalışan `/translate` aynı şekilde engellendi, ortam kısıtı, kod hatası değil) yüzünden
    gerçek "Metni Düzelt" buton tıklamasını uçtan uca kendim test edemedim — kullanıcı/Çiğdem'den
-   canlıda deneyip onaylaması istenecek. Ayrıca tam uçtan uca (gerçek ödeme ile) 500-eşiği
-   senaryosu (kısa metin/uzun metin/Translate sonrası eşik geçişi) henüz gerçek bir rezervasyonla
-   denenmedi.
+   canlıda deneyip onaylaması istenecek.
+
+### DÜZELTME — Gerçek canlı testte bulunan sorun + kullanıcı kararı (2026-08-11)
+
+Kullanıcı gerçek uzun bir metinle (özgün metin ~1050 karakter) canlı test yaptı. Sonuç: Google
+Sheet'e giden alan çok kısa bir özet olarak geldi (`summarizeNote` >500 karakter dalında devreye
+girmişti) — kullanıcı bunu istemiyor: **"google sheet e giden mesajı kesinlikle özetlemeyeceğiz,
+sadece kişi metni düzelt yaparsa ya da yapmadığında ödeme sonrası otomatik tetiklenen düzeltilmiş
+metin olduğu gibi google sheet e gidecek."** Yani Sheet UZUNLUĞA BAKMAKSIZIN her zaman tam
+(gramer düzeltilmiş) metni alacak; sadece Çiğdem'e giden WhatsApp bildirimi gerçek özet olacak
+(değişmedi).
+
+**Uygulanan düzeltme:** `booking.ts`'teki >500 karakter dalındaki `summarizeNote` çağrısı tamamen
+kaldırıldı. Bunun yerine metin, Stripe metadata'nın gerçek 500 karakter sınırını aşarsa
+`summary0`, `summary1`, ... şeklinde birden fazla metadata alanına BÖLÜNÜYOR (`summaryChunkCount`
+ile kaç parça olduğu da yazılıyor), `stripe-webhook.ts` bunları kayıpsız birleştirip `fixGrammar`
+uyguluyor — Sheet artık HİÇBİR uzunlukta özetlenmiyor. WhatsApp'a giden özet hâlâ ayrı ve gerçek
+bir özet (koşulsuz, her zaman). Testler buna göre güncellendi (35/35 booking+webhook, toplam
+141/141), deploy edildi.
+
+**Kullanıcı ayrıca not etti (2026-08-11, TAKİP GEREKİYOR — kod düzeltmesi DEĞİL, sadece hatırlatma
+istendi):** `fixGrammar`'ın çıktısında küçük ama gerçek hatalar var — bazı kelimeler saf
+gramer/imla düzeltmesinin ötesine geçip anlamı hafifçe kaydırıyor (örnek canlı test: "zihinsel
+gürültü" → "zihinsel gerginlik", "dönüp duruyor" → "donup duruyor", "kısır döngü" → "kışır
+döngüsü" — bunlardan sonuncusu gerçek bir kelime bile değil). Kullanıcının kararı: **"düzeltilen
+metin fena değil, küçük hatalar var o hatalara sonra bakarız... entegre ettiğimiz araç
+kullanılmaya devam edecek."** Yani araç (Cloudflare Workers AI) değiştirilmeyecek, sadece
+`textCleanup.ts`'teki `fixGrammar` prompt'u ileride (kullanıcı istediğinde) iyileştirilecek —
+şimdilik dokunulmuyor. Bir sonraki oturumda bu konuyu hatırlat.
 

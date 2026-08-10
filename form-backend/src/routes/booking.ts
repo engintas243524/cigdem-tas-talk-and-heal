@@ -2,7 +2,7 @@ import {
 	getPriceGBP,
 	STRIPE_SUCCESS_URL,
 	STRIPE_CANCEL_URL,
-	SUMMARY_SUMMARIZE_THRESHOLD,
+	STRIPE_METADATA_VALUE_MAX,
 	MAX_SESSION_COUNT,
 	BUSINESS_HOURS,
 	type SessionType,
@@ -12,7 +12,6 @@ import {
 import { getAvailableSlots } from '../lib/calendar';
 import { detectTimezoneFromPhone, getLocalDateParts } from '../lib/timezone';
 import { getStripeClient } from '../lib/stripe';
-import { summarizeNote } from '../lib/summarize';
 import { errorResponse, json } from '../lib/http';
 import type { Env, BookingRequest } from '../types';
 
@@ -150,13 +149,15 @@ export async function handleBooking(request: Request, env: Env): Promise<Respons
 		const priceGBP = getPriceGBP(booking.sessionMode, booking.therapyMode, booking.sessionType);
 		const sessionCount = sortedSlots.length;
 
-		// Madde 500 (2026-08-11): decided on whatever's in the box AT SUBMIT TIME (after any
-		// Translate/Metni Düzelt edit the visitor made) — over the threshold, Stripe metadata
-		// literally cannot hold the raw text (500-char value cap), so it must be AI-summarized
-		// right now, before Checkout is even created. `summaryWasSummarized` tells the webhook
-		// which case this was, since a summarized result can itself end up under the threshold too.
-		const summaryWasSummarized = booking.summary.length > SUMMARY_SUMMARIZE_THRESHOLD;
-		const summaryForMetadata = summaryWasSummarized ? await summarizeNote(env, booking.summary) : booking.summary;
+		// Madde 500 (2026-08-11, revised): the client's note (whatever's in the box at submit time,
+		// after any Translate/Metni Düzelt edit) is split into as many ≤500-char chunks as needed —
+		// never summarized here. A single Stripe metadata value can't hold more than
+		// STRIPE_METADATA_VALUE_MAX characters, so this is purely a storage workaround; the webhook
+		// reassembles the full text losslessly (see routes/stripe-webhook.ts).
+		const summaryChunks: string[] = [];
+		for (let i = 0; i < booking.summary.length; i += STRIPE_METADATA_VALUE_MAX) {
+			summaryChunks.push(booking.summary.slice(i, i + STRIPE_METADATA_VALUE_MAX));
+		}
 
 		const stripe = getStripeClient(env);
 		const session = await stripe.checkout.sessions.create({
@@ -180,8 +181,8 @@ export async function handleBooking(request: Request, env: Env): Promise<Respons
 				name: booking.name,
 				email: booking.email,
 				phone: booking.phone,
-				summary: summaryForMetadata.slice(0, SUMMARY_SUMMARIZE_THRESHOLD),
-				summaryWasSummarized: String(summaryWasSummarized),
+				summaryChunkCount: String(summaryChunks.length),
+				...Object.fromEntries(summaryChunks.map((chunk, i) => [`summary${i}`, chunk])),
 				sessionType: booking.sessionType,
 				sessionMode: booking.sessionMode,
 				therapyMode: booking.therapyMode,

@@ -12,11 +12,14 @@ afterEach(() => {
 	vi.mocked(constructStripeEvent).mockReset();
 });
 
+// Madde 500: booking.ts splits the summary across summaryN/summaryChunkCount fields (Stripe's
+// 500-char metadata value cap) — a single short test summary is always exactly one chunk.
 const METADATA = {
 	name: 'Ada Test',
 	email: 'ada@example.com',
 	phone: '447911123456',
-	summary: 'A test summary',
+	summary0: 'A test summary',
+	summaryChunkCount: '1',
 	sessionType: 'standard',
 	sessionMode: 'online',
 	therapyMode: 'individual',
@@ -196,15 +199,13 @@ describe('POST /webhook/stripe', () => {
 		expect(putBodies.length).toBeGreaterThanOrEqual(2); // guard cell (confirmationSentAt) still written
 	});
 
-	it("sends the AI-condensed summary — not the client's raw note — to Sheets and Selen", async () => {
+	it("sends the AI-condensed summary — not the client's raw note — to Selen's WhatsApp notice", async () => {
 		vi.mocked(constructStripeEvent).mockResolvedValue(completedEvent() as never);
 		stubAi();
-		const { fetchMock, putBodies } = stubApis(false);
+		const { fetchMock } = stubApis(false);
 
 		await postWebhook();
 
-		expect(putBodies.some((b) => b.includes(STUB_SUMMARY))).toBe(true);
-		expect(putBodies.some((b) => b.includes(METADATA.summary))).toBe(false);
 		const whatsappBodies = fetchMock.mock.calls
 			.filter(([u]) => String(u).includes('graph.facebook.com'))
 			.map(([, init]) => String((init as RequestInit | undefined)?.body ?? ''));
@@ -225,43 +226,41 @@ describe('POST /webhook/stripe', () => {
 		} as unknown as Ai;
 	}
 
-	it('Madde 500: full-text case (summaryWasSummarized=false) — Sheets gets the grammar-fixed FULL text, WhatsApp gets a fresh short summary of it', async () => {
-		vi.mocked(constructStripeEvent).mockResolvedValue({
-			type: 'checkout.session.completed',
-			data: { object: { id: 'cs_test_123', metadata: { ...METADATA, summaryWasSummarized: 'false' } } },
-		} as never);
+	it('Madde 500 (revised 2026-08-11): Sheets always gets the grammar-fixed FULL text (never a summary); WhatsApp always gets a separate, genuinely short summary of it', async () => {
+		vi.mocked(constructStripeEvent).mockResolvedValue(completedEvent() as never);
 		stubAiDistinct();
 		const { fetchMock, putBodies } = stubApis(false);
 
 		await postWebhook();
 
-		// Sheets: the grammar-fixed FULL text (fixGrammar ran directly on md.summary).
-		expect(putBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(true);
-		// WhatsApp: a genuinely separate short summary (summarizeNote ran on the fixed text).
+		// Sheets: the grammar-fixed FULL text — never condensed.
+		expect(putBodies.some((b) => b.includes('FIXED: ' + METADATA.summary0))).toBe(true);
+		// WhatsApp: a genuinely separate short summary (summarizeNote ran on the fixed text), NOT
+		// the same value Sheets got.
 		const whatsappBodies = fetchMock.mock.calls
 			.filter(([u]) => String(u).includes('graph.facebook.com'))
 			.map(([, init]) => String((init as RequestInit | undefined)?.body ?? ''));
 		expect(whatsappBodies.some((b) => b.includes('SHORT_SUMMARY:'))).toBe(true);
-		expect(whatsappBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(false); // must NOT reuse the full-text value verbatim
+		expect(whatsappBodies.some((b) => b.includes('FIXED: ' + METADATA.summary0))).toBe(false);
 	});
 
-	it('Madde 500: already-summarized case (summaryWasSummarized=true) — WhatsApp reuses the same grammar-fixed summary Sheets got, never re-summarizes', async () => {
+	it('Madde 500: a summary split across multiple Stripe metadata chunks (summary0/summary1/…) is losslessly reassembled before Sheets sees it', async () => {
+		const longSummary = 'A'.repeat(500) + 'B'.repeat(120); // forces 2 chunks, matching booking.ts's split
 		vi.mocked(constructStripeEvent).mockResolvedValue({
 			type: 'checkout.session.completed',
-			data: { object: { id: 'cs_test_123', metadata: { ...METADATA, summaryWasSummarized: 'true' } } },
+			data: {
+				object: {
+					id: 'cs_test_123',
+					metadata: { ...METADATA, summary0: longSummary.slice(0, 500), summary1: longSummary.slice(500), summaryChunkCount: '2' },
+				},
+			},
 		} as never);
 		stubAiDistinct();
-		const { fetchMock, putBodies } = stubApis(false);
+		const { putBodies } = stubApis(false);
 
 		await postWebhook();
 
-		expect(putBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(true);
-		const whatsappBodies = fetchMock.mock.calls
-			.filter(([u]) => String(u).includes('graph.facebook.com'))
-			.map(([, init]) => String((init as RequestInit | undefined)?.body ?? ''));
-		// Same value as Sheets — no separate "SHORT_SUMMARY:" pass should have run.
-		expect(whatsappBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(true);
-		expect(whatsappBodies.some((b) => b.includes('SHORT_SUMMARY:'))).toBe(false);
+		expect(putBodies.some((b) => b.includes('FIXED: ' + longSummary))).toBe(true);
 	});
 
 	it('falls back to the raw note when Workers AI summarization fails, without blocking the booking', async () => {
@@ -275,7 +274,7 @@ describe('POST /webhook/stripe', () => {
 		const whatsappBodies = fetchMock.mock.calls
 			.filter(([u]) => String(u).includes('graph.facebook.com'))
 			.map(([, init]) => String((init as RequestInit | undefined)?.body ?? ''));
-		expect(whatsappBodies.some((b) => b.includes(METADATA.summary))).toBe(true);
+		expect(whatsappBodies.some((b) => b.includes(METADATA.summary0))).toBe(true);
 	});
 
 	it('does not block confirmation or repeat the WhatsApp send when the client email fails (Resend sandbox restriction)', async () => {
