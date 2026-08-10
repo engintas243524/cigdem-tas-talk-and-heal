@@ -4,6 +4,7 @@ import { findRowBySessionId, getRow, getAllRows, writeCellMirrored } from '../li
 import { sessionFields, bookedSessionIndexes, nextBookedSession, closeOutSessionNote } from '../lib/notes';
 import { computeRefund, computeOverrideRefund } from '../lib/refund';
 import { performCancellation } from '../lib/cancellation';
+import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
 import type { Env, SheetRow } from '../types';
 
@@ -132,13 +133,17 @@ export async function handlePanelNotePost(request: Request, env: Env): Promise<R
 	const stripeSessionId = String(body.stripeSessionId ?? '');
 	const index = Number(body.sessionIndex);
 	const mode = String(body.mode ?? '');
-	const text = String(body.text ?? '').slice(0, NOTE_MAX_LENGTH);
+	const rawText = String(body.text ?? '').slice(0, NOTE_MAX_LENGTH);
 	if (!stripeSessionId || !Number.isInteger(index) || index < 1 || index > MAX_SESSION_COUNT) {
 		return errorResponse(request, 400, 'Geçersiz seans bilgisi.');
 	}
 	if (mode !== 'add' && mode !== 'append' && mode !== 'replace') {
 		return errorResponse(request, 400, 'Geçersiz işlem.');
 	}
+	// Madde 13 (2026-08-11): dictated notes go through Workers AI to strip hesitation filler
+	// ("ee", stutter-repeats) and fix grammar/punctuation before ever reaching Sheets — same
+	// safe-fallback behavior as summarizeNote, never touches actual clinical content.
+	const text = await cleanDictation(env, rawText);
 
 	const found = await loadRow(env, stripeSessionId);
 	if (!found) return errorResponse(request, 404, 'Kayıt bulunamadı.');

@@ -147,4 +147,21 @@ describe('POST /booking validation', () => {
 			expect(response.status).toBe(400);
 		});
 	});
+
+	describe('summary (Madde 500)', () => {
+		// This route reaches the real Stripe SDK past validation, which 502s in this test
+		// environment (no live network) — same reasoning as the slotStartUtcs "reaches Stripe"
+		// checks above. These confirm the new over/under-500 branch in routes/booking.ts doesn't
+		// itself throw or get rejected as a validation error; the actual metadata split (Sheets vs.
+		// WhatsApp content) is covered end-to-end in stripe-webhook.spec.ts's "Madde 500" tests.
+		it('a summary at exactly the 500-char threshold is not rejected', async () => {
+			const response = await postBooking({ summary: 'a'.repeat(500) });
+			expect(response.status).not.toBe(400);
+		});
+
+		it('a summary over 500 chars (forcing the AI-summarize-before-Checkout path) is not rejected', async () => {
+			const response = await postBooking({ summary: 'a'.repeat(700) });
+			expect(response.status).not.toBe(400);
+		});
+	});
 });

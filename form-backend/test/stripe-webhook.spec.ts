@@ -211,6 +211,59 @@ describe('POST /webhook/stripe', () => {
 		expect(whatsappBodies.some((b) => b.includes(STUB_SUMMARY))).toBe(true);
 	});
 
+	// Distinguishes fixGrammar's system prompt from summarizeNote's, so a test can tell which one
+	// actually ran and assert Sheets vs. WhatsApp got the values Madde 500's split logic intends.
+	function stubAiDistinct() {
+		env.AI = {
+			run: vi.fn(async (_model: string, opts: { messages: { role: string; content: string }[] }) => {
+				const systemPrompt = opts.messages[0].content;
+				const userText = opts.messages[opts.messages.length - 1].content;
+				if (systemPrompt.includes('condense')) return { response: 'SHORT_SUMMARY: ' + userText.slice(0, 15) };
+				if (systemPrompt.includes('correct grammar')) return { response: 'FIXED: ' + userText };
+				return { response: userText };
+			}),
+		} as unknown as Ai;
+	}
+
+	it('Madde 500: full-text case (summaryWasSummarized=false) — Sheets gets the grammar-fixed FULL text, WhatsApp gets a fresh short summary of it', async () => {
+		vi.mocked(constructStripeEvent).mockResolvedValue({
+			type: 'checkout.session.completed',
+			data: { object: { id: 'cs_test_123', metadata: { ...METADATA, summaryWasSummarized: 'false' } } },
+		} as never);
+		stubAiDistinct();
+		const { fetchMock, putBodies } = stubApis(false);
+
+		await postWebhook();
+
+		// Sheets: the grammar-fixed FULL text (fixGrammar ran directly on md.summary).
+		expect(putBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(true);
+		// WhatsApp: a genuinely separate short summary (summarizeNote ran on the fixed text).
+		const whatsappBodies = fetchMock.mock.calls
+			.filter(([u]) => String(u).includes('graph.facebook.com'))
+			.map(([, init]) => String((init as RequestInit | undefined)?.body ?? ''));
+		expect(whatsappBodies.some((b) => b.includes('SHORT_SUMMARY:'))).toBe(true);
+		expect(whatsappBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(false); // must NOT reuse the full-text value verbatim
+	});
+
+	it('Madde 500: already-summarized case (summaryWasSummarized=true) — WhatsApp reuses the same grammar-fixed summary Sheets got, never re-summarizes', async () => {
+		vi.mocked(constructStripeEvent).mockResolvedValue({
+			type: 'checkout.session.completed',
+			data: { object: { id: 'cs_test_123', metadata: { ...METADATA, summaryWasSummarized: 'true' } } },
+		} as never);
+		stubAiDistinct();
+		const { fetchMock, putBodies } = stubApis(false);
+
+		await postWebhook();
+
+		expect(putBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(true);
+		const whatsappBodies = fetchMock.mock.calls
+			.filter(([u]) => String(u).includes('graph.facebook.com'))
+			.map(([, init]) => String((init as RequestInit | undefined)?.body ?? ''));
+		// Same value as Sheets — no separate "SHORT_SUMMARY:" pass should have run.
+		expect(whatsappBodies.some((b) => b.includes('FIXED: ' + METADATA.summary))).toBe(true);
+		expect(whatsappBodies.some((b) => b.includes('SHORT_SUMMARY:'))).toBe(false);
+	});
+
 	it('falls back to the raw note when Workers AI summarization fails, without blocking the booking', async () => {
 		vi.mocked(constructStripeEvent).mockResolvedValue(completedEvent() as never);
 		stubAi(true);

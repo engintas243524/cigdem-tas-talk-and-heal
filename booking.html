@@ -193,6 +193,9 @@
               <button class="btn btn-ghost" type="button" id="translateBtn">
                 <span data-en>Translate</span><span data-tr>Çevir</span>
               </button>
+              <button class="btn btn-ghost" type="button" id="fixTextBtn">
+                <span data-en>Fix text</span><span data-tr>Metni Düzelt</span>
+              </button>
               <button class="btn btn-ghost" type="button" id="translateToEnBtn" style="display:none;">
                 <span data-en>To English</span><span data-tr>İngilizceye</span>
               </button>
@@ -364,6 +367,10 @@
       translating: { en: 'Translating…', tr: 'Çevriliyor…' },
       translateError: { en: 'Translation service is unavailable right now. Please try again shortly.', tr: 'Çeviri servisi şu anda kullanılamıyor. Lütfen birazdan tekrar dene.' },
       translated: { en: 'Translated.', tr: 'Çevrildi.' },
+      fixTextEmpty: { en: 'Please write something first.', tr: 'Lütfen önce bir şeyler yaz.' },
+      fixingText: { en: 'Fixing text…', tr: 'Metin düzeltiliyor…' },
+      fixTextError: { en: 'Text-fixing service is unavailable right now. Please try again shortly.', tr: 'Metin düzeltme servisi şu anda kullanılamıyor. Lütfen birazdan tekrar dene.' },
+      fixedText: { en: 'Fixed.', tr: 'Düzeltildi.' },
       foreignLanguage: { en: 'This looks like it’s written in another language. Please use the Translate button to translate it into English.', tr: 'Bu not başka bir dilde yazılmış görünüyor. Lütfen Çevir butonunu kullanarak Türkçeye çevir.' },
       micListening: { en: 'Listening… speak now (tap the mic again to stop).', tr: 'Dinleniyor… konuş (durdurmak için mikrofona tekrar dokun).' },
       micError: { en: 'Microphone error. Please check your browser permissions.', tr: 'Mikrofon hatası. Lütfen tarayıcı izinlerini kontrol et.' },
@@ -1099,6 +1106,46 @@
         lastDetectedText = ''; // force a fresh check on the next blur
         translateNote.style.display = 'none';
         showLanguageChoice(false);
+      });
+    })();
+
+    // "Fix text" button: grammar/spelling/punctuation correction only (never translates, never
+    // changes meaning/names/scientific terms — same Workers AI-backed /fix-text endpoint the
+    // post-payment webhook falls back to automatically if this button is never pressed). Language
+    // is auto-detected server-side, no flag/toggle needed here.
+    (function(){
+      var fixTextBtn = document.getElementById('fixTextBtn');
+      var translateNote = document.getElementById('translateNote'); // shared status line with Translate
+      if (!fixTextBtn || !summaryEl || !translateNote) return;
+
+      function showFixNote(key, isError){
+        translateNote.textContent = STRINGS[key][currentLang()];
+        translateNote.style.display = 'block';
+        translateNote.classList.toggle('form-note--error', !!isError);
+      }
+
+      fixTextBtn.addEventListener('click', function(){
+        var text = summaryEl.value.trim();
+        if (!text) { showFixNote('fixTextEmpty', true); return; }
+        showFixNote('fixingText', false);
+        fixTextBtn.disabled = true;
+        fetch(API_BASE + '/fix-text?text=' + encodeURIComponent(text))
+          .then(function(res){
+            if (!res.ok) throw new Error('http ' + res.status);
+            return res.json();
+          })
+          .then(function(data){
+            if (!data || !data.fixed) throw new Error('bad fix-text response');
+            summaryEl.value = data.fixed;
+            if (charCount) charCount.textContent = summaryEl.value.length + ' / ' + summaryEl.getAttribute('maxlength');
+            showFixNote('fixedText', false);
+          })
+          .catch(function(){
+            showFixNote('fixTextError', true);
+          })
+          .finally(function(){
+            fixTextBtn.disabled = false;
+          });
       });
     })();
 

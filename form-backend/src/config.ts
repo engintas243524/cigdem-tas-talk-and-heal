@@ -247,3 +247,11 @@ export function locationFor(sessionMode: string): string {
 // Stripe Checkout metadata values cap at 500 chars — truncate defensively at the trust boundary
 // even though the frontend form also caps "Sorun Özeti" client-side.
 export const SUMMARY_MAX_LENGTH = 450;
+
+// The real Stripe metadata value cap (source: https://docs.stripe.com/metadata) — used as the
+// decision boundary for the booking summary's full-text-vs-AI-summary rule (2026-08-11, Madde
+// 500): at or under this many characters (checked at submit time, AFTER any Translate/Metni
+// Düzelt edit — not frozen at whatever the visitor first typed), the summary fits Stripe metadata
+// as-is and the Sheet gets the FULL text; over it, metadata can't hold the raw text at all, so
+// it's AI-summarized before Checkout is even created (see routes/booking.ts).
+export const SUMMARY_SUMMARIZE_THRESHOLD = 500;

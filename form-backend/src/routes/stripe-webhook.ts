@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { WHATSAPP_TEMPLATES, SUMMARY_MAX_LENGTH, getSessionMinutes, locationFor, type SessionType } from '../config';
+import { WHATSAPP_TEMPLATES, getSessionMinutes, locationFor, type SessionType } from '../config';
 import { constructStripeEvent } from '../lib/stripe';
 import { createCalendarEvent } from '../lib/calendar';
 import { computeReminderDueUtc } from '../lib/timezone';
@@ -16,6 +16,7 @@ import { sendTemplate, sendText } from '../lib/whatsapp';
 import { sendEmail } from '../lib/email';
 import { buildCancelUrl } from '../lib/cancel-link';
 import { summarizeNote } from '../lib/summarize';
+import { fixGrammar } from '../lib/textCleanup';
 import { errorResponse } from '../lib/http';
 import type { Env, SheetRow } from '../types';
 
@@ -65,10 +66,19 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 	const appointment = formatAppointment(firstSession.startUtc, md.clientTimeZone);
 	const sessionCount = plan.length;
 	const appointmentLabel = sessionCount > 1 ? `${appointment} (first of ${sessionCount} weekly sessions)` : appointment;
-	// A real (AI-condensed) summary, not the client's raw note verbatim — this is what the field
-	// is actually named ("Sorun Özeti"/Summary) everywhere it's stored or sent. Falls back to the
-	// raw text on any Workers AI hiccup (see summarize.ts), so this never blocks the booking.
-	const summary = await summarizeNote(env, md.summary ?? '');
+	// Madde 500 (2026-08-11): routes/booking.ts already decided, at submit time, whether the
+	// client's note fit under Stripe metadata's 500-char cap as-is (`summaryWasSummarized ===
+	// 'false'`, Sheet gets it verbatim) or had to be AI-summarized before Checkout was even
+	// created (`'true'`, Sheet gets that summary). Either way, a grammar/spelling/punctuation pass
+	// always runs here as a safety net — whether or not the visitor used "Metni Düzelt" themselves
+	// — never altering names/context/clinical terms (see textCleanup.ts). This is what actually
+	// goes to Sheets/Calendar.
+	const summaryWasSummarized = md.summaryWasSummarized === 'true';
+	const sheetSummary = await fixGrammar(env, md.summary ?? '');
+	// Çiğdem's WhatsApp/email notification ALWAYS gets a genuine short summary, unconditionally —
+	// reuse sheetSummary directly when it's already an AI summary; otherwise (Sheet got the full
+	// text) summarize it fresh just for this notification, so the two can legitimately differ.
+	const notifySummary = summaryWasSummarized ? sheetSummary : await summarizeNote(env, sheetSummary);
 
 	try {
 		// 1. Calendar events — idempotent (deterministic id per session index derived from the
@@ -78,7 +88,7 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 			await createCalendarEvent(env, {
 				stripeSessionId: s.index === 1 ? stripeSessionId : `${stripeSessionId}_s${s.index}`,
 				summary: `Talk and Heal — ${md.name}`,
-				description: summary,
+				description: sheetSummary,
 				startUtc: s.startUtc,
 				endUtc: s.endUtc,
 			});
@@ -95,7 +105,7 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 				name: md.name ?? '',
 				email: md.email ?? '',
 				phone: md.phone ?? '',
-				summary: summary.slice(0, SUMMARY_MAX_LENGTH),
+				summary: sheetSummary,
 				sessionType: md.sessionType ?? '',
 				// Human-readable minutes for Selen's sheet, derived from the existing SESSION_DURATIONS
 				// (via getSessionMinutes) — no new mapping. e.g. "50 dk" / "80 dk".
@@ -188,7 +198,7 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 				md.name ?? '',
 				`${md.email ?? ''} / ${md.phone ?? ''}`,
 				appointmentLabel,
-				summary,
+				notifySummary,
 			]);
 		} catch (err) {
 			console.error(`Selen new-booking WhatsApp failed for ${stripeSessionId}:`, err);
@@ -198,7 +208,7 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 				env,
 				env.SELEN_NOTIFICATION_EMAIL,
 				'New Talk and Heal booking',
-				`New booking from ${md.name}.\nContact: ${md.email} / ${md.phone}\nAppointment: ${appointmentLabel}\nSummary: ${summary}`,
+				`New booking from ${md.name}.\nContact: ${md.email} / ${md.phone}\nAppointment: ${appointmentLabel}\nSummary: ${notifySummary}`,
 			);
 		} catch (err) {
 			console.error(`Selen new-booking email failed for ${stripeSessionId}:`, err);

@@ -5,6 +5,7 @@ import { handleWhatsappVerify, handleWhatsappIncoming } from './routes/whatsapp'
 import { handleStripeWebhook } from './routes/stripe-webhook';
 import { handleCancelGet, handleCancelPost } from './routes/cancel';
 import { handleTranslate } from './routes/translate';
+import { handleFixText } from './routes/fix-text';
 import {
 	handlePanelLogin,
 	handlePanelPending,
@@ -46,6 +47,8 @@ export default {
 				return handleCancelPost(request, env);
 			case 'GET /translate':
 				return handleTranslate(request, env);
+			case 'GET /fix-text':
+				return handleFixText(request, env);
 			// Madde 5 control panel. Login is public (it's the password check); every other panel
 			// route is gated by a valid Bearer token via requirePanelAuth.
 			case 'POST /panel/login':

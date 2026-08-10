@@ -982,8 +982,16 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
       "Değerlendiriliyor" durumunu kontrol et).
     - 2 yeni test (137/137 yeşil), `tsc`/`prettier` temiz. Backend deploy edildi, frontend push
       edildi (CDN yayılımı birkaç dakika sürebilir).
-12. (8) Çiğdem'in bilgisayarında İngilizce dikte bozuk çıkıyor (Selen'in bilgisayarında Türkçe
-    dikte sorunsuz) — kök neden araştırılacak (tarayıcı/mikrofon/dil ayarı ihtimali).
+    - **TAKİP GEREKİYOR:** `iptal_kisisel_not_danisan` şablonu WhatsApp Manager'da "Değerlendiriliyor"
+      durumunda — aktif olunca kullanıcıya haber verilecek (kullanıcının açık isteği, 2026-08-10/11).
+      Otomatik arka plan izleme yok, bir sonraki oturumda veya kontrol istendiğinde WhatsApp
+      Manager'dan bakılacak.
+12. (8) ⏭️ ATLANDI (2026-08-11, kullanıcı kararı) — Çiğdem'in bilgisayarında İngilizce dikte bozuk
+    çıkıyor (Selen'in bilgisayarında Türkçe dikte sorunsuz). Kullanıcının değerlendirmesi: bu ilk
+    kez iki farklı bilgisayardan ve iki farklı ülkeden bağlanılması + henüz canlıya alınmamış,
+    test aşamasındaki landing page yapısından kaynaklanıyor olabilir — bu ihtimalden dolayı
+    önemsenmeyip şimdilik atlandı, gerçek bir kod hatası olarak kabul edilmedi. Hata günlüğüne
+    işlenirken çözüm tarafına bu gerekçeyle atlandığı yazılacak.
 13. (9) Dikte temizleme (duraksama/"ee" dolgu kelimelerini eleme) + gramer/noktalama düzeltme
     aracı seçimi (ücretli, EN ve TR için) — araç araştırması + entegrasyon gerekiyor, madde 8
     ile ilişkili olabilir.
@@ -998,4 +1006,78 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
     alanı içeren app — en büyük, en uzun vadeli vizyon maddesi, muhtemelen benzersiz.
 18. (5) [Süreç talimatı, ayrı bir görev değil] — bu ve sonraki maddelerin iş sırası/zaman
     hiyerarşisine göre sıralanması isteği; bu bölüm onun uygulanmış halidir.
+
+## Kullanıcı isteği — Özet mantığı (500 karakter eşiği) + "Metni Düzelt" butonu (2026-08-11, birebir metin)
+
+Madde 13'ün (dikte temizleme aracı, Cloudflare Workers AI ücretsiz tier ile yapılmasına karar
+verildi) hemen ardından, kullanıcının birebir eklediği ek iş — birlikte ele alınacak:
+
+"ozaman şunu da ekleyeyim birlikte hallet:
+Randevu oluştur sayfasındaki 'Ne hakkında konuşmak istersin' kutusuna yazılan yazı 500 karakteri
+aştığında google sheet e özet (bağlam, anlam, vaka ismi, bilimsel terim, isim vs kesinlike
+özetlenmeden) olarak gitsin, ama 500 karakterden az olduğunda mesajın tamamı google sheet e
+gitsin, ama ödeme sonrası Çiğdem e giden whatsapp randevu bilgilendirme mesajının Summary
+kısmında gerçekten özet olsun ki mesaj uzayıp gitmesin
+Translate butonunun yanına Metni Düzelt yazan bir buton eklensin ve bu buton yazılan dili
+otomatik algılayarak o dilin gramer ve imla, noktalama kurallarına göre düzeltsin, eğer kişi bu
+Metni Düzlet butonuna basmayı unutsa bile ödeme alındıktan sonra hem Çiğdem e giden whatsapp
+randevu bilgilendirme mesajında hemd e google sheet e giden veride bu metin gramer,imla ve
+noktalama yönünden yazılan ya da translate edilen dilin kurallarına uygun olarak(ama
+bağlamdan,anlamdan, isim, bilimsel terminoloji vs. değiştirilmeden) kaydedilsin. Burada bir
+diğer ince detay, kişinin yazdığı mesaj 500 karakter üstündeyken Translate ve Metni Düzelt
+butonları kullanıldığında ya da ödeme sonrası otomatik Metni Düzelt butonuna basılmamasına
+rağmen otomatik olarak Metni Doğrula nın tetiklenerek google sheet evgiden mesaj 500 karakterin
+altına düşerse mesajın ilk halindeki karakter sayısı varsayılan olarak kabul edilecerek özet
+yerine msesajın tamamı gidecek, ama Çiğdem e giden whatsapp randevu bilgilendirme meajı her
+şartta özet olarak gidecek.
+şimdi bulduğun araçla bu görevi de yap. Hatta bir önceki görev ile bu görevdeki bütün aşamaları
+madde madde yaz ve adım adım bitirerek ilerle, tabi otak yapılması gereknler varsa bağlam
+hiyerarşisi kurarak birlikte de yapabilirsin ama eksik bir iş bırakma."
+
+### Ortak plan — Madde 13 + bu istek (2026-08-11, Claude'un ayrıştırması)
+
+Ortak araç: Cloudflare Workers AI (zaten entegre, ücretsiz — `lib/summarize.ts`'teki modelle aynı
+desen, farklı promptlarla 3 fonksiyon).
+
+1. [x] ✅ ÇÖZÜLDÜ (2026-08-11) — `lib/textCleanup.ts`'in `cleanDictation()` fonksiyonu (madde 13):
+   dolgu kelime/duraksama temizliği + gramer, TR+EN, Cloudflare Workers AI (aynı ücretsiz model,
+   `summarize.ts`'le aynı desen). `/panel/note`'a bağlandı (`routes/panel.ts`), tüm mod'larda
+   (add/append/replace) devreye giriyor.
+2. [x] ✅ ÇÖZÜLDÜ (2026-08-11) — aynı dosyada `fixGrammar()`: gramer/imla/noktalama ONLY (dolgu
+   kelime temizliği yok, çeviri YAPMIYOR — canlı doğrulandı, hem TR hem EN'de test edildi). İki
+   yerde kullanılıyor: (a) `booking.html`'deki yeni "Metni Düzelt" butonu → `GET /fix-text`, (b)
+   `stripe-webhook.ts`'teki otomatik güvenlik-ağı geçişi (aşağıda, madde 3).
+3. [x] ✅ ÇÖZÜLDÜ (2026-08-11) — Karakter-eşiği mantığı — **düzeltildi (kullanıcı netleştirdi): karar ORİJİNAL
+   değil, GÖNDERİM ANINDAKİ (Translate/Metni Düzelt sonrası, "Continue to payment" tıklandığı
+   andaki) uzunluğa göre verilir.** (700 karakter TR yazılıp İngilizce'ye çevrilince 480'e düşerse
+   → 480 karakterlik TAM çeviri Sheet'e gider, özet değil.)
+   - `booking.ts` (ödeme/Stripe Checkout oluşturulmadan HEMEN önce): o an kutudaki `summary`'nin
+     uzunluğuna bakılır. ≤500 ise metin AYNEN metadata'ya yazılır (Stripe metadata zaten 500
+     karakter sınırlı — kaynak: Stripe metadata docs, key≤40/value≤500 karakter). >500 ise
+     (metadata'ya raw olarak sığmadığı için ZORUNLU) `summarizeNote` ile HEMEN özetlenir, özet
+     metadata'ya yazılır. Hangi durumun geçerli olduğu `summaryWasSummarized: 'true'|'false'`
+     olarak ayrı bir metadata alanına da yazılır (yoksa webhook, metadata'daki kısa bir metnin
+     "zaten kısaydı" mı yoksa "özetlenerek kısaldı" mı olduğunu ayırt edemez).
+   - `stripe-webhook.ts`: metadata'daki `summary`'ye HER ZAMAN otomatik `fixGrammar` uygulanır
+     (buton hiç kullanılmamışsa bile güvenlik ağı — kullanıcının açık isteği). Sonuç Sheet'e ve
+     Calendar açıklamasına yazılan `sheetSummary` olur.
+   - Çiğdem'e giden WhatsApp `newBookingNotice`/e-posta Summary alanı: HER ZAMAN gerçek kısa özet.
+     `summaryWasSummarized==='true'` ise `sheetSummary` zaten özet, direkt kullanılır. `'false'` ise
+     (Sheet'e TAM metin gitmiş demektir) WhatsApp için AYRICA `summarizeNote(sheetSummary)` çalışıp
+     ayrı, kısa bir `notifySummary` üretilir — Sheet ile WhatsApp'ın içeriği bu durumda FARKLI olur,
+     kasıtlı (kullanıcının açık isteği: "her şartta özet gidecek").
+4. [x] ✅ ÇÖZÜLDÜ (2026-08-11) — `booking.html`'e "Metni Düzelt" butonu eklendi (Translate'in
+   yanına, aynı `.btn-ghost` stiliyle), Translate'in `doTranslate` deseniyle aynı yapıda
+   (`fixTextBtn` click → `/fix-text` → kutuyu ve karakter sayacını günceller, hata/başarı notu
+   paylaşımlı `translateNote` alanında gösterilir).
+5. [x] KISMEN DOĞRULANDI (2026-08-11) — Backend: 141/141 test yeşil (booking.spec.ts'e 2, stripe-
+   webhook.spec.ts'e 2 yeni test eklendi — sheetSummary/notifySummary ayrımı ve 500-eşiği kod
+   yolunun hata vermediği doğrulandı), `tsc`/`prettier` temiz, gerçek deploy'a karşı doğrudan
+   navigasyonla `fixGrammar`'ın hem TR hem EN'de ÇEVİRİ YAPMADAN doğru düzelttiği canlı doğrulandı.
+   **Doğrulanamayan:** tarayıcı sandbox'ı (`*.workers.dev`'e `fetch()` — hem yeni `/fix-text` hem
+   zaten çalışan `/translate` aynı şekilde engellendi, ortam kısıtı, kod hatası değil) yüzünden
+   gerçek "Metni Düzelt" buton tıklamasını uçtan uca kendim test edemedim — kullanıcı/Çiğdem'den
+   canlıda deneyip onaylaması istenecek. Ayrıca tam uçtan uca (gerçek ödeme ile) 500-eşiği
+   senaryosu (kısa metin/uzun metin/Translate sonrası eşik geçişi) henüz gerçek bir rezervasyonla
+   denenmedi.
 
