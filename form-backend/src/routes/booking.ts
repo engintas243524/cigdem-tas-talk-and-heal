@@ -11,7 +11,6 @@ import {
 } from '../config';
 import { getAvailableSlots } from '../lib/calendar';
 import { detectTimezoneFromPhone, getLocalDateParts } from '../lib/timezone';
-import { computePolicyTier } from '../lib/policy';
 import { getStripeClient } from '../lib/stripe';
 import { errorResponse, json } from '../lib/http';
 import type { Env, BookingRequest } from '../types';
@@ -40,10 +39,10 @@ function patternKey(date: Date): string {
 // Recurring/multi-session bookings establish their weekly pattern from the earliest ("reference")
 // week the client picks: any number of distinct weekday+hour patterns in that first week (even
 // several on the same day). Every later week may only reuse patterns from that set — a subset is
-// fine, the client isn't forced to repeat all of them — and consecutive weeks (Monday-of-week, in
-// BUSINESS_HOURS.timeZone) can't be more than 7 days apart. Generalizes the old "exactly one slot
-// per week, identical weekday+hour every week" rule to N weekly patterns. Single-session bookings
-// (length 1) skip this check entirely.
+// fine, the client isn't forced to repeat all of them — and later weeks may be any distance apart
+// (skipping weeks entirely is allowed; decided 2026-07-31, dropping the old "consecutive weeks
+// only" cap). Generalizes the old "exactly one slot per week, identical weekday+hour every week"
+// rule to N weekly patterns. Single-session bookings (length 1) skip this check entirely.
 function validateConsecutiveWeeks(slotStartUtcs: string[]): string | null {
 	if (slotStartUtcs.length <= 1) return null;
 
@@ -76,13 +75,6 @@ function validateConsecutiveWeeks(slotStartUtcs: string[]): string | null {
 			}
 			if (seen.has(key)) return 'Duplicate day/time selected in the same week.';
 			seen.add(key);
-		}
-	}
-
-	for (let i = 1; i < weekOrder.length; i++) {
-		const daysBetween = (new Date(weekOrder[i]).getTime() - new Date(weekOrder[i - 1]).getTime()) / 86_400_000;
-		if (daysBetween > 7) {
-			return 'Sessions cannot be more than a week apart — please adjust your session selections.';
 		}
 	}
 	return null;
@@ -138,9 +130,6 @@ export async function handleBooking(request: Request, env: Env): Promise<Respons
 
 		const sortedSlots = [...booking.slotStartUtcs].sort();
 		const timeZone = detectTimezoneFromPhone(booking.phone);
-		const firstSlotStart = new Date(sortedSlots[0]);
-		const hoursUntilFirstSession = (firstSlotStart.getTime() - Date.now()) / 3_600_000;
-		const policyTier = computePolicyTier(hoursUntilFirstSession);
 		const priceGBP = getPriceGBP(booking.sessionMode, booking.therapyMode, booking.sessionType);
 		const sessionCount = sortedSlots.length;
 
@@ -172,7 +161,10 @@ export async function handleBooking(request: Request, env: Env): Promise<Respons
 				therapyMode: booking.therapyMode,
 				priceGBP: String(priceGBP),
 				sessionCount: String(sessionCount),
-				policyTier: String(policyTier),
+				// The tiered 72/48/24h policy was retired (2026-08-10) in favor of a single flat 72h
+				// cutoff (see lib/refund.ts) — this field is now always '72', kept only because
+				// SHEET_COLUMNS still has a column for it and existing rows already carry the label.
+				policyTier: '72',
 				slotStartUtcsJson: JSON.stringify(sortedSlots),
 				clientTimeZone: timeZone,
 			},

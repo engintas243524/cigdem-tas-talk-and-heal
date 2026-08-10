@@ -1,5 +1,4 @@
 import type { SheetRow } from '../types';
-import { computePolicyTier } from './policy';
 
 // Refund calculation for a cancellation (Session 13). Pure — no I/O — so the money math can be
 // unit-tested in isolation. The route (routes/cancel.ts) turns the result into the actual Stripe
@@ -38,9 +37,9 @@ export interface RefundResult {
 //
 // Same day, second policy change: under 72 hours' notice now forfeits the FULL amount (0% refund),
 // not 50% — a session cancelled with under 72h notice earns no refund at all. >=72h notice still
-// refunds 100%. (The 48/24 sub-tiers in policy.ts no longer affect the refund rate at all — both
-// collapse to 0%, same as they collapsed to 50% before — but the tier plumbing is left in place
-// since nothing else needs removing it.)
+// refunds 100%. (The old 72/48/24h tiered policy — lib/policy.ts's computePolicyTier — was
+// removed entirely 2026-08-10: 48 and 24 had already collapsed to the same 0% outcome as each
+// other, so the three-way tier added indirection without adding a distinction that mattered.)
 function remainingSessions(row: SheetRow, now: Date): SessionRef[] {
 	return sessionRefs(row)
 		.filter((r) => new Date(r.startUtc).getTime() > now.getTime())
@@ -67,8 +66,7 @@ export function computeRefund(row: SheetRow, now: Date, onlyIndexes?: number[]):
 	let refundGBP = 0;
 	for (const session of remaining) {
 		const hoursUntil = (new Date(session.startUtc).getTime() - now.getTime()) / 3_600_000;
-		const tier = computePolicyTier(hoursUntil);
-		const rate = tier === 72 ? 1 : 0; // under 72h => full forfeiture
+		const rate = hoursUntil >= 72 ? 1 : 0; // under 72h notice => full forfeiture
 		refundGBP += unitPriceGBP * rate;
 	}
 

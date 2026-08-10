@@ -175,7 +175,7 @@ export const SHEET_COLUMN_LABELS: Record<(typeof SHEET_COLUMNS)[number], string>
 	sessionMode: 'Seans Şekli (Online/Yüz Yüze)',
 	priceGBP: 'Toplam Ücret (GBP)',
 	sessionCount: 'Toplam Seans Sayısı',
-	policyTier: 'İptal Politikası Kademesi (72/48/24s)',
+	policyTier: 'İptal Politikası Kademesi',
 	appointmentStartUtc: '1. Seans Tarihi/Saati (UTC)',
 	clientTimeZone: 'Danışan Saat Dilimi',
 	reminderDueUtc: '1. Seans Hatırlatma Zamanı (UTC)',
