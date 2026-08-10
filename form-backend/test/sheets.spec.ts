@@ -14,7 +14,7 @@ afterEach(() => {
 // values:batchUpdate addressed by each field's own resolved column — these tests pin both response
 // shapes Google actually returns for that first append call.
 describe('appendBookingRow', () => {
-	function stubApis(idAppendUpdatedRange: string) {
+	function stubApis(idAppendUpdatedRange: string, stripeSessionId: string) {
 		const calls: Array<{ url: string; method: string; body: string }> = [];
 		vi.stubGlobal(
 			'fetch',
@@ -29,6 +29,11 @@ describe('appendBookingRow', () => {
 				if (url.includes(':append')) {
 					return new Response(JSON.stringify({ updates: { updatedRange: idAppendUpdatedRange } }), { status: 200 });
 				}
+				// The post-append concurrency-guard read-back (see appendBookingRow) — echo the id
+				// back so these tests, which aren't exercising the race itself, don't trip it.
+				if (method === 'GET' && url.includes('/values/')) {
+					return new Response(JSON.stringify({ values: [[stripeSessionId]] }), { status: 200 });
+				}
 				return new Response('{}', { status: 200 }); // the follow-up values:batchUpdate
 			}),
 		);
@@ -36,7 +41,7 @@ describe('appendBookingRow', () => {
 	}
 
 	it('parses the row number from a single-cell updatedRange ("Sayfa1!A2", no colon — the very first data row)', async () => {
-		const calls = stubApis('Sayfa1!A2');
+		const calls = stubApis('Sayfa1!A2', 'cs_test_1');
 		const rowNumber = await appendBookingRow(env, { ...emptySheetRow(), stripeSessionId: 'cs_test_1' });
 		expect(rowNumber).toBe(2);
 		const batch = calls.find((c) => c.method === 'POST' && c.url.includes(':batchUpdate'));
@@ -44,7 +49,7 @@ describe('appendBookingRow', () => {
 	});
 
 	it('parses the row number from a multi-cell updatedRange ("Sayfa1!A7:A7", any later row)', async () => {
-		const calls = stubApis('Sayfa1!A7:A7');
+		const calls = stubApis('Sayfa1!A7:A7', 'cs_test_2');
 		const rowNumber = await appendBookingRow(env, { ...emptySheetRow(), stripeSessionId: 'cs_test_2' });
 		expect(rowNumber).toBe(7);
 		const batch = calls.find((c) => c.method === 'POST' && c.url.includes(':batchUpdate'));

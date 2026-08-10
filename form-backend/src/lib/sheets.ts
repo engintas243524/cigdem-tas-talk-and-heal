@@ -145,6 +145,23 @@ export async function appendBookingRow(env: Env, row: SheetRow, tab: string = SH
 	}
 	const rowNumber = Number(match[1]);
 
+	// Concurrency guard (found live 2026-08-10, BE-43): two bookings appended within moments of
+	// each other can both have this `:append` call report the SAME rowNumber back — observed with
+	// an active sheet filter, but nothing about Sheets' table-detection heuristic guarantees it
+	// can't also happen under genuine simultaneous webhook deliveries with no filter involved. The
+	// single-column append itself is cheap to re-verify: read back the cell we just claimed and
+	// confirm it's still OUR id before writing 15+ more fields into what might now be someone
+	// else's row. A mismatch means we lost the race — fail loudly (502, Stripe retries the whole
+	// webhook) rather than silently overwriting another booking's data.
+	const verifyResponse = await sheetsFetch(env, `/values/${encodeURIComponent(`${tab}!${idColumn}${rowNumber}`)}`);
+	const verifyData = (await verifyResponse.json()) as { values?: string[][] };
+	const actualId = verifyData.values?.[0]?.[0];
+	if (actualId !== row.stripeSessionId) {
+		throw new Error(
+			`appendBookingRow lost a concurrent write race: row ${rowNumber} holds "${actualId}", expected "${row.stripeSessionId}"`,
+		);
+	}
+
 	const data = SHEET_COLUMNS.filter((key) => key !== 'stripeSessionId').map((key) => ({
 		range: `${tab}!${columnLetter(positions.get(key)!)}${rowNumber}`,
 		values: [[String(row[key] ?? '')]],

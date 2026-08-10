@@ -30,7 +30,7 @@ function reversedPosition(key: (typeof SHEET_COLUMNS)[number]): number {
 	return N - 1 - SHEET_COLUMNS.indexOf(key);
 }
 
-function stubReversedHeader() {
+function stubReversedHeader(appendedSessionId?: string) {
 	const calls: Array<{ url: string; method: string; body: string }> = [];
 	vi.stubGlobal(
 		'fetch',
@@ -43,6 +43,9 @@ function stubReversedHeader() {
 			calls.push({ url, method, body: String(init?.body ?? '') });
 			if (url.includes('!1:1')) return new Response(JSON.stringify({ values: [REVERSED_HEADER] }), { status: 200 });
 			if (url.includes(':append')) return new Response(JSON.stringify({ updates: { updatedRange: 'Sayfa1!A2' } }), { status: 200 });
+			// The post-append concurrency-guard read-back (see appendBookingRow) — echo the id
+			// back so this test isn't mistaken for hitting the race it's not exercising.
+			if (method === 'GET' && appendedSessionId) return new Response(JSON.stringify({ values: [[appendedSessionId]] }), { status: 200 });
 			return new Response('{}', { status: 200 });
 		}),
 	);
@@ -76,7 +79,7 @@ describe('lib/sheets.ts column resolution survives a manually reordered header',
 	});
 
 	it("appendBookingRow reserves the row via the ID column's real (last, post-reversal) position, then batch-writes every other field to its own real column", async () => {
-		const calls = stubReversedHeader();
+		const calls = stubReversedHeader('cs_test_reorder');
 		await appendBookingRow(env, { ...emptySheetRow(), stripeSessionId: 'cs_test_reorder', name: 'Ada' });
 
 		const idCol = columnLetter(reversedPosition('stripeSessionId'));

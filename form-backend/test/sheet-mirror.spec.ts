@@ -54,6 +54,11 @@ function stubSheets(opts: StubOptions = {}) {
 			if (url.includes(':append')) {
 				return new Response(JSON.stringify({ updates: { updatedRange: '3 Seans!A2' } }), { status: 200 });
 			}
+			// The post-append concurrency-guard read-back (see appendBookingRow) — a single-cell GET
+			// (no colon range, unlike findRowBySessionId's whole-column read above) — echo the id back.
+			if (method === 'GET' && /![A-Z]+\d+$/.test(url)) {
+				return new Response(JSON.stringify({ values: [['cs_mirror_1']] }), { status: 200 });
+			}
 			return new Response('{}', { status: 200 }); // PUT writes, batchUpdate, etc.
 		}),
 	);
