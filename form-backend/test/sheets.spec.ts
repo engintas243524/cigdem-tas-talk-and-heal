@@ -56,6 +56,21 @@ describe('appendBookingRow', () => {
 		expect(batch?.body).toContain('"range":"Sayfa1!B7"');
 	});
 
+	// Madde 2/#14 (2026-08-11): the concurrency guard (BE-43) is the permanent fix for two bookings
+	// racing onto the same row — this pins the actual collision path, not just the happy path the
+	// tests above stub around. Simulates Sheets' :append heuristic reporting the SAME row to two
+	// concurrent callers: this call "wins" the append but the verify read-back finds the OTHER
+	// booking's id already sitting in that cell (it lost the real race at the Sheets API level).
+	it('detects a lost concurrent-write race and throws BEFORE writing any other field — never corrupts the row the other booking already claimed', async () => {
+		const calls = stubApis('Sayfa1!A9', 'cs_the_other_booking'); // verify read-back echoes a DIFFERENT id
+		await expect(appendBookingRow(env, { ...emptySheetRow(), stripeSessionId: 'cs_this_booking' })).rejects.toThrow(
+			/lost a concurrent write race/,
+		);
+		// The rest-of-row values:batchUpdate must never fire — that's what would have overwritten
+		// the other booking's already-claimed row.
+		expect(calls.some((c) => c.method === 'POST' && c.url.includes(':batchUpdate'))).toBe(false);
+	});
+
 	it('throws (rather than silently writing to a garbled row) if updatedRange is missing', async () => {
 		vi.stubGlobal(
 			'fetch',

@@ -918,8 +918,19 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
 
 1. (18) İade mantığı ters dönmüş — 72 saatten az kala iptalde %100 İADE çıkıyor, olması gereken
    %100 KESİNTİ. Yanlış para iadesi riski, EN KRİTİK.
-2. (14) Eşzamanlı/çoklu ödemede satır çakışması — bugün canlı yaşandı, geçici olarak elle
-   düzeltildi ama kod seviyesinde kalıcı çözüm (idempotent/kilitli satır ataması) yapılmadı.
+2. (14) ✅ ÇÖZÜLDÜ (2026-08-10'da eklenmişti, bu oturumda [2026-08-11] doğrulanıp test edildi) —
+   Eşzamanlı/çoklu ödemede satır çakışması. Google Sheets API'de gerçek bir "satır kilidi"
+   primitifi yok, o yüzden çözüm klasik dağıtık-sistem deseni: **tespit et + gürültülü başarısız
+   ol + Stripe'ın zaten var olan retry/idempotency mekanizmasına bırak** (`lib/sheets.ts`
+   `appendBookingRow`, BE-43): ID hücresi yazıldıktan hemen sonra geri okunup gerçekten BİZİM
+   id'miz mi diye doğrulanıyor; eşleşmezse (yarışı kaybettik demektir) diğer 15+ alanı yazan
+   `batchUpdate` hiç ÇAĞRILMADAN önce throw ediliyor — yani kaybeden taraf kazananın satırını asla
+   ezemiyor. Throw, webhook'un dış catch'ine düşüp 500 döndürüyor, Stripe webhook'u otomatik
+   tekrar dener; retry'da `findRowBySessionId` (tam sütun taraması, satır numarasına güvenmiyor)
+   bu id'yi bulamayacağı için temiz bir yeniden deneme yapılıyor. **Bu oturumda eksik olan asıl
+   şey kod değil, testti** — çakışma tespitinin gerçekten doğru çalıştığını (throw ediyor VE
+   `batchUpdate` hiç tetiklenmiyor) doğrulayan bir test yoktu, eklendi (`test/sheets.spec.ts`,
+   142/142 yeşil).
 3. (12) ✅ ÇÖZÜLDÜ (2026-08-10) — Stripe sonrası Sheet/WhatsApp hiç işlenmiyordu, kök neden
    (webhook endpoint hiç kayıtlı değilmiş) bulunup kalıcı endpoint kuruldu.
 4. (17) ✅ ÇÖZÜLDÜ (2026-08-10) — İptal Sheet'e işlenmedi + WhatsApp gitmedi, kök nedenleri
@@ -1010,14 +1021,11 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
 18. (5) [Süreç talimatı, ayrı bir görev değil] — bu ve sonraki maddelerin iş sırası/zaman
     hiyerarşisine göre sıralanması isteği; bu bölüm onun uygulanmış halidir.
 
-**18 maddelik liste baştan sona gözden geçirildi (2026-08-11).** Çözülen: 1(#18 iade), 3(#12),
-4(#17), 5(#10), 6(#15), 7(#1 müzik), 8(#6 hero bant), 9(#7 services metni), 10(#11 çok haftalı
-gün-only), 11(#16 iptal kişisel notu — Meta onayı bekliyor), 13(#9 dikte temizleme + 500-karakter
-kuralı). Atlanan: 12(#8, kullanıcı kararıyla). Sonraya bırakılan: 14, 15, 16, 17.
-**⚠️ AÇIK KALAN, GÖZDEN KAÇAN MADDE: 2(#14, eşzamanlı/çoklu ödemede satır çakışması)** — önceki
-oturumda sadece elle düzeltilmiş, kod seviyesinde kalıcı çözüm (idempotent/kilitli satır ataması)
-hâlâ yapılmadı; bu konuşmada hiç "şimdi mi sonra mı" diye sorulmadı, listeye dahil edilmeyi
-unutmuş görünüyor. Bir sonraki oturumda bu maddeyi ayrıca gündeme getir.
+**18 maddelik liste baştan sona gözden geçirildi (2026-08-11).** Çözülen: 1(#18 iade), 2(#14 satır
+çakışması — gözden kaçmıştı, ayrıca ele alınıp doğrulandı/test edildi), 3(#12), 4(#17), 5(#10),
+6(#15), 7(#1 müzik), 8(#6 hero bant), 9(#7 services metni), 10(#11 çok haftalı gün-only), 11(#16
+iptal kişisel notu — Meta onayı bekliyor), 13(#9 dikte temizleme + 500-karakter kuralı). Atlanan:
+12(#8, kullanıcı kararıyla). Sonraya bırakılan: 14, 15, 16, 17. **Liste artık tamamen kapandı.**
 
 ## Kullanıcı isteği — Özet mantığı (500 karakter eşiği) + "Metni Düzelt" butonu (2026-08-11, birebir metin)
 
