@@ -2,7 +2,8 @@ import { WHATSAPP_TEMPLATES } from '../config';
 import { sessionRefs, type SessionRef } from './refund';
 import { deleteCalendarEvent } from './calendar';
 import { getStripeClient } from './stripe';
-import { sendTemplate } from './whatsapp';
+import { sendTemplate, sendText } from './whatsapp';
+import { sendEmail } from './email';
 import { writeCellMirrored } from './sheets';
 import type { Env, SheetRow } from '../types';
 
@@ -123,14 +124,31 @@ export async function performCancellation(
 	// row.appointmentStartUtc (session 1) — found live: a partial cancellation of session 2 or 3
 	// was quoting session 1's date in the confirmation, which is simply wrong when session 1 was
 	// never touched.
+	const referenceStart = params.remaining[0]?.startUtc ?? row.appointmentStartUtc;
+	const appointment = formatAppointment(referenceStart, row.clientTimeZone);
+	const refundText = `£${params.refundGBP}`;
 	try {
-		const referenceStart = params.remaining[0]?.startUtc ?? row.appointmentStartUtc;
-		const appointment = formatAppointment(referenceStart, row.clientTimeZone);
-		const refundText = `£${params.refundGBP}`;
 		await sendTemplate(env, row.phone, WHATSAPP_TEMPLATES.cancellationConfirmed, [row.name, appointment, refundText]);
 		await sendTemplate(env, env.SELEN_WHATSAPP_NUMBER, WHATSAPP_TEMPLATES.cancellationNotice, [row.name, appointment, refundText]);
 	} catch (err) {
 		console.error(`Cancellation WhatsApp notice failed for ${stripeSessionId}:`, err);
+	}
+
+	// Client cancellation email — same isolation reasoning as the booking confirmation email
+	// (stripe-webhook.ts): will fail while Resend stays in sandbox mode, must never undo the
+	// refund/Calendar/Sheets work already committed above.
+	const emailBody = `Hi ${row.name},\n\nYour cancellation has been processed.\nCancelled appointment: ${appointment}\nRefund: ${refundText}\n\nWarm wishes,\nTalk and Heal`;
+	try {
+		await sendEmail(env, row.email, 'Your Talk and Heal cancellation is confirmed', emailBody);
+	} catch (err) {
+		console.error(`Client cancellation email failed for ${stripeSessionId}:`, err);
+	}
+	// ponytail: same email-to-WhatsApp mirror (to the configured notification number) as the
+	// booking confirmation, for the cancellation email above.
+	try {
+		await sendText(env, env.SELEN_WHATSAPP_NUMBER, `[Email preview for ${row.email}]\n\n${emailBody}`);
+	} catch (err) {
+		console.error(`Email-to-WhatsApp fallback failed for ${stripeSessionId}:`, err);
 	}
 
 	return { refundId };

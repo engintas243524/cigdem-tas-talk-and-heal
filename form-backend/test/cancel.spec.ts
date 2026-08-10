@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { handleCancelGet, handleCancelPost } from '../src/routes/cancel';
 import { computeRefund } from '../src/lib/refund';
 import { signCancelToken } from '../src/lib/cancel-link';
-import { SHEET_COLUMNS, TEMP_EMAIL_TO_WHATSAPP_NUMBER } from '../src/config';
+import { SHEET_COLUMNS } from '../src/config';
 import { isHeaderRequest, headerResponse } from './sheets-test-header';
 import type { SheetRow } from '../src/types';
 
@@ -175,7 +175,7 @@ function stubApis(row: SheetRow, failWhatsApp = false, failEmailToWhatsAppFallba
 			}
 			if (failEmailToWhatsAppFallback) {
 				const parsedBody = JSON.parse(String(init?.body ?? '{}'));
-				if (parsedBody.type === 'text' && parsedBody.to === TEMP_EMAIL_TO_WHATSAPP_NUMBER) {
+				if (parsedBody.type === 'text' && parsedBody.to === env.SELEN_WHATSAPP_NUMBER) {
 					return new Response('{"error":{"message":"outside 24h window","code":131047}}', { status: 400 });
 				}
 			}
@@ -300,7 +300,7 @@ describe('POST /cancel', () => {
 			.map((c) => JSON.parse(c.body))
 			.filter((body) => body.type === 'text');
 		expect(textMessages.length).toBe(1);
-		expect(textMessages[0].to).toBe(TEMP_EMAIL_TO_WHATSAPP_NUMBER);
+		expect(textMessages[0].to).toBe(env.SELEN_WHATSAPP_NUMBER);
 		expect(textMessages[0].text.body).toContain('Ada');
 		expect(textMessages[0].text.body).toContain('cancellation has been processed');
 	});

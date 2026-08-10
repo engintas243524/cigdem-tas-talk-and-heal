@@ -1,12 +1,5 @@
 import type Stripe from 'stripe';
-import {
-	WHATSAPP_TEMPLATES,
-	SUMMARY_MAX_LENGTH,
-	getSessionMinutes,
-	locationFor,
-	TEMP_EMAIL_TO_WHATSAPP_NUMBER,
-	type SessionType,
-} from '../config';
+import { WHATSAPP_TEMPLATES, SUMMARY_MAX_LENGTH, getSessionMinutes, locationFor, type SessionType } from '../config';
 import { constructStripeEvent } from '../lib/stripe';
 import { createCalendarEvent } from '../lib/calendar';
 import { computeReminderDueUtc } from '../lib/timezone';
@@ -168,18 +161,18 @@ export async function handleStripeWebhook(request: Request, env: Env): Promise<R
 			} catch (err) {
 				console.error(`Client confirmation email failed for ${stripeSessionId}:`, err);
 			}
-			// ponytail: see TEMP_EMAIL_TO_WHATSAPP_NUMBER in config.ts — mirrors the email above as a
-			// WhatsApp text (own isolated try/catch, same reasoning as the email isolation) so the
-			// fallback number can see the email attempt happened while Resend can't email real
-			// clients. Deliberately does NOT include cancelUrl: that link is a bearer capability token
-			// (whoever holds it can cancel + trigger a refund for this booking), so fanning it out to
-			// a fixed non-client number would leak that capability for every booking made while
-			// Resend stays in sandbox mode (found in security review, 2026-08-02).
+			// ponytail: mirrors the email above as a WhatsApp text to the configured notification
+			// number (own isolated try/catch, same reasoning as the email isolation) so whoever is
+			// watching WhatsApp right now can see the email attempt happened while Resend can't email
+			// real clients. Deliberately does NOT include cancelUrl: that link is a bearer capability
+			// token (whoever holds it can cancel + trigger a refund for this booking), so fanning it
+			// out to a fixed non-client number would leak that capability for every booking made
+			// while Resend stays in sandbox mode (found in security review, 2026-08-02).
 			const whatsappPreviewBody =
 				bodyIntro +
 				`To cancel or change your booking, contact Talk and Heal directly — this preview does not include the cancellation link.\n\nWarm wishes,\nTalk and Heal`;
 			try {
-				await sendText(env, TEMP_EMAIL_TO_WHATSAPP_NUMBER, `[Email preview for ${md.email}]\n\n${whatsappPreviewBody}`);
+				await sendText(env, env.SELEN_WHATSAPP_NUMBER, `[Email preview for ${md.email}]\n\n${whatsappPreviewBody}`);
 			} catch (err) {
 				console.error(`Email-to-WhatsApp fallback failed for ${stripeSessionId}:`, err);
 			}

@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { handleStripeWebhook } from '../src/routes/stripe-webhook';
 import { constructStripeEvent } from '../src/lib/stripe';
-import { SHEET_COLUMNS, TEMP_EMAIL_TO_WHATSAPP_NUMBER } from '../src/config';
+import { SHEET_COLUMNS } from '../src/config';
 import { isHeaderRequest, headerResponse } from './sheets-test-header';
 
 vi.mock('../src/lib/stripe', () => ({ constructStripeEvent: vi.fn() }));
@@ -94,7 +94,7 @@ function stubApis(confirmationAlreadySent: boolean, failClientEmail = false, fai
 			// succeeding even when only the fallback is made to fail.
 			if (failEmailToWhatsAppFallback) {
 				const body = JSON.parse(String(init?.body ?? '{}'));
-				if (body.type === 'text' && body.to === TEMP_EMAIL_TO_WHATSAPP_NUMBER) {
+				if (body.type === 'text' && body.to === env.SELEN_WHATSAPP_NUMBER) {
 					return new Response('{"error":{"message":"outside 24h window","code":131047}}', { status: 400 });
 				}
 			}
@@ -153,7 +153,7 @@ describe('POST /webhook/stripe', () => {
 		expect(putBodies.some((b) => b.includes('50 dk'))).toBe(true);
 	});
 
-	it('sends the email-to-WhatsApp fallback to TEMP_EMAIL_TO_WHATSAPP_NUMBER, but never leaks the cancel link there', async () => {
+	it('sends the email-to-WhatsApp fallback to env.SELEN_WHATSAPP_NUMBER, but never leaks the cancel link there', async () => {
 		// The existing "4 WhatsApp sends" test above only counts calls — it would still pass if the
 		// fallback silently went to the wrong number or leaked the cancel link. This asserts on the
 		// actual destination/content of that specific call. The cancel link is a bearer capability
@@ -171,7 +171,7 @@ describe('POST /webhook/stripe', () => {
 			.map(([, init]) => JSON.parse(String((init as RequestInit | undefined)?.body ?? '{}')))
 			.filter((body) => body.type === 'text');
 		expect(textMessages.length).toBe(1);
-		expect(textMessages[0].to).toBe(TEMP_EMAIL_TO_WHATSAPP_NUMBER);
+		expect(textMessages[0].to).toBe(env.SELEN_WHATSAPP_NUMBER);
 		expect(textMessages[0].text.body).toContain(METADATA.name);
 		expect(textMessages[0].text.body).toContain('Your booking is confirmed');
 		expect(textMessages[0].text.body).not.toContain('/cancel?session='); // no cancel-link path leaked
