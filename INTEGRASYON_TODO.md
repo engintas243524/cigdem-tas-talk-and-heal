@@ -995,17 +995,29 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
 13. (9) Dikte temizleme (duraksama/"ee" dolgu kelimelerini eleme) + gramer/noktalama düzeltme
     aracı seçimi (ücretli, EN ve TR için) — araç araştırması + entegrasyon gerekiyor, madde 8
     ile ilişkili olabilir.
-14. (13) Çoklu terapist/klinik altyapısı (Çiğdem'in yanına psikoterapist/psikolog ekleyeceği,
-    her biri için ayrı sayfa/veri alanı) — büyük mimari değişiklik, ileride; o aşamaya
-    geçilmeden önce front-end/back-end/debug/deploy önlemleri ayrıca çıkarılacak.
-15. (3) Danışan verilerini isim paylaşmadan, yasal izinle, teze konu olacak şekilde saklama
-    altyapısı — büyük, yasal + teknik, ileride.
-16. (2) Video edit aracı entegrasyonu (Sparrow'daki OpenCut benzeri) reklam/tanıtım videoları
-    için — ayrı proje kapsamı, ileride.
-17. (4) Kendi-kendine-uygulanabilir mini tedavi + klinik referans/atıf + kişisel rapor/not
-    alanı içeren app — en büyük, en uzun vadeli vizyon maddesi, muhtemelen benzersiz.
+14. (13) ⏭️ SONRAYA BIRAKILDI (2026-08-11, kullanıcı kararı) — Çoklu terapist/klinik altyapısı
+    (Çiğdem'in yanına psikoterapist/psikolog ekleyeceği, her biri için ayrı sayfa/veri alanı) —
+    büyük mimari değişiklik, ileride; o aşamaya geçilmeden önce front-end/back-end/debug/deploy
+    önlemleri ayrıca çıkarılacak.
+15. (3) ⏭️ SONRAYA BIRAKILDI (2026-08-11, kullanıcı kararı) — Danışan verilerini isim
+    paylaşmadan, yasal izinle, teze konu olacak şekilde saklama altyapısı — büyük, yasal +
+    teknik, ileride.
+16. (2) ⏭️ SONRAYA BIRAKILDI (2026-08-11, kullanıcı kararı) — Video edit aracı entegrasyonu
+    (Sparrow'daki OpenCut benzeri) reklam/tanıtım videoları için — ayrı proje kapsamı, ileride.
+17. (4) ⏭️ SONRAYA BIRAKILDI (2026-08-11, kullanıcı kararı) — Kendi-kendine-uygulanabilir mini
+    tedavi + klinik referans/atıf + kişisel rapor/not alanı içeren app — en büyük, en uzun
+    vadeli vizyon maddesi, muhtemelen benzersiz.
 18. (5) [Süreç talimatı, ayrı bir görev değil] — bu ve sonraki maddelerin iş sırası/zaman
     hiyerarşisine göre sıralanması isteği; bu bölüm onun uygulanmış halidir.
+
+**18 maddelik liste baştan sona gözden geçirildi (2026-08-11).** Çözülen: 1(#18 iade), 3(#12),
+4(#17), 5(#10), 6(#15), 7(#1 müzik), 8(#6 hero bant), 9(#7 services metni), 10(#11 çok haftalı
+gün-only), 11(#16 iptal kişisel notu — Meta onayı bekliyor), 13(#9 dikte temizleme + 500-karakter
+kuralı). Atlanan: 12(#8, kullanıcı kararıyla). Sonraya bırakılan: 14, 15, 16, 17.
+**⚠️ AÇIK KALAN, GÖZDEN KAÇAN MADDE: 2(#14, eşzamanlı/çoklu ödemede satır çakışması)** — önceki
+oturumda sadece elle düzeltilmiş, kod seviyesinde kalıcı çözüm (idempotent/kilitli satır ataması)
+hâlâ yapılmadı; bu konuşmada hiç "şimdi mi sonra mı" diye sorulmadı, listeye dahil edilmeyi
+unutmuş görünüyor. Bir sonraki oturumda bu maddeyi ayrıca gündeme getir.
 
 ## Kullanıcı isteği — Özet mantığı (500 karakter eşiği) + "Metni Düzelt" butonu (2026-08-11, birebir metin)
 
