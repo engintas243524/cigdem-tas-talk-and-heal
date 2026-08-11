@@ -145,7 +145,7 @@ export async function appendBookingRow(env: Env, row: SheetRow, tab: string = SH
 	}
 	const rowNumber = Number(match[1]);
 
-	// Concurrency guard (found live 2026-08-10, BE-43): two bookings appended within moments of
+	// Concurrency guard (found live 2026-08-10, BE-49): two bookings appended within moments of
 	// each other can both have this `:append` call report the SAME rowNumber back — observed with
 	// an active sheet filter, but nothing about Sheets' table-detection heuristic guarantees it
 	// can't also happen under genuine simultaneous webhook deliveries with no filter involved. The

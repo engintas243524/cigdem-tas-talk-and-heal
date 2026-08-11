@@ -56,7 +56,7 @@ describe('appendBookingRow', () => {
 		expect(batch?.body).toContain('"range":"Sayfa1!B7"');
 	});
 
-	// Madde 2/#14 (2026-08-11): the concurrency guard (BE-43) is the permanent fix for two bookings
+	// Madde 2/#14 (2026-08-11): the concurrency guard (BE-49) is the permanent fix for two bookings
 	// racing onto the same row — this pins the actual collision path, not just the happy path the
 	// tests above stub around. Simulates Sheets' :append heuristic reporting the SAME row to two
 	// concurrent callers: this call "wins" the append but the verify read-back finds the OTHER

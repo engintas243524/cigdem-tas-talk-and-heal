@@ -422,7 +422,7 @@
       if (thisSeq !== refundPreviewSeq) return; // a newer request already landed, ignore this stale one
       cancelRefundPreview.textContent = (mode === 'manual' ? 'Seçilen orana göre iade: ' : 'Otomatik hesaplanan iade: ') +
         '£' + data.refundGBP + ' (%' + data.refundPercent + ')';
-      // Bug (found live 2026-08-10, BE-42): cancelPercent.value stayed hardcoded at the openCancel
+      // Bug (found live 2026-08-10, BE-52): cancelPercent.value stayed hardcoded at the openCancel
       // default ('100') until Çiğdem manually touched the dropdown herself — the confirm() prompt
       // and the refundPercent actually POSTed to /panel/cancel both read cancelPercent.value, so a
       // same-day (<72h, 0% policy) cancellation still confirmed and submitted as "%100 iade" unless
