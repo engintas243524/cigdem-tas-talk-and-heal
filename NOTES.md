@@ -21,6 +21,13 @@
       tüm "Photo coming soon" placeholder'ları bitti (#iletisim teaser'ı zaten tamamen
       kaldırılmıştı, bkz. INTEGRASYON_TODO.md).
 - [x] **E-posta:** şimdilik help@talkandheal.co.uk kullanılıyor (teyitli, sonra değişebilir)
+- [ ] **Gelecek plan (2026-08-14, kullanıcı notu):** `cigdemtas@talkandheal.com` altyapısı
+      kurulacak; WhatsApp bilgilendirme mailleri buraya yönlendirilecek, aynı e-posta diğer
+      sosyal medya hesaplarında da görünür hale getirilecek. Henüz aksiyon alınmadı, ilgili
+      aşama geldiğinde ele alınacak.
+- [ ] **Rakip Analizi API hesabı (2026-08-14):** Anthropic + Google Places API key'leri
+      Çiğdem'in kendi hesabı **`tascigdem19771@gmail.com`** üzerinden alınacak (test hesabı
+      değil, baştan gerçek hesap — Phase 5 taşıma ihtiyacını bu özellik için ortadan kaldırır).
 - [ ] **Fiyat & Bilgi sayfası gerçek verisi** (Ücretler/Ödeme/İptal Politikası — `pricing.html`
       içinde açıkça "TBD" etiketiyle işaretli, uydurma rakam konulmadı)
 - [x] **İletişim formu** — `iletisim.html` bağımsız sayfası (Formspree placeholder'lı contact
