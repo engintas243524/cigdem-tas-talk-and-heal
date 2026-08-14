@@ -1126,3 +1126,77 @@ kullanılmaya devam edecek."** Yani araç (Cloudflare Workers AI) değiştirilme
 `textCleanup.ts`'teki `fixGrammar` prompt'u ileride (kullanıcı istediğinde) iyileştirilecek —
 şimdilik dokunulmuyor. Bir sonraki oturumda bu konuyu hatırlat.
 
+
+## YENİ TALEP — Rakip Analizi + Video/Görsel Küratörlüğü + Sosyal Medya Otomasyonu + Linktree Yapısı (2026-08-14, henüz faz planına işlenmedi)
+
+Kullanıcının (Selen, Çiğdem'in isteği üzerine) birebir/verbatim metni:
+
+> şimdi çiğdemin isteği ile Talk and Heal projesi için de çiğdem in Londra ya da türkiye
+> de(zaman zaman türkiyedeki ofisinde de danışan kabul edecek) rakip analizi yapıp
+> rakiplerinin verileri ve görsel/video paylaşımlarını yine senin sparrowda(sparrow dedim
+> diye sparrow un bütün dosyalarını okuyup gereksiz yoken ve zaman harcama lütfen, sadece
+> ilgili yerleri araştır) önerdiğin gibi küratif yaklaşımla(bu yaklaşımı bulursun çünkü sen
+> önermiştin rakip videolarının işlenmesinin yasal engelinden dolayı) üretip bu videoları
+> basit bir arayüz sayesinde(bu arayüzün arkasında aslı olarak opencut ın çalışması lazım)
+> görsel ve videolarını edileyip istediği formatta ya dışarı aktardığı ya da istediği adette
+> sosyal medyasında ve o sosyal medyası(lar)nın görsel/video çözünürlük ve formatında
+> önceden planlanlı/zaman ayarlı otomatik paylaşımını yapabileceği entegre bir sistemi
+> kuracağız. Bu entegre sistem Talk and Heal sitesinde Not Paneli gibi bağımsız bir sayfa
+> da olabilir(bu kullanım şeklinin hız/maliyet/fayda analizine göre diğer şekilde ki, şimdi
+> onu da yazıyorum) ya da kendi herhangi bir cihazında yerleşik ya da bulut üzerinden (bu da
+> hız/maliyet/fayda analizine göre) kullanımının veya hibirt bir kullanım önerin varsa
+> hız/maliyet/fayda analizine göre o şekilde de kurabiliriz.
+>
+> daha sonra da linktree için yapmayı düşündüğüm kendi linktree benzeri ve verilerin bizim
+> elimizde olduğu bir yapıyı kuracağız. Bununla ilgili dosyaya masa üstünde: Linktree benzeri
+> yapı.docx ismi ile ulaşabilirsin
+> Şimdi adım adım gidelim
+
+**Kapsam (henüz onaylanmamış, ilk parçalama):**
+1. Çiğdem'in rakip analizi (Londra + zaman zaman Türkiye ofisi ihtimali dahil).
+2. Rakip görsel/video paylaşımlarının **küratif yaklaşımla** (Sparrow'da rakip videolarının
+   doğrudan işlenmesinin yasal/telif engeli nedeniyle önerilen yöntem — bkz. Sparrow
+   `SPARROW_MECLIS_KARARI.md`, `SPARROW_ARAC_DETAY_SUNUMLARI.md` madde 9-10 "Rakip analizi")
+   üretilmesi.
+3. Basit bir video/görsel düzenleme arayüzü — arkada OpenCut motoru.
+4. Dışa aktarma VEYA platforma özel format/çözünürlükte, istenen adette, önceden
+   zamanlanmış/otomatik sosyal medya paylaşımı.
+5. Mimari/barındırma kararı (hız/maliyet/fayda analiziyle karar verilecek):
+   - Talk and Heal sitesinde Not Paneli gibi bağımsız bir sayfa, VEYA
+   - Cihaz-yerel (Çiğdem'in kendi cihazında), VEYA
+   - Bulut, VEYA
+   - Hibrit.
+6. (Sonraki adım) Linktree benzeri, verisi bizim elimizde olan kendi yapı — kaynak:
+   `~/Desktop/Linktree benzeri yapı.docx`.
+
+**Durum:** Henüz hiçbir teknik karar/uygulama yapılmadı — kullanıcı "adım adım gidelim" dedi,
+sıradaki adım kapsamın parçalanması ve önceliklendirilmesi üzerine kullanıcıyla hizalanmak.
+
+## YENİ TALEP — "Hermes" Tarzı Sektöre Özel Konuşan AI Ajanı (2026-08-14, henüz planlanmadı, muhtemelen Sparrow ile çakışıyor)
+
+Kullanıcının birebir/verbatim metni:
+
+> Peki spec yazmadan önce daha sonra yapmayı planladığım birşeyi şimdi eklesek nasıl olur. Bu işleri
+> Çiğdem in web sitesi ve sektörüne özel (açma-kapama tuşu olan yani kapalıyken sıfır maliyet
+> yaratan, ayrıca canlı-cansız modlarına sahip yani canlı iken kullanıma göre API maliyeti üreten
+> ama cansız konumda iken de mevcut eğitim setine ait memory den cevaplar üretebilen ve karşılıklı
+> konuşmalarda konuşmacı konuşurken duru interaktif olarak sesli iletişim kurabilen ama sesli
+> prompt yerine yazılı prompt, dışarıda sürükle bırakla dosya alıp, içerik üretip dışarı aktarla
+> istenen formatta çıktı üretebilen aslında daha basit tabirle notebooklm hesabına entegre olduğu
+> için altyapıda notebooklm i kullanan ama kendi arayüzü olan, rakip analizinin her iki tarafını
+> da sunup, genel ve özet yazılı/sesli sunum(yine notebooklm altyapısıyla ya da çiğdem e ait ve
+> sektör bazlı çalışmalar canlı modunda topladığı için memory den cansız moddayken de bu işlerin
+> tümünü yapabilen ister kadın ister erkek sesine sahip, resmi,neşeli,espirili,otoriter,
+> öğrenmeye açık, otoriter tarz ve ses tonlarına sahip bir eğitilebilir Hermes ajanı olmasına
+> ne dersin!!!
+
+**Kritik not:** Bu tarif, Sparrow'un `SPARROW_SCOPE.md`'sinde (satır 832+, 907+) zaten planlanmış
+"Hermes ajanı" kavramıyla neredeyse birebir örtüşüyor — canlı mod (Gemini Live API, tam-dupleks
+sesli), cansız mod (eğitim seti/memory'den cevap), yapılandırılabilir persona. Sparrow'da bu
+Faz 7'de, henüz BAŞLANMAMIŞ bir yetenek. Talk & Heal için sıfırdan inşa etmek, Sparrow'un kendi
+Hermes'iyle çakışan/tekrarlayan bir iş olabilir.
+
+**Karar:** Bu, bugün tasarlanan Rakip Analizi spec'ine eklenmedi — kapsamı tek başına Rakip
+Analizi'nden büyük, bağımsız bir alt-proje. Ayrıca Sparrow-Talk&Heal çakışma riski nedeniyle
+önce bu ikisinin nasıl ilişkileneceğine (ayrı mı inşa edilecek, yoksa Sparrow'un Hermes'i mi
+Çiğdem'e adapte edilecek) karar verilmesi gerekiyor — bkz. `~/.claude/gundem.md`.
