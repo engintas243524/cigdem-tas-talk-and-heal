@@ -68,6 +68,7 @@
     <div class="field">
       <h3>Konum ile Rakip Ara</h3>
       <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
+      <input type="text" id="rakipSorgu" placeholder="Ne arıyorsun? (örn: psikolog, terapi merkezi, danışmanlık)">
       <input type="number" id="rakipRadius" placeholder="Yarıçap (metre)" value="2000">
       <button class="btn-secondary" id="rakipAraBtn" type="button">Ara</button>
       <div class="status" id="rakipAraStatus"></div>
@@ -182,10 +183,10 @@
   });
 
   el('rakipAraBtn').addEventListener('click', function () {
-    var adres = el('rakipAdres').value.trim(), radius = el('rakipRadius').value;
-    if (!adres || !radius) { setStatus(el('rakipAraStatus'), 'Adres ve yarıçap gerekli.', 'err'); return; }
+    var adres = el('rakipAdres').value.trim(), sorgu = el('rakipSorgu').value.trim(), radius = el('rakipRadius').value;
+    if (!adres || !sorgu || !radius) { setStatus(el('rakipAraStatus'), 'Adres, arama terimi ve yarıçap gerekli.', 'err'); return; }
     setStatus(el('rakipAraStatus'), 'Aranıyor...', '');
-    var qs = '?adres=' + encodeURIComponent(adres) + '&radiusMeters=' + encodeURIComponent(radius);
+    var qs = '?adres=' + encodeURIComponent(adres) + '&sorgu=' + encodeURIComponent(sorgu) + '&radiusMeters=' + encodeURIComponent(radius);
     authFetch('/panel/rakip-analizi/rakip-ara' + qs).then(function (r) { return r.json(); }).then(function (data) {
       var list = el('rakipSonuclar');
       list.innerHTML = '';
