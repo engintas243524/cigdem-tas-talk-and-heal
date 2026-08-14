@@ -90,6 +90,9 @@
   <!-- PANEL -->
   <section id="panelView" class="hidden">
     <h1>Seans Notu</h1>
+    <div class="actions">
+      <button class="btn-secondary" id="showRakipAnaliziBtn" type="button">Rakip Analizi</button>
+    </div>
 
     <div class="field">
       <label for="nameBox">Danışan (düzenlenebilir — yalnızca görüntü içindir)</label>
@@ -187,6 +190,67 @@
       <button class="btn-primary" id="addBtn" type="button">Ekle</button>
     </div>
     <div class="status" id="panelStatus"></div>
+  </section>
+
+  <!-- RAKİP ANALİZİ -->
+  <section id="rakipAnaliziSection" class="hidden">
+    <h1>Rakip Analizi</h1>
+    <div class="actions">
+      <button class="btn-secondary" id="backToNoteBtn" type="button">◂ Not Paneline Dön</button>
+    </div>
+    <div class="actions">
+      <button class="btn-secondary" id="dalIcerikBtn" type="button">Görsel/Video Stratejisi</button>
+      <button class="btn-secondary" id="dalAksiyonBtn" type="button">Aksiyon/Hedef Analizi</button>
+    </div>
+
+    <div class="field" id="rakipEkleField">
+      <h3>Rakip Ekle</h3>
+      <input type="text" id="rakipIsim" placeholder="Rakip ismi">
+      <input type="text" id="rakipLink" placeholder="Link (opsiyonel)">
+      <div class="row">
+        <textarea id="rakipNot" class="grow" placeholder="Gözlem/not — yazın ya da mikrofonla dikte edin..."></textarea>
+        <div class="mic-lang-toggle" id="rakipMicLangToggle">
+          <button type="button" data-lang="tr" class="active">TR</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="icon-btn mic-btn" id="rakipMicBtn" type="button" title="Sesli not (Chrome)" aria-label="Sesli not">
+          <span class="mic-icon" aria-hidden="true">🎤</span>
+          <span class="mic-wave" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        </button>
+      </div>
+      <p class="muted" id="rakipMicHint"></p>
+      <button class="btn-primary" id="rakipEkleBtn" type="button">Rakip Ekle</button>
+      <div class="status" id="rakipEkleStatus"></div>
+    </div>
+
+    <div class="field">
+      <h3>Konum ile Rakip Ara</h3>
+      <input type="number" id="rakipLat" placeholder="Enlem (lat)" step="any">
+      <input type="number" id="rakipLng" placeholder="Boylam (lng)" step="any">
+      <input type="number" id="rakipRadius" placeholder="Yarıçap (metre)" value="2000">
+      <button class="btn-secondary" id="rakipAraBtn" type="button">Ara</button>
+      <div id="rakipHarita" style="height:320px;width:100%;margin-top:0.5rem;"></div>
+      <ul id="rakipSonuclar"></ul>
+    </div>
+
+    <div class="field" id="dalIstekField">
+      <h3 id="dalBaslik">İstek</h3>
+      <div class="row">
+        <textarea id="dalIstek" class="grow" placeholder="İsteğinizi yazın ya da mikrofonla dikte edin..."></textarea>
+        <div class="mic-lang-toggle" id="dalMicLangToggle">
+          <button type="button" data-lang="tr" class="active">TR</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="icon-btn mic-btn" id="dalMicBtn" type="button" title="Sesli istek (Chrome)" aria-label="Sesli istek">
+          <span class="mic-icon" aria-hidden="true">🎤</span>
+          <span class="mic-wave" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        </button>
+      </div>
+      <p class="muted" id="dalMicHint"></p>
+      <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
+      <div class="status" id="dalStatus"></div>
+      <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
+    </div>
   </section>
 
 </div>
@@ -714,6 +778,94 @@
     micHintEl: el('micHint'),
     micLangToggleEl: el('micLangToggle'),
     localStorageKey: 'panelMicLang',
+  });
+
+  // --- Rakip Analizi ---
+  var rakipAnaliziSection = el('rakipAnaliziSection');
+  el('showRakipAnaliziBtn').addEventListener('click', function () {
+    panelView.classList.add('hidden');
+    rakipAnaliziSection.classList.remove('hidden');
+  });
+  el('backToNoteBtn').addEventListener('click', function () {
+    rakipAnaliziSection.classList.add('hidden');
+    panelView.classList.remove('hidden');
+  });
+
+  attachVoiceInput({
+    textareaEl: el('rakipNot'),
+    micBtnEl: el('rakipMicBtn'),
+    micHintEl: el('rakipMicHint'),
+    micLangToggleEl: el('rakipMicLangToggle'),
+    localStorageKey: 'panelMicLang',
+  });
+  attachVoiceInput({
+    textareaEl: el('dalIstek'),
+    micBtnEl: el('dalMicBtn'),
+    micHintEl: el('dalMicHint'),
+    micLangToggleEl: el('dalMicLangToggle'),
+    localStorageKey: 'panelMicLang',
+  });
+
+  el('rakipEkleBtn').addEventListener('click', function () {
+    var isim = el('rakipIsim').value.trim();
+    if (!isim) { setStatus(el('rakipEkleStatus'), 'Rakip ismi gerekli.', 'err'); return; }
+    setStatus(el('rakipEkleStatus'), 'Kaydediliyor...', '');
+    authFetch('/panel/rakip-analizi/rakip', {
+      method: 'POST',
+      body: JSON.stringify({ isim: isim, link: el('rakipLink').value.trim(), not: el('rakipNot').value, kaynak: 'manuel' }),
+    }).then(function (r) { return r.json(); }).then(function () {
+      setStatus(el('rakipEkleStatus'), 'Eklendi.', 'ok');
+      el('rakipIsim').value = ''; el('rakipLink').value = ''; el('rakipNot').value = '';
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipEkleStatus'), 'Eklenemedi.', 'err'); });
+  });
+
+  el('rakipAraBtn').addEventListener('click', function () {
+    var lat = el('rakipLat').value, lng = el('rakipLng').value, radius = el('rakipRadius').value;
+    if (!lat || !lng || !radius) { return; }
+    var qs = '?lat=' + encodeURIComponent(lat) + '&lng=' + encodeURIComponent(lng) + '&radiusMeters=' + encodeURIComponent(radius);
+    authFetch('/panel/rakip-analizi/rakip-ara' + qs).then(function (r) { return r.json(); }).then(function (data) {
+      var list = el('rakipSonuclar');
+      list.innerHTML = '';
+      (data.places || []).forEach(function (p) {
+        var li = document.createElement('li');
+        li.textContent = p.name + ' — ' + p.address;
+        var addBtn = document.createElement('button');
+        addBtn.type = 'button'; addBtn.className = 'btn-secondary'; addBtn.textContent = 'Ekle';
+        addBtn.addEventListener('click', function () {
+          authFetch('/panel/rakip-analizi/rakip', {
+            method: 'POST',
+            body: JSON.stringify({ isim: p.name, adres: p.address, kaynak: 'harita' }),
+          }).then(function () { addBtn.disabled = true; addBtn.textContent = 'Eklendi'; });
+        });
+        li.appendChild(addBtn);
+        list.appendChild(li);
+      });
+      // Not: Google Maps JS API'nin harita render kısmı (google.maps.Map + Marker) ayrı bir
+      // <script src="https://maps.googleapis.com/maps/api/js?key=..."> yüklemesi gerektiriyor —
+      // bu adımın kapsamı dışında, ayrı bir küçük takip görevi olarak bırakıldı (liste görünümü
+      // haritasız da tam işlevsel).
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipEkleStatus'), 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', 'err'); });
+  });
+
+  var currentDal = 'icerikStrateji';
+  function setDal(dal) {
+    currentDal = dal;
+    el('dalBaslik').textContent = dal === 'icerikStrateji' ? 'Görsel/Video Stratejisi İsteği' : 'Aksiyon/Hedef Analizi İsteği';
+  }
+  el('dalIcerikBtn').addEventListener('click', function () { setDal('icerikStrateji'); });
+  el('dalAksiyonBtn').addEventListener('click', function () { setDal('aksiyonAnaliz'); });
+  setDal('icerikStrateji');
+
+  el('dalGonderBtn').addEventListener('click', function () {
+    var istek = el('dalIstek').value.trim();
+    if (!istek) { setStatus(el('dalStatus'), 'İstek metni gerekli.', 'err'); return; }
+    setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
+    var path = currentDal === 'icerikStrateji' ? '/panel/rakip-analizi/icerik-strateji' : '/panel/rakip-analizi/aksiyon-analiz';
+    var payload = currentDal === 'icerikStrateji' ? { istek: istek } : { yorum: istek };
+    authFetch(path, { method: 'POST', body: JSON.stringify(payload) }).then(function (r) { return r.json(); }).then(function (data) {
+      setStatus(el('dalStatus'), '', '');
+      el('dalRapor').textContent = data.rapor;
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('dalStatus'), 'Rapor şu an üretilemedi, lütfen tekrar dene.', 'err'); });
   });
 
   // Resume an existing session-token on reload.
