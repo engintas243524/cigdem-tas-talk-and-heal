@@ -1,5 +1,14 @@
 # Rakip Analizi & Strateji Altyapısı Implementation Plan
 
+> **DURUM (2026-08-14): TÜM 9 GÖREV TAMAMLANDI, CANLIYA DEPLOY EDİLDİ.** Detaylı özet ve
+> henüz-teyit-edilmemiş tek açık madde (kullanıcının canlıda uçtan uca fonksiyonel testi) için
+> `INTEGRASYON_TODO.md`'deki "Rakip Analizi & Strateji Altyapısı — UYGULAMA TAMAMLANDI ve CANLI"
+> bölümüne bak. Frontend, bu plandaki Task 7-8'de `panel.html`'e gömülü olarak tarif edilmişti;
+> uygulama sonrası kullanıcı isteğiyle ayrı bir sayfaya (`rakip-analizi.html`) taşındı — bu planın
+> aşağıdaki Task 7-8 metni artık o taşımadan ÖNCEKİ hali yansıtıyor, tarihi referans olarak kalsın.
+> Aşağıdaki checkbox'lar plan yazıldığı andaki niyeti gösterir, güncel kod hâli için dosyaların
+> kendisine bak.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Çiğdem'in istediği zaman kendi kendine tetikleyebileceği bir rakip-analiz aracı kurmak — rakip verisi toplama (manuel + konum/yarıçap harita arama), ve bu veriden iki ayrı çıktı üreten dallar: (A) küratif görsel/video içerik-stratejisi önerisi, (B) hedef/projeksiyon/realizasyon takibi.

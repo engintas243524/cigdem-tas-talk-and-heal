@@ -1200,3 +1200,41 @@ Hermes'iyle çakışan/tekrarlayan bir iş olabilir.
 Analizi'nden büyük, bağımsız bir alt-proje. Ayrıca Sparrow-Talk&Heal çakışma riski nedeniyle
 önce bu ikisinin nasıl ilişkileneceğine (ayrı mı inşa edilecek, yoksa Sparrow'un Hermes'i mi
 Çiğdem'e adapte edilecek) karar verilmesi gerekiyor — bkz. `~/.claude/gundem.md`.
+
+## Rakip Analizi & Strateji Altyapısı — UYGULAMA TAMAMLANDI ve CANLI (2026-08-14)
+
+Yukarıdaki spec/plan (`docs/superpowers/specs/2026-08-14-rakip-analizi-design.md`,
+`docs/superpowers/plans/2026-08-14-rakip-analizi.md`) baştan sona uygulandı, test edildi ve
+deploy edildi. Git commit sırası: `a5de68c`→`5d4f5f8` (form-backend + panel.html + yeni dosyalar).
+
+**Yapılanlar:**
+- Backend: `form-backend/src/lib/rakipSheets.ts` (RakipAnalizi sekmesi, Sayfa1'den tamamen
+  izole), `lib/claude.ts` (Claude Sonnet 5 rapor üretimi), `lib/places.ts` (Google Places Nearby
+  Search), `routes/rakipAnalizi.ts` (4 route: rakip ekle, rakip ara, içerik-strateji,
+  aksiyon-analiz — hepsi `requirePanelAuth` korumalı). Tüm testler yeşil (`npm test`, 158/158).
+- Frontend: **başlangıçta `panel.html` içine gömülü bir bölüm olarak yapıldı, sonra kullanıcı
+  isteğiyle tamamen ayrı bir sayfaya (`rakip-analizi.html`) taşındı** — `panel.html` gibi
+  herkese açık nav'da YOK, sadece panel.html'deki "Rakip Analizi" butonundan link + doğrudan
+  URL/bookmark ile erişiliyor, aynı `panelToken` oturumunu paylaşıyor (ayrı login yok). Paylaşılan
+  stil `panel.css`'e, mikrofon-dikte mantığı `panel-voice.js`'e çıkarıldı (DRY, iki sayfa da
+  kullanıyor).
+- Production secret'ları: `ANTHROPIC_API_KEY` + `GOOGLE_PLACES_API_KEY` — Çiğdem'in KENDİ hesabı
+  (`tascigdem1977@gmail.com`, hem Anthropic Console hem Google Cloud) üzerinden alındı, test
+  hesabı değil — Phase 5 taşıma ihtiyacını bu özellik için baştan ortadan kaldırdı. Anthropic
+  tarafında $5 kredi yüklendi, auto-reload KAPALI (kullanıcı isteği). `wrangler secret put` ile
+  eklendi, `wrangler deploy` ile canlıya alındı.
+- `git push` ile GitHub Pages'e yayınlandı (ilk seferinde 11 commit'lik bir push unutulmuştu,
+  "buton görünmüyor" şikayetiyle fark edilip düzeltildi — bir sonraki oturumda benzer "değişiklik
+  görünmüyor" şikayetlerinde önce `git log origin/main..HEAD` ile push edilmemiş commit var mı
+  kontrol et).
+
+**Henüz teyit edilmemiş (bir sonraki oturumda ilk iş):** kullanıcı canlıda uçtan uca testi
+(rakip ekleme → Sheet'te RakipAnalizi sekmesinin doğru yazıldığını kontrol, konum+yarıçap arama,
+her iki dal için gerçek Claude raporu üretme) henüz TEYİT ETMEDİ — plan dosyasının Task 9/Step 4'ü
+teknik olarak yapıldı (deploy + route canlı, 401 doğrulandı) ama fonksiyonel doğrulama kullanıcı
+tarafından onaylanmadı. Sorulacak: "rakip ekleme/arama/rapor üretme test edildi mi, çalışıyor mu?"
+
+**Kapsam dışı bırakılan (ayrı, küçük takip görevi):** Google Maps JavaScript API ile gerçek harita
+render'ı (pin gösterimi) — şu an sonuç listesi haritasız, tam işlevsel metin listesi olarak
+çalışıyor. `GOOGLE_PLACES_API_KEY` zaten Maps JavaScript API'yi de kapsayacak şekilde kısıtlandı,
+sadece `<script src="https://maps.googleapis.com/maps/api/js?key=...">` + render kodu eksik.
