@@ -108,7 +108,11 @@ describe('GET /panel/rakip-analizi/rakip-ara', () => {
 	it('geocodes the address and returns nearby places', async () => {
 		stubApis();
 		const response = await authedRequest(
-			'/panel/rakip-analizi/rakip-ara?adres=' + encodeURIComponent('Notting Hill, London') + '&radiusMeters=2000',
+			'/panel/rakip-analizi/rakip-ara?adres=' +
+				encodeURIComponent('Notting Hill, London') +
+				'&sorgu=' +
+				encodeURIComponent('psikolog') +
+				'&radiusMeters=2000',
 		);
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as { places: { name: string }[] };
@@ -117,13 +121,19 @@ describe('GET /panel/rakip-analizi/rakip-ara', () => {
 
 	it('rejects a missing address', async () => {
 		stubApis();
-		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=&radiusMeters=2000');
+		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=&sorgu=psikolog&radiusMeters=2000');
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects a missing search query', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=London&sorgu=&radiusMeters=2000');
 		expect(response.status).toBe(400);
 	});
 
 	it('rejects an invalid radius', async () => {
 		stubApis();
-		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=London&radiusMeters=0');
+		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=London&sorgu=psikolog&radiusMeters=0');
 		expect(response.status).toBe(400);
 	});
 });

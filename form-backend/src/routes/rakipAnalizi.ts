@@ -1,7 +1,7 @@
 import { getAllRows } from '../lib/sheets';
 import { appendRakipAnalizRow, getAllRakipAnalizRows, emptyRakipAnalizRow, ensureRakipAnaliziTab } from '../lib/rakipSheets';
 import { generateReport } from '../lib/claude';
-import { searchNearbyCompetitors } from '../lib/places';
+import { searchCompetitors } from '../lib/places';
 import { geocodeAddress } from '../lib/geocoding';
 import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
@@ -44,21 +44,25 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 	return json({ id: row.id, rowNumber }, request);
 }
 
-// GET /panel/rakip-analizi/rakip-ara?adres=&radiusMeters= — adres/semt metni + yarıçap bazlı
-// arama. Çiğdem enlem/boylam bilmez, sadece bir adres/semt yazar; backend önce bunu Geocoding
-// API ile enlem/boylama çevirir, sonra Places Nearby Search'ü çalıştırır. API key sızmasın diye
-// backend proxy'liyor (kaydetme ayrı bir handleRakipEkle çağrısı — Çiğdem hangi sonuçları
-// seçtiğine karar verdikten sonra).
+// GET /panel/rakip-analizi/rakip-ara?adres=&sorgu=&radiusMeters= — adres/semt metni + serbest
+// arama terimi (ör. "psikolog", "terapi merkezi", "avukat") + yarıçap bazlı arama. `sorgu`
+// Çiğdem'in kendi yazdığı metin — Google'ın sabit place-type listesine (ör. 'psychotherapist')
+// bağlı kalmıyoruz, çünkü o tipler Türkiye'deki işletmelerde zayıf/eksik kapsanıyor ve neyin
+// arandığını Çiğdem'den gizliyordu. Backend önce adresi Geocoding API ile enlem/boylama çevirir,
+// sonra Places Text Search'ü o konum+yarıçapla sınırlı çalıştırır. API key sızmasın diye backend
+// proxy'liyor (kaydetme ayrı bir handleRakipEkle çağrısı — Çiğdem hangi sonuçları seçtiğine karar
+// verdikten sonra).
 export async function handleRakipAra(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
 	const adres = (url.searchParams.get('adres') ?? '').trim();
+	const sorgu = (url.searchParams.get('sorgu') ?? '').trim();
 	const radiusMeters = Number(url.searchParams.get('radiusMeters'));
-	if (!adres || !Number.isFinite(radiusMeters) || radiusMeters <= 0) {
-		return errorResponse(request, 400, 'Geçersiz adres/yarıçap.');
+	if (!adres || !sorgu || !Number.isFinite(radiusMeters) || radiusMeters <= 0) {
+		return errorResponse(request, 400, 'Geçersiz adres/arama terimi/yarıçap.');
 	}
 	try {
 		const { lat, lng } = await geocodeAddress(env, adres);
-		const places = await searchNearbyCompetitors(env, lat, lng, radiusMeters);
+		const places = await searchCompetitors(env, sorgu, lat, lng, radiusMeters);
 		return json({ places }, request);
 	} catch (err) {
 		return errorResponse(request, 502, 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', err);
