@@ -15,13 +15,30 @@
 <body>
 <div class="panel-wrap">
 
-  <!-- Standalone internal tool, same as panel.html — not linked from any public nav, reachable
-       only by direct URL/bookmark. Shares panel.html's login session (same 'panelToken' key in
-       sessionStorage, same origin) — no separate login screen here, see the auth guard below. -->
-  <section id="rakipAnaliziSection">
+  <!-- Standalone internal tool, own login screen — independent of panel.html (not nested inside
+       it, not reached through it). Uses the SAME panel password/backend (one password to
+       remember), but its own page/session entry point — reachable directly via a bookmark or the
+       hidden "RAKİP ANALİZİ" header link (index.html etc.), same convention as panel.html's own
+       hidden "NOT PANELİ" link. Not linked from any public nav a random visitor would see. -->
+
+  <!-- LOGIN -->
+  <section id="raLoginView">
+    <h1>Rakip Analizi</h1>
+    <div class="field">
+      <label for="raPw">Panel parolası</label>
+      <input type="password" id="raPw" autocomplete="current-password" />
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="raLoginBtn" type="button">Giriş</button>
+    </div>
+    <div class="status err" id="raLoginStatus"></div>
+  </section>
+
+  <!-- APP -->
+  <section id="rakipAnaliziSection" class="hidden">
     <h1>Rakip Analizi</h1>
     <div class="actions">
-      <a class="btn-secondary" href="panel.html" id="backToNoteLink">◂ Not Paneline Dön</a>
+      <a class="btn-secondary" href="panel.html" id="backToNoteLink">◂ Not Paneline Git</a>
     </div>
     <div class="actions">
       <button class="btn-secondary" id="dalIcerikBtn" type="button">Görsel/Video Stratejisi</button>
@@ -89,28 +106,52 @@
     ? 'http://localhost:8787'
     : 'https://form-backend.engintass19-358.workers.dev';
 
+  // Same sessionStorage key as panel.html — if that page's login already ran earlier this
+  // browser session, this page opens straight into the app view with no extra login step. If
+  // opened fresh (bookmark, header link), it shows its own login screen below — never depends on
+  // having visited panel.html first.
   var token = sessionStorage.getItem('panelToken') || '';
-  // No login screen on this page — it only ever reaches here via a link from panel.html's own
-  // login-gated view, so a missing/expired token just bounces back there to re-authenticate.
-  if (!token) { window.location.href = 'panel.html'; return; }
 
   var el = function (id) { return document.getElementById(id); };
+  var raLoginView = el('raLoginView'), rakipAnaliziSection = el('rakipAnaliziSection');
+
+  function showApp() { raLoginView.classList.add('hidden'); rakipAnaliziSection.classList.remove('hidden'); }
+  function showLogin() { rakipAnaliziSection.classList.add('hidden'); raLoginView.classList.remove('hidden'); }
 
   function setStatus(elm, msg, kind) {
     elm.textContent = msg || '';
     elm.className = 'status' + (kind ? ' ' + kind : '');
   }
 
-  // Authenticated fetch — attaches the Bearer token; a 401 (expired/revoked session) sends the
-  // user back to panel.html to log in again, same as panel.html's own authFetch.
+  // Authenticated fetch — attaches the Bearer token; a 401 (expired/revoked session) sends back
+  // to this page's own login screen, same pattern as panel.html's own authFetch.
   function authFetch(path, opts) {
     opts = opts || {};
     opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, opts.headers || {});
     return fetch(API_BASE + path, opts).then(function (r) {
-      if (r.status === 401) { sessionStorage.removeItem('panelToken'); window.location.href = 'panel.html'; throw new Error('unauthorized'); }
+      if (r.status === 401) { token = ''; sessionStorage.removeItem('panelToken'); showLogin(); throw new Error('unauthorized'); }
       return r;
     });
   }
+
+  // --- Login (independent of panel.html — same password, same /panel/login endpoint, own screen) ---
+  el('raLoginBtn').addEventListener('click', function () {
+    var pw = el('raPw').value;
+    setStatus(el('raLoginStatus'), '', '');
+    fetch(API_BASE + '/panel/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('bad');
+      return r.json();
+    }).then(function (data) {
+      token = data.token; sessionStorage.setItem('panelToken', token);
+      // Same cosmetic flag panel.html sets — reveals both hidden header links ("NOT PANELİ" and
+      // "RAKİP ANALİZİ") on every public page, regardless of which of the two tools was used to log in first.
+      localStorage.setItem('panelAccess', '1');
+      el('raPw').value = ''; showApp();
+    }).catch(function () { setStatus(el('raLoginStatus'), 'Parola hatalı.', 'err'); });
+  });
+  el('raPw').addEventListener('keydown', function (e) { if (e.key === 'Enter') el('raLoginBtn').click(); });
 
   attachVoiceInput({
     textareaEl: el('rakipNot'),
@@ -188,6 +229,9 @@
       el('dalRapor').textContent = data.rapor;
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('dalStatus'), 'Rapor şu an üretilemedi, lütfen tekrar dene.', 'err'); });
   });
+
+  // Resume an existing session-token on reload (e.g. already logged in via panel.html).
+  if (token) { showApp(); } else { showLogin(); }
 })();
 </script>
 </body>

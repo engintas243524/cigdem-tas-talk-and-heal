@@ -34,6 +34,7 @@
       <a href="blog.html"><span data-en>BLOG</span><span data-tr>BLOG</span></a>
       <a href="booking.html"><span data-en>BOOK A CONSULTATION</span><span data-tr>RANDEVU AL</span></a>
       <a href="panel.html" id="panelNavLink" style="display:none"><span data-en>NOTES</span><span data-tr>NOT PANELİ</span></a>
+      <a href="rakip-analizi.html" id="rakipAnaliziNavLink" style="display:none"><span data-en>COMPETITOR ANALYSIS</span><span data-tr>RAKİP ANALİZİ</span></a>
     </nav>
 
     <div class="header-actions">
@@ -75,6 +76,8 @@
   if (localStorage.getItem('panelAccess') === '1') {
     var panelNavLink = document.getElementById('panelNavLink');
     if (panelNavLink) panelNavLink.style.display = '';
+    var rakipAnaliziNavLink = document.getElementById('rakipAnaliziNavLink');
+    if (rakipAnaliziNavLink) rakipAnaliziNavLink.style.display = '';
   }
 </script>
 
