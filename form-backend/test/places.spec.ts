@@ -44,4 +44,14 @@ describe('searchCompetitors', () => {
 		);
 		await expect(searchCompetitors(env, 'psikolog', 51.5, -0.1, 2000)).rejects.toThrow(/400/);
 	});
+
+	it('sends a rectangle locationRestriction, not a circle (Text Search rejects circle silently)', async () => {
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ places: [] }), { status: 200 }));
+		vi.stubGlobal('fetch', fetchMock);
+		await searchCompetitors(env, 'avukat', 41.0, 29.0, 1000);
+		const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+		expect(body.locationRestriction.rectangle).toBeDefined();
+		expect(body.locationRestriction.circle).toBeUndefined();
+		expect(body.locationBias).toBeUndefined();
+	});
 });

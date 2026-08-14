@@ -9,6 +9,20 @@ export interface NearbyPlace {
 	lng: number;
 }
 
+// 1 derece enlem ~= 111,320 metre, sabit. 1 derece boylam ise enleme göre daralır (kutuplara
+// yaklaştıkça meridyenler birbirine yaklaşır) — cos(enlem) ile düzeltiliyor. Bu, "yarıçap metre"yi
+// Text Search'ün kabul ettiği dikdörtgen sınıra çevirmenin standart yöntemi.
+const METERS_PER_DEGREE_LAT = 111320;
+
+function boundingRectangle(lat: number, lng: number, radiusMeters: number) {
+	const latDelta = radiusMeters / METERS_PER_DEGREE_LAT;
+	const lngDelta = radiusMeters / (METERS_PER_DEGREE_LAT * Math.cos((lat * Math.PI) / 180));
+	return {
+		low: { latitude: lat - latDelta, longitude: lng - lngDelta },
+		high: { latitude: lat + latDelta, longitude: lng + lngDelta },
+	};
+}
+
 // Text Search (New) yerine bilinçli tercih edildi: Nearby Search'ün includedTypes'ı Google'ın
 // sabit tip listesine bağlı (ör. 'psychotherapist', 'counselor') — bu tipler Türkiye'deki
 // işletmelerde zayıf/eksik kapsanıyor ve Çiğdem'e ne arandığını göstermiyor. Text Search, Çiğdem'in
@@ -31,7 +45,11 @@ export async function searchCompetitors(
 		body: JSON.stringify({
 			textQuery,
 			maxResultCount: 20,
-			locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius: radiusMeters } },
+			// Text Search (New)'de 'locationRestriction' sadece dikdörtgen (rectangle) kabul ediyor —
+			// çember (circle) göndermek sessizce reddediliyor (400 değil, boş sonuç). Yarıçapı gerçek
+			// bir dikdörtgen sınıra çeviriyoruz ki Çiğdem'in girdiği yarıçap gerçekten sınırlasın
+			// ('locationBias' sadece "öncelik ver" demek, sınırı garanti etmezdi).
+			locationRestriction: { rectangle: boundingRectangle(lat, lng, radiusMeters) },
 		}),
 	});
 	if (!response.ok) {
