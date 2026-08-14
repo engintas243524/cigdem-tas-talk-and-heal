@@ -71,6 +71,7 @@
       <input type="number" id="rakipLng" placeholder="Boylam (lng)" step="any">
       <input type="number" id="rakipRadius" placeholder="Yarıçap (metre)" value="2000">
       <button class="btn-secondary" id="rakipAraBtn" type="button">Ara</button>
+      <div class="status" id="rakipAraStatus"></div>
       <div id="rakipHarita" style="height:320px;width:100%;margin-top:0.5rem;"></div>
       <ul id="rakipSonuclar"></ul>
     </div>
@@ -176,19 +177,23 @@
       method: 'POST',
       body: JSON.stringify({ isim: isim, link: el('rakipLink').value.trim(), not: el('rakipNot').value, kaynak: 'manuel' }),
     }).then(function (r) { return r.json(); }).then(function () {
-      setStatus(el('rakipEkleStatus'), 'Eklendi.', 'ok');
+      setStatus(el('rakipEkleStatus'), "'" + isim + "' eklendi (RakipAnalizi sekmesine kaydedildi).", 'ok');
       el('rakipIsim').value = ''; el('rakipLink').value = ''; el('rakipNot').value = '';
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipEkleStatus'), 'Eklenemedi.', 'err'); });
   });
 
   el('rakipAraBtn').addEventListener('click', function () {
     var lat = el('rakipLat').value, lng = el('rakipLng').value, radius = el('rakipRadius').value;
-    if (!lat || !lng || !radius) { return; }
+    if (!lat || !lng || !radius) { setStatus(el('rakipAraStatus'), 'Enlem, boylam ve yarıçapın hepsi gerekli.', 'err'); return; }
+    setStatus(el('rakipAraStatus'), 'Aranıyor...', '');
     var qs = '?lat=' + encodeURIComponent(lat) + '&lng=' + encodeURIComponent(lng) + '&radiusMeters=' + encodeURIComponent(radius);
     authFetch('/panel/rakip-analizi/rakip-ara' + qs).then(function (r) { return r.json(); }).then(function (data) {
       var list = el('rakipSonuclar');
       list.innerHTML = '';
-      (data.places || []).forEach(function (p) {
+      var places = data.places || [];
+      if (!places.length) { setStatus(el('rakipAraStatus'), 'Bu konum/yarıçapta sonuç bulunamadı.', ''); return; }
+      setStatus(el('rakipAraStatus'), places.length + ' sonuç bulundu.', 'ok');
+      places.forEach(function (p) {
         var li = document.createElement('li');
         li.textContent = p.name + ' — ' + p.address;
         var addBtn = document.createElement('button');
@@ -206,13 +211,15 @@
       // <script src="https://maps.googleapis.com/maps/api/js?key=..."> yüklemesi gerektiriyor —
       // bu adımın kapsamı dışında, ayrı bir küçük takip görevi olarak bırakıldı (liste görünümü
       // haritasız da tam işlevsel).
-    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipEkleStatus'), 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', 'err'); });
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', 'err'); });
   });
 
   var currentDal = 'icerikStrateji';
   function setDal(dal) {
     currentDal = dal;
     el('dalBaslik').textContent = dal === 'icerikStrateji' ? 'Görsel/Video Stratejisi İsteği' : 'Aksiyon/Hedef Analizi İsteği';
+    el('dalIcerikBtn').classList.toggle('active', dal === 'icerikStrateji');
+    el('dalAksiyonBtn').classList.toggle('active', dal === 'aksiyonAnaliz');
   }
   el('dalIcerikBtn').addEventListener('click', function () { setDal('icerikStrateji'); });
   el('dalAksiyonBtn').addEventListener('click', function () { setDal('aksiyonAnaliz'); });

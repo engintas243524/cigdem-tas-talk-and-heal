@@ -29,6 +29,7 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: var(--space-2); }
 .actions button { flex: 1 1 auto; min-width: 150px; padding: 0.8rem 1rem; font-size: 0.95rem; font-weight: 500; }
 .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+.btn-secondary.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 .btn-primary { background: var(--btn-cta); color: #fff; }
 .btn-primary:disabled { background: var(--border); color: var(--taupe); cursor: not-allowed; }
 .context-line { font-size: 0.85rem; color: var(--taupe); margin: 0 0 var(--space-2); min-height: 1.2em; }
