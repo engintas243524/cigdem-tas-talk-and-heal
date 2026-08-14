@@ -14,7 +14,9 @@ function stubSheetsApi(existingTabs: string[] = []) {
 		}
 		if (url.includes('?fields=sheets.properties')) {
 			return new Response(
-				JSON.stringify({ sheets: existingTabs.map((t) => ({ properties: { sheetId: 1, title: t, gridProperties: { columnCount: 20 } } })) }),
+				JSON.stringify({
+					sheets: existingTabs.map((t) => ({ properties: { sheetId: 1, title: t, gridProperties: { columnCount: 20 } } })),
+				}),
 				{ status: 200 },
 			);
 		}
