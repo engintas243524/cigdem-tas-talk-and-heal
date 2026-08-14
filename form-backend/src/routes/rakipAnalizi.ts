@@ -2,6 +2,7 @@ import { getAllRows } from '../lib/sheets';
 import { appendRakipAnalizRow, getAllRakipAnalizRows, emptyRakipAnalizRow, ensureRakipAnaliziTab } from '../lib/rakipSheets';
 import { generateReport } from '../lib/claude';
 import { searchNearbyCompetitors } from '../lib/places';
+import { geocodeAddress } from '../lib/geocoding';
 import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
 import type { Env } from '../types';
@@ -43,19 +44,20 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 	return json({ id: row.id, rowNumber }, request);
 }
 
-// GET /panel/rakip-analizi/rakip-ara?lat=&lng=&radiusMeters= — konum+yarıçap bazlı harita
-// araması. API key sızmasın diye backend proxy'liyor, sonuçlar doğrudan frontend'in haritaya
-// pin basması için kullanılır (kaydetme ayrı bir handleRakipEkle çağrısı — Çiğdem hangi
-// sonuçları seçtiğine karar verdikten sonra).
+// GET /panel/rakip-analizi/rakip-ara?adres=&radiusMeters= — adres/semt metni + yarıçap bazlı
+// arama. Çiğdem enlem/boylam bilmez, sadece bir adres/semt yazar; backend önce bunu Geocoding
+// API ile enlem/boylama çevirir, sonra Places Nearby Search'ü çalıştırır. API key sızmasın diye
+// backend proxy'liyor (kaydetme ayrı bir handleRakipEkle çağrısı — Çiğdem hangi sonuçları
+// seçtiğine karar verdikten sonra).
 export async function handleRakipAra(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
-	const lat = Number(url.searchParams.get('lat'));
-	const lng = Number(url.searchParams.get('lng'));
+	const adres = (url.searchParams.get('adres') ?? '').trim();
 	const radiusMeters = Number(url.searchParams.get('radiusMeters'));
-	if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(radiusMeters) || radiusMeters <= 0) {
-		return errorResponse(request, 400, 'Geçersiz konum/yarıçap.');
+	if (!adres || !Number.isFinite(radiusMeters) || radiusMeters <= 0) {
+		return errorResponse(request, 400, 'Geçersiz adres/yarıçap.');
 	}
 	try {
+		const { lat, lng } = await geocodeAddress(env, adres);
 		const places = await searchNearbyCompetitors(env, lat, lng, radiusMeters);
 		return json({ places }, request);
 	} catch (err) {

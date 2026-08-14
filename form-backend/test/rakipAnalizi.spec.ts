@@ -50,6 +50,11 @@ function stubApis() {
 				{ status: 200 },
 			);
 		}
+		if (url.includes('maps.googleapis.com/maps/api/geocode')) {
+			return new Response(JSON.stringify({ status: 'OK', results: [{ geometry: { location: { lat: 51.5, lng: -0.1 } } }] }), {
+				status: 200,
+			});
+		}
 		if (url.includes('api.anthropic.com')) {
 			return new Response(JSON.stringify({ content: [{ type: 'text', text: 'Üretilen rapor metni.' }] }), { status: 200 });
 		}
@@ -100,17 +105,25 @@ describe('POST /panel/rakip-analizi/rakip', () => {
 });
 
 describe('GET /panel/rakip-analizi/rakip-ara', () => {
-	it('returns nearby places for a valid location+radius', async () => {
+	it('geocodes the address and returns nearby places', async () => {
 		stubApis();
-		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?lat=51.5&lng=-0.1&radiusMeters=2000');
+		const response = await authedRequest(
+			'/panel/rakip-analizi/rakip-ara?adres=' + encodeURIComponent('Notting Hill, London') + '&radiusMeters=2000',
+		);
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as { places: { name: string }[] };
 		expect(data.places).toEqual([{ name: 'Test Klinik', address: 'Test Adres', lat: 1, lng: 2 }]);
 	});
 
+	it('rejects a missing address', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=&radiusMeters=2000');
+		expect(response.status).toBe(400);
+	});
+
 	it('rejects an invalid radius', async () => {
 		stubApis();
-		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?lat=51.5&lng=-0.1&radiusMeters=0');
+		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=London&radiusMeters=0');
 		expect(response.status).toBe(400);
 	});
 });
