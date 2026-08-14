@@ -1212,12 +1212,17 @@ deploy edildi. Git commit sırası: `a5de68c`→`5d4f5f8` (form-backend + panel.
   izole), `lib/claude.ts` (Claude Sonnet 5 rapor üretimi), `lib/places.ts` (Google Places Nearby
   Search), `routes/rakipAnalizi.ts` (4 route: rakip ekle, rakip ara, içerik-strateji,
   aksiyon-analiz — hepsi `requirePanelAuth` korumalı). Tüm testler yeşil (`npm test`, 158/158).
-- Frontend: **başlangıçta `panel.html` içine gömülü bir bölüm olarak yapıldı, sonra kullanıcı
-  isteğiyle tamamen ayrı bir sayfaya (`rakip-analizi.html`) taşındı** — `panel.html` gibi
-  herkese açık nav'da YOK, sadece panel.html'deki "Rakip Analizi" butonundan link + doğrudan
-  URL/bookmark ile erişiliyor, aynı `panelToken` oturumunu paylaşıyor (ayrı login yok). Paylaşılan
-  stil `panel.css`'e, mikrofon-dikte mantığı `panel-voice.js`'e çıkarıldı (DRY, iki sayfa da
-  kullanıyor).
+- Frontend: **başlangıçta `panel.html` içine gömülü bir bölüm olarak yapıldı (yanlış anlaşılma),
+  sonra ayrı dosyaya (`rakip-analizi.html`) taşındı ama hâlâ panel.html'e bağımlı/onun şifresiyle
+  gömülü kaldı (ikinci yanlış anlaşılma), üçüncü düzeltmede tam bağımsız hale getirildi:**
+  `rakip-analizi.html` artık kendi giriş ekranına sahip (panel.html'e yönlendirmiyor, aynı
+  parola/backend'i kullanıyor ama kendi başına açılabiliyor), VE her genel sayfada (index/hakkımda/
+  services/approach/blog/booking) "NOT PANELİ" linkiyle aynı gizli-göster mekanizmasıyla
+  ("panelAccess" localStorage bayrağı set olunca görünür) bir "RAKİP ANALİZİ" header linki var.
+  Hâlâ herkese açık/her zaman görünür DEĞİL — sadece bir kez giriş yapılmış tarayıcıda görünür,
+  kullanıcının "sadece Çiğdem ve ben görecek" isteğiyle tutarlı. Paylaşılan stil `panel.css`'e,
+  mikrofon-dikte mantığı `panel-voice.js`'e çıkarıldı (DRY, iki sayfa da kullanıyor). Commit:
+  `bc66988`.
 - Production secret'ları: `ANTHROPIC_API_KEY` + `GOOGLE_PLACES_API_KEY` — Çiğdem'in KENDİ hesabı
   (`tascigdem1977@gmail.com`, hem Anthropic Console hem Google Cloud) üzerinden alındı, test
   hesabı değil — Phase 5 taşıma ihtiyacını bu özellik için baştan ortadan kaldırdı. Anthropic
