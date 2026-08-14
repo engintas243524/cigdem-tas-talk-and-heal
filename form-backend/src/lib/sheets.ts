@@ -7,7 +7,7 @@ const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 // A1-style column letter for a 0-indexed column (0 -> 'A', 25 -> 'Z', 26 -> 'AA', ...). The sheet
 // now has ~70+ columns (booking-system-expansion plan), well past 'Z', so a single
 // `String.fromCharCode` no longer works.
-function columnLetter(index: number): string {
+export function columnLetter(index: number): string {
 	let n = index + 1;
 	let letters = '';
 	while (n > 0) {
@@ -18,7 +18,7 @@ function columnLetter(index: number): string {
 	return letters;
 }
 
-async function sheetsFetch(env: Env, path: string, init: RequestInit = {}): Promise<Response> {
+export async function sheetsFetch(env: Env, path: string, init: RequestInit = {}): Promise<Response> {
 	const token = await getGoogleAccessToken(env);
 	const response = await fetch(`${SHEETS_API}/${env.GOOGLE_SHEET_ID}${path}`, {
 		...init,
