@@ -16,6 +16,7 @@ import {
 	handlePanelCancel,
 	requirePanelAuth,
 } from './routes/panel';
+import { handleRakipEkle, handleRakipAra, handleIcerikStrateji, handleAksiyonAnaliz } from './routes/rakipAnalizi';
 import { runReminderSweep, runSessionNoteFallback } from './scheduled';
 import { corsHeaders } from './lib/http';
 
@@ -65,6 +66,14 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handlePanelRefundPreview(request, env);
 			case 'POST /panel/cancel':
 				return (await requirePanelAuth(request, env)) ?? handlePanelCancel(request, env);
+			case 'POST /panel/rakip-analizi/rakip':
+				return (await requirePanelAuth(request, env)) ?? handleRakipEkle(request, env);
+			case 'GET /panel/rakip-analizi/rakip-ara':
+				return (await requirePanelAuth(request, env)) ?? handleRakipAra(request, env);
+			case 'POST /panel/rakip-analizi/icerik-strateji':
+				return (await requirePanelAuth(request, env)) ?? handleIcerikStrateji(request, env);
+			case 'POST /panel/rakip-analizi/aksiyon-analiz':
+				return (await requirePanelAuth(request, env)) ?? handleAksiyonAnaliz(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}
