@@ -19,6 +19,10 @@ export interface Env {
 	// the signed, time-limited session token minted on login.
 	PANEL_PASSWORD: string;
 	PANEL_TOKEN_SECRET: string;
+	// Rakip Analizi & Strateji Altyapısı: Claude Sonnet 5 (rapor üretimi) + Google Places (konum
+	// bazlı rakip arama). Her ikisi de yalnızca /panel/rakip-analizi/* route'larında kullanılır.
+	ANTHROPIC_API_KEY: string;
+	GOOGLE_PLACES_API_KEY: string;
 	// Workers AI binding — summarizes the client's free-text note (lib/summarize.ts).
 	AI: Ai;
 }

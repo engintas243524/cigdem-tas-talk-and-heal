@@ -255,3 +255,33 @@ export const SUMMARY_MAX_LENGTH = 450;
 // routes/booking.ts splits the summary across as many `summaryN` fields as needed (up to Stripe's
 // 50-key cap) and routes/stripe-webhook.ts reassembles them — nothing is ever condensed here.
 export const STRIPE_METADATA_VALUE_MAX = 500;
+
+// ── Rakip Analizi & Strateji Altyapısı ──────────────────────────────────────────────────────────
+// Sayfa1'den (randevu/müşteri verisi) TAMAMEN AYRI bir sekme — kullanıcının açık isteği, asla
+// karışmamalı. Kendi kolon şeması var, SHEET_COLUMNS'a hiç dokunmuyor.
+
+export const RAKIP_ANALIZI_TAB_NAME = 'RakipAnalizi';
+
+export const RAKIP_ANALIZI_COLUMNS = [
+	'id',
+	'createdAtUtc',
+	'kaynak', // 'manuel' | 'harita'
+	'isim',
+	'link',
+	'adres',
+	'not', // Çiğdem'in yazı/ses girişi (manuel kaynak) veya harita seçimine eklediği not
+	'dal', // 'icerikStrateji' | 'aksiyonAnaliz'
+	'raporMetni', // Claude'un ürettiği çıktı
+] as const;
+
+export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[number], string> = {
+	id: 'ID',
+	createdAtUtc: 'Oluşturulma (UTC)',
+	kaynak: 'Kaynak',
+	isim: 'Rakip İsmi',
+	link: 'Link',
+	adres: 'Adres',
+	not: 'Not',
+	dal: 'Dal',
+	raporMetni: 'Rapor Metni',
+};
