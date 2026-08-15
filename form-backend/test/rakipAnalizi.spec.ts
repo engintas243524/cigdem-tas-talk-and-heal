@@ -153,7 +153,14 @@ describe('GET /panel/rakip-analizi/rakip-liste', () => {
 		vi.setSystemTime(new Date('2026-08-15T10:05:00.000Z'));
 		await authedRequest('/panel/rakip-analizi/rakip', {
 			method: 'POST',
-			body: JSON.stringify({ isim: 'İkinci Eklenen', adres: 'Kadıköy', kaynak: 'harita' }),
+			body: JSON.stringify({
+				isim: 'İkinci Eklenen',
+				adres: 'Kadıköy',
+				kaynak: 'harita',
+				aramaAdres: 'kadıköy bahariye caddesi',
+				aramaSorgu: 'avukat',
+				aramaRadiusMeters: '500',
+			}),
 		});
 		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
 			method: 'POST',
@@ -162,10 +169,18 @@ describe('GET /panel/rakip-analizi/rakip-liste', () => {
 
 		const response = await authedRequest('/panel/rakip-analizi/rakip-liste');
 		expect(response.status).toBe(200);
-		const data = (await response.json()) as { rakipler: { isim: string; kaynak: string; adres: string }[] };
+		const data = (await response.json()) as {
+			rakipler: { isim: string; kaynak: string; adres: string; aramaAdres: string; aramaSorgu: string; aramaRadiusMeters: string }[];
+		};
 		expect(data.rakipler).toHaveLength(2);
 		expect(data.rakipler.map((r) => r.isim)).toEqual(['İkinci Eklenen', 'İlk Eklenen']);
 		expect(data.rakipler.every((r) => r.kaynak === 'manuel' || r.kaynak === 'harita')).toBe(true);
+		const haritaSonuc = data.rakipler.find((r) => r.isim === 'İkinci Eklenen')!;
+		expect(haritaSonuc.aramaSorgu).toBe('avukat');
+		expect(haritaSonuc.aramaAdres).toBe('kadıköy bahariye caddesi');
+		expect(haritaSonuc.aramaRadiusMeters).toBe('500');
+		const manuelSonuc = data.rakipler.find((r) => r.isim === 'İlk Eklenen')!;
+		expect(manuelSonuc.aramaSorgu).toBe('');
 	});
 
 	it('rejects requests without a valid panel token', async () => {

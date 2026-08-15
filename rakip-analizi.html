@@ -68,7 +68,8 @@
     <div class="field" id="rakipListeField">
       <h3>Kayıtlı Rakipler</h3>
       <p class="muted" id="rakipListeBos">Henüz kaydedilmiş rakip yok.</p>
-      <ul id="rakipListe"></ul>
+      <div class="rakip-table" id="rakipListe"></div>
+      <button class="btn-secondary hidden" id="rakipListeToggleBtn" type="button"></button>
     </div>
 
     <div class="field">
@@ -125,19 +126,68 @@
   // Şu ana kadar eklenen (manuel veya haritadan) rakiplerin listesi — bunlar sadece Google
   // Sheet'in RakipAnalizi sekmesinde tutuluyordu, uygulamada görünür bir yer yoktu ("Eklendi"
   // yazıyor ama nereye eklendiği belli değildi). Kaynak/tarih/not birlikte gösteriliyor.
+  // İlk 3 tam görünür, gerisi silik (opacity) — "Daha Fazla" her tıklamada 3 tane daha açar,
+  // tam açıldığında buton "Listeyi Kapat"a döner ve tek tıkla ilk 3'e geri sarar (ilan sitesi
+  // "daha fazla göster" kalıbı).
+  var rakipListeCache = [];
+  var rakipListeVisible = 3;
+  var RAKIP_LISTE_ADIM = 3;
+
+  function renderRakipListe() {
+    var list = el('rakipListe'), bos = el('rakipListeBos'), toggleBtn = el('rakipListeToggleBtn');
+    var rakipler = rakipListeCache;
+    list.innerHTML = '';
+    bos.classList.toggle('hidden', rakipler.length > 0);
+    if (!rakipler.length) { toggleBtn.classList.add('hidden'); return; }
+
+    var head = document.createElement('div');
+    head.className = 'rakip-row head';
+    ['İsim', 'Adres', 'Kaynak', 'Nasıl Bulundu', 'Tarih', 'Not'].forEach(function (label) {
+      var span = document.createElement('span'); span.textContent = label; head.appendChild(span);
+    });
+    list.appendChild(head);
+
+    rakipler.forEach(function (r, i) {
+      var row = document.createElement('div');
+      row.className = 'rakip-row' + (i >= rakipListeVisible ? ' silik' : '');
+      var tarih = r.createdAtUtc ? new Date(r.createdAtUtc).toLocaleString('tr-TR') : '';
+      var kaynakEtiket = r.kaynak === 'harita' ? 'Haritadan' : 'Manuel';
+      var nasilBulundu = '—';
+      if (r.kaynak === 'harita' && (r.aramaSorgu || r.aramaAdres)) {
+        nasilBulundu = "'" + (r.aramaSorgu || '?') + "' aramasıyla" + (r.aramaRadiusMeters ? ' (' + r.aramaRadiusMeters + 'm)' : '') + (r.aramaAdres ? ' — ' + r.aramaAdres : '');
+      }
+      [r.isim, r.adres || '—', kaynakEtiket, nasilBulundu, tarih, r.not || '—'].forEach(function (val, colIdx) {
+        var span = document.createElement('span');
+        if (colIdx === 5) span.className = 'rakip-col-not';
+        span.textContent = val;
+        row.appendChild(span);
+      });
+      list.appendChild(row);
+    });
+
+    if (rakipler.length <= RAKIP_LISTE_ADIM) { toggleBtn.classList.add('hidden'); return; }
+    toggleBtn.classList.remove('hidden');
+    if (rakipListeVisible >= rakipler.length) {
+      toggleBtn.textContent = 'Listeyi Kapat';
+    } else {
+      toggleBtn.textContent = 'Daha Fazla (+' + Math.min(RAKIP_LISTE_ADIM, rakipler.length - rakipListeVisible) + ')';
+    }
+  }
+
+  el('rakipListeToggleBtn').addEventListener('click', function () {
+    if (rakipListeVisible >= rakipListeCache.length) {
+      rakipListeVisible = RAKIP_LISTE_ADIM;
+    } else {
+      rakipListeVisible += RAKIP_LISTE_ADIM;
+    }
+    renderRakipListe();
+  });
+
   function loadRakipListe() {
     authFetch('/panel/rakip-analizi/rakip-liste').then(function (r) { return r.json(); }).then(function (data) {
-      var list = el('rakipListe'), bos = el('rakipListeBos');
-      var rakipler = data.rakipler || [];
-      list.innerHTML = '';
-      bos.classList.toggle('hidden', rakipler.length > 0);
-      rakipler.forEach(function (r) {
-        var li = document.createElement('li');
-        var tarih = r.createdAtUtc ? new Date(r.createdAtUtc).toLocaleString('tr-TR') : '';
-        var kaynakEtiket = r.kaynak === 'harita' ? 'Haritadan' : 'Manuel';
-        li.textContent = r.isim + (r.adres ? ' — ' + r.adres : '') + ' (' + kaynakEtiket + (tarih ? ', ' + tarih : '') + ')' + (r.not ? ': ' + r.not : '');
-        list.appendChild(li);
-      });
+      rakipListeCache = data.rakipler || [];
+      rakipListeVisible = RAKIP_LISTE_ADIM;
+      renderRakipListe();
     }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, liste yükleme kritik değil */ } });
   }
 
@@ -195,8 +245,11 @@
   });
 
   el('rakipEkleBtn').addEventListener('click', function () {
+    var btn = el('rakipEkleBtn');
     var isim = el('rakipIsim').value.trim();
     if (!isim) { setStatus(el('rakipEkleStatus'), 'Rakip ismi gerekli.', 'err'); return; }
+    if (btn.disabled) return; // hızlı çift tıklamada aynı rakibi iki kez kaydetmeyi önler
+    btn.disabled = true;
     setStatus(el('rakipEkleStatus'), 'Kaydediliyor...', '');
     authFetch('/panel/rakip-analizi/rakip', {
       method: 'POST',
@@ -205,7 +258,8 @@
       setStatus(el('rakipEkleStatus'), "'" + isim + "' eklendi — aşağıdaki 'Kayıtlı Rakipler' listesinde görünüyor.", 'ok');
       el('rakipIsim').value = ''; el('rakipLink').value = ''; el('rakipNot').value = '';
       loadRakipListe();
-    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipEkleStatus'), 'Eklenemedi.', 'err'); });
+    }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipEkleStatus'), 'Eklenemedi.', 'err'); })
+      .finally(function () { btn.disabled = false; });
   });
 
   el('rakipAraBtn').addEventListener('click', function () {
@@ -229,10 +283,13 @@
         var addBtn = document.createElement('button');
         addBtn.type = 'button'; addBtn.className = 'btn-secondary'; addBtn.textContent = 'Ekle';
         addBtn.addEventListener('click', function () {
+          if (addBtn.disabled) return; // hızlı çift tıklamada aynı rakibi iki kez kaydetmeyi önler
+          addBtn.disabled = true; addBtn.textContent = 'Ekleniyor...';
           authFetch('/panel/rakip-analizi/rakip', {
             method: 'POST',
-            body: JSON.stringify({ isim: p.name, adres: p.address, kaynak: 'harita' }),
-          }).then(function () { addBtn.disabled = true; addBtn.textContent = 'Eklendi'; loadRakipListe(); });
+            body: JSON.stringify({ isim: p.name, adres: p.address, kaynak: 'harita', aramaAdres: adres, aramaSorgu: sorgu, aramaRadiusMeters: radius }),
+          }).then(function () { addBtn.textContent = 'Eklendi'; loadRakipListe(); })
+            .catch(function (e) { if (e.message !== 'unauthorized') { addBtn.disabled = false; addBtn.textContent = 'Ekle'; } });
         });
         li.appendChild(addBtn);
         list.appendChild(li);

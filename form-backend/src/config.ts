@@ -272,6 +272,12 @@ export const RAKIP_ANALIZI_COLUMNS = [
 	'not', // Çiğdem'in yazı/ses girişi (manuel kaynak) veya harita seçimine eklediği not
 	'dal', // 'icerikStrateji' | 'aksiyonAnaliz'
 	'raporMetni', // Claude'un ürettiği çıktı
+	// Sona eklendi (2026-08-15) — kaynak='harita' satırlarının hangi arama sonucu bulunduğunu
+	// kaydeder ("bu rakip hangi arama sonucu bulundu?" sorusuna cevap). kaynak='manuel' satırlarda
+	// boş kalır. Mevcut satırlar/kod ile uyumluluk için sona eklendi, aradaki sütunlar kaymadı.
+	'aramaAdres', // arama kutusuna girilen adres/semt
+	'aramaSorgu', // arama terimi (ör. "avukat")
+	'aramaRadiusMeters', // seçilen yarıçap
 ] as const;
 
 export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[number], string> = {
@@ -284,4 +290,7 @@ export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[
 	not: 'Not',
 	dal: 'Dal',
 	raporMetni: 'Rapor Metni',
+	aramaAdres: 'Arama Adresi',
+	aramaSorgu: 'Arama Terimi',
+	aramaRadiusMeters: 'Arama Yarıçapı (m)',
 };

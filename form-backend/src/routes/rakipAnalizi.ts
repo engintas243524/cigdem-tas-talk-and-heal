@@ -13,11 +13,22 @@ function newId(): string {
 	return crypto.randomUUID();
 }
 
-// POST /panel/rakip-analizi/rakip { isim, link?, adres?, not, kaynak: 'manuel' | 'harita' } —
-// Çiğdem'in rastgele karşılaştığı bir rakip (manuel) veya harita aramasından seçtiği bir sonuç
-// (harita), üzerine eklediği yazı/ses notuyla birlikte RakipAnalizi sekmesine kaydedilir.
+// POST /panel/rakip-analizi/rakip { isim, link?, adres?, not, kaynak: 'manuel' | 'harita',
+// aramaAdres?, aramaSorgu?, aramaRadiusMeters? } — Çiğdem'in rastgele karşılaştığı bir rakip
+// (manuel) veya harita aramasından seçtiği bir sonuç (harita), üzerine eklediği yazı/ses
+// notuyla birlikte RakipAnalizi sekmesine kaydedilir. arama* alanları sadece kaynak='harita'
+// için anlamlı — hangi arama (adres/terim/yarıçap) bu rakibi bulduğunu kaydeder.
 export async function handleRakipEkle(request: Request, env: Env): Promise<Response> {
-	let body: { isim?: unknown; link?: unknown; adres?: unknown; not?: unknown; kaynak?: unknown };
+	let body: {
+		isim?: unknown;
+		link?: unknown;
+		adres?: unknown;
+		not?: unknown;
+		kaynak?: unknown;
+		aramaAdres?: unknown;
+		aramaSorgu?: unknown;
+		aramaRadiusMeters?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -40,6 +51,11 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 	row.link = String(body.link ?? '').trim();
 	row.adres = String(body.adres ?? '').trim();
 	row.not = not;
+	if (kaynak === 'harita') {
+		row.aramaAdres = String(body.aramaAdres ?? '').trim();
+		row.aramaSorgu = String(body.aramaSorgu ?? '').trim();
+		row.aramaRadiusMeters = String(body.aramaRadiusMeters ?? '').trim();
+	}
 	const rowNumber = await appendRakipAnalizRow(env, row);
 	return json({ id: row.id, rowNumber }, request);
 }
@@ -52,7 +68,18 @@ export async function handleRakipListe(request: Request, env: Env): Promise<Resp
 	const rows = await getAllRakipAnalizRows(env);
 	const rakipler = rows
 		.filter(({ row }) => row.kaynak === 'manuel' || row.kaynak === 'harita')
-		.map(({ row }) => ({ id: row.id, createdAtUtc: row.createdAtUtc, kaynak: row.kaynak, isim: row.isim, link: row.link, adres: row.adres, not: row.not }))
+		.map(({ row }) => ({
+			id: row.id,
+			createdAtUtc: row.createdAtUtc,
+			kaynak: row.kaynak,
+			isim: row.isim,
+			link: row.link,
+			adres: row.adres,
+			not: row.not,
+			aramaAdres: row.aramaAdres,
+			aramaSorgu: row.aramaSorgu,
+			aramaRadiusMeters: row.aramaRadiusMeters,
+		}))
 		.sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc));
 	return json({ rakipler }, request);
 }

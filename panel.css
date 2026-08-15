@@ -48,6 +48,13 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .sess.done { opacity: 0.55; }
 .sess.cancel-trigger { display: block; margin-top: 0.5rem; color: #fff; background: var(--brand-deep); border-color: var(--brand-deep); font-weight: 500; }
 .muted { color: var(--taupe); font-size: 0.82rem; }
+/* Kayıtlı Rakipler tablosu (rakip-analizi.html) */
+.rakip-table { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.rakip-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.4rem 0.8rem; padding: 0.6rem 0.85rem; border-top: 1px solid var(--border); font-size: 0.86rem; }
+.rakip-row:first-child { border-top: none; }
+.rakip-row.head { font-weight: 600; color: var(--taupe); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; background: var(--paper); }
+.rakip-row.silik { opacity: 0.55; }
+.rakip-col-not { color: var(--taupe); }
 .cancel-summary { color: var(--brand-deep); }
 #clientSearchField { margin-bottom: 0.5rem; }
 .cancel-box { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.85rem; margin-top: var(--space-2); }
