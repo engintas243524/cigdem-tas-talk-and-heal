@@ -322,3 +322,38 @@ export const KULLANIM_KATEGORILERI = {
 } as const;
 
 export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;
+
+// Otomatik 10-rakip periyodik takip + OKR döngüsü (2026-08-15, Faz 1 — sadece veri modeli, henüz
+// hiçbir route/UI bunu kullanmıyor). Kullanıcı kararı: raporlar Sheet'i satır satır büyütmesin
+// (bkz. INTEGRASYON_TODO.md), o yüzden bu sekme klasik "her olayda append" değil, periyot türü
+// başına TEK, SABİT bir satır tutuyor — döngü ilerledikçe o satır YERİNDE güncelleniyor (append
+// değil). 10 rakip × 6 periyot türü × haftalarca/aylarca çalışan bir döngü satır-bazlı bir modelde
+// çok hızlı devasa bir tabloya dönüşürdü, bu tasarım onu baştan engelliyor.
+export const RAKIP_TAKIP_TAB_NAME = 'RakipTakip';
+
+export const RAKIP_TAKIP_COLUMNS = [
+	'periyotTuru', // RAKIP_TAKIP_PERIYOT_TURLERI'nden biri — sabit, hiç değişmez (satırın kimliği)
+	'donemBaslangicUtc',
+	'donemBitisUtc',
+	'projeksiyon', // TODO/NOT-TODO içerikli, dönem başında üretilen projeksiyon metni
+	'hedef',
+	'realizasyon', // dönem bitince doldurulur — o dönemde gerçekte ne yapıldığı
+	'fark', // hedef-realizasyon farkı + neden analizi (eksik/yanlış/zamanlama) — bir sonraki
+	// projeksiyonun NOT-TODO girdisi olur
+	'guncellenmeUtc',
+] as const;
+
+export const RAKIP_TAKIP_COLUMN_LABELS: Record<(typeof RAKIP_TAKIP_COLUMNS)[number], string> = {
+	periyotTuru: 'Periyot Türü',
+	donemBaslangicUtc: 'Dönem Başlangıç (UTC)',
+	donemBitisUtc: 'Dönem Bitiş (UTC)',
+	projeksiyon: 'Projeksiyon (TODO/NOT-TODO)',
+	hedef: 'Hedef',
+	realizasyon: 'Realizasyon',
+	fark: 'Hedef-Realizasyon Farkı',
+	guncellenmeUtc: 'Güncellenme (UTC)',
+};
+
+export const RAKIP_TAKIP_PERIYOT_TURLERI = ['haftalik', 'aylik', 'ucAylik', 'altiAylik', 'dokuzAylik', 'onikiAylik'] as const;
+
+export type RakipTakipPeriyotTuru = (typeof RAKIP_TAKIP_PERIYOT_TURLERI)[number];
