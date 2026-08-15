@@ -27,7 +27,13 @@ function stubSheetsApi(existingTabs: string[] = []) {
 				{ status: 200 },
 			);
 		}
-		if (url.includes(':batchUpdate')) return new Response('{}', { status: 200 });
+		if (url.includes(':batchUpdate')) {
+			const body = init?.body ? (JSON.parse(init.body as string) as { requests?: { addSheet?: unknown }[] }) : {};
+			if (body.requests?.some((r) => r.addSheet)) {
+				return new Response(JSON.stringify({ replies: [{ addSheet: { properties: { sheetId: 42 } } }] }), { status: 200 });
+			}
+			return new Response('{}', { status: 200 });
+		}
 		if (url.includes(':append') && method === 'POST') {
 			const body = JSON.parse(init!.body as string) as { values: string[][] };
 			let nextRow = Math.max(1, ...rows.keys()) + 1;
@@ -96,5 +102,20 @@ describe('rakipTakipSheets', () => {
 		stubSheetsApi([]);
 		await ensureRakipTakipTab(env);
 		expect(await getRakipTakipDurumu(env, 'gunluk')).toBeNull();
+	});
+
+	it('applies CLIP wrapStrategy to the long-text columns so cell wrap never grows row height', async () => {
+		const { fetchMock } = stubSheetsApi([]);
+		await ensureRakipTakipTab(env);
+		const repeatCellCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string) as { requests?: { repeatCell?: unknown }[] };
+			return body.requests?.some((r) => r.repeatCell);
+		});
+		expect(repeatCellCall).toBeDefined();
+		const body = JSON.parse((repeatCellCall![1] as RequestInit).body as string) as {
+			requests: { repeatCell: { cell: { userEnteredFormat: { wrapStrategy: string } } } }[];
+		};
+		expect(body.requests[0].repeatCell.cell.userEnteredFormat.wrapStrategy).toBe('CLIP');
 	});
 });

@@ -1390,3 +1390,24 @@ Grafik kütüphanesi için önceden Chart.js kararı var (bkz. rakip-analizi.htm
   Heal ile birebir/çoklu-rakip-ortalaması karşılaştırma raporu, zaman içi çizgi/pasta/sütun grafik
   görselleştirmesi (sonradan eklenen rakibin zaman ekseni kendi ekleme tarihinden başlaması dahil),
   ve bu rapor türünün mevcut "Rapor Üret" (manuel dal) akışına da eklenmesi.
+
+## Rakip Takip — 3 maddelik takip isteği (2026-08-15, birebir kaydedildi)
+
+Kullanıcının mesajı (birebir):
+
+"1- zaman-içi karşılaştırma/grafik raporu var — bunun için önce rakip-bazlı sınırlı (son 12
+periyot) geçmiş veri modelini kur
+2- google sheet te rapor metninin hücresi metin alt satıra taşınca büyümesin,
+böylece aşağı doğsu sonsuz uzanan bir sheet sayfası olmaz.
+3- raporların detayları normal bir vatandaşın okuyarak anlayabileceği bir dilde değil o nedenle
+raporlar için notion gibi bir araçtan destek alarak yazı dili, özet, vs ayarları
+yapabileceğimiz bir imkanımız var mı? Notion ı altyapıda ücretsiz kullanabilir miyiz, yoksa
+ücretsiz açık kaynak bir araç bulabilir miyiz?"
+
+Madde 1: yukarıdaki "Durum güncellemesi" bölümünde zaten karar verilmiş plan — şimdi inşa
+aşamasına geçiliyor. Madde 2: Sheets hücre `wrapStrategy` formatı — `values.update` sadece değer
+yazıyor, satır yüksekliğinin büyümemesi için ayrı bir `batchUpdate` (`repeatCell` +
+`userEnteredFormat.wrapStrategy`) gerekiyor. Madde 3: Notion AI'ın üçüncü taraf bir backend'den
+programatik/ücretsiz kullanılabilir bir API'si olup olmadığı araştırılacak; muhtemel ve daha basit
+alternatif, raporları zaten ÜRETEN Claude'un kendi system promptlarına "sade/gündelik dil" talimatı
+eklemek (harici bir araç gerektirmez, mevcut altyapıda hiçbir ek maliyet yok).

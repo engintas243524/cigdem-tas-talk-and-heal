@@ -194,7 +194,9 @@ Sana verilen rakip verisini ASLA rakip rakip karşılaştırma/analiz yapmadan, 
 güncel trend hissi vermek için arka plan bağlamı olarak kullan. Rakiplerin içeriklerini ASLA
 kopyalamadan, sadece stratejilerinden (hangi platformda, ne sıklıkla, hangi format/konu daha çok
 etkileşim alıyor) ilham alarak Talk and Heal için ORİJİNAL, telifsiz-stok veya AI-üretilmiş içerik
-önerileri sun. Türkçe yaz, somut ve uygulanabilir öneriler ver.`;
+önerileri sun. Türkçe yaz, somut ve uygulanabilir öneriler ver. Sade, gündelik bir dil kullan —
+pazarlama/iş jargonu, uzun karmaşık cümleler ve süslü terimlerden kaçın; hiç bu alanda uzman
+olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.`;
 
 const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
@@ -309,7 +311,9 @@ DOĞRUDAN karşılaştırma yapabilirsin (fiyat/konum/sosyal medya aktifliği gi
 Çiğdem'in nerede güçlü/zayıf olduğunu somutça belirt). Eğer önceki bir dönemin hedefi verilmişse,
 "neredeydik / ne yaptık / neredeyiz" üçlemesiyle realizasyonu değerlendir; sapma varsa nedenini
 analiz edip bir sonraki dönem için düzeltilmiş hedef/yol haritası öner. Türkçe yaz, somut ve
-ölçülebilir ol.`;
+ölçülebilir ol. Sade, gündelik bir dil kullan — pazarlama/iş jargonu, uzun karmaşık cümleler ve
+süslü terimlerden kaçın; hiç bu alanda uzman olmayan sıradan bir okuyucunun tek okuyuşta
+anlayacağı, kısa cümlelerle yaz.`;
 
 // POST /panel/rakip-analizi/aksiyon-analiz { yorum, rakipIds?, parametreler? } — booking
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses

@@ -13,6 +13,13 @@ function emptyRakipTakipRow(): RakipTakipRow {
 // RakipTakip sekmesini oluşturur/tamamlar ve SABİT 6 satırı (bir periyot türü = bir satır) tohumlar
 // — bkz. config.ts'deki tasarım notu. rakipSheets.ts'deki ensureRakipAnaliziTab ile aynı
 // oluşturma/genişletme mantığı, tek fark satır tohumlaması.
+// projeksiyon/hedef/realizasyon/fark — uzun rapor metni tutan sütunlar. Google Sheets varsayılan
+// wrapStrategy'si (WRAP) uzun metni hücre içinde alt satıra taşıyıp SATIR YÜKSEKLİĞİNİ büyütür;
+// 6 sabit satırın her biri uzun bir rapor tutunca sayfa dikeyde "sonsuza kadar uzuyormuş" gibi
+// görünür hale gelirdi (kullanıcı kararı 2026-08-15). CLIP bunu önler — metin tek satırda kalır,
+// hücreye tıklayınca formül çubuğunda tam metin yine okunabilir.
+const UZUN_METIN_KOLON_ARALIGI = { startColumnIndex: 3, endColumnIndex: 7 }; // projeksiyon..fark
+
 export async function ensureRakipTakipTab(env: Env): Promise<void> {
 	const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title,gridProperties.columnCount)');
 	const data = (await response.json()) as {
@@ -20,8 +27,10 @@ export async function ensureRakipTakipTab(env: Env): Promise<void> {
 	};
 	const existing = (data.sheets ?? []).find((s) => s.properties?.title === RAKIP_TAKIP_TAB_NAME);
 
+	let sheetId: number | undefined = existing?.properties?.sheetId;
+
 	if (!existing) {
-		await sheetsFetch(env, ':batchUpdate', {
+		const createResponse = await sheetsFetch(env, ':batchUpdate', {
 			method: 'POST',
 			body: JSON.stringify({
 				requests: [
@@ -33,29 +42,47 @@ export async function ensureRakipTakipTab(env: Env): Promise<void> {
 				],
 			}),
 		});
+		const createData = (await createResponse.json()) as { replies?: { addSheet?: { properties?: { sheetId?: number } } }[] };
+		sheetId = createData.replies?.[0]?.addSheet?.properties?.sheetId;
 		await writeHeaderRow(env);
 		await seedEksikPeriyotRows(env);
-		return;
+	} else {
+		const columnCount = existing.properties?.gridProperties?.columnCount ?? 0;
+		if (columnCount < RAKIP_TAKIP_COLUMNS.length && sheetId !== undefined) {
+			await sheetsFetch(env, ':batchUpdate', {
+				method: 'POST',
+				body: JSON.stringify({
+					requests: [
+						{
+							updateSheetProperties: {
+								properties: { sheetId, gridProperties: { columnCount: RAKIP_TAKIP_COLUMNS.length } },
+								fields: 'gridProperties.columnCount',
+							},
+						},
+					],
+				}),
+			});
+		}
+		await writeHeaderRow(env);
+		await seedEksikPeriyotRows(env);
 	}
 
-	const columnCount = existing.properties?.gridProperties?.columnCount ?? 0;
-	if (columnCount < RAKIP_TAKIP_COLUMNS.length && existing.properties?.sheetId !== undefined) {
+	if (sheetId !== undefined) {
 		await sheetsFetch(env, ':batchUpdate', {
 			method: 'POST',
 			body: JSON.stringify({
 				requests: [
 					{
-						updateSheetProperties: {
-							properties: { sheetId: existing.properties.sheetId, gridProperties: { columnCount: RAKIP_TAKIP_COLUMNS.length } },
-							fields: 'gridProperties.columnCount',
+						repeatCell: {
+							range: { sheetId, ...UZUN_METIN_KOLON_ARALIGI },
+							cell: { userEnteredFormat: { wrapStrategy: 'CLIP' } },
+							fields: 'userEnteredFormat.wrapStrategy',
 						},
 					},
 				],
 			}),
 		});
 	}
-	await writeHeaderRow(env);
-	await seedEksikPeriyotRows(env);
 }
 
 async function writeHeaderRow(env: Env): Promise<void> {
