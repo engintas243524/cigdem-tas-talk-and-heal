@@ -244,3 +244,151 @@ describe('runRakipTakipSweep (cron)', () => {
 		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
 	});
 });
+
+describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
+	// Skorlama çağrılarını (system promptu "veri analistisin" içeren) sıraya göre ayırt eden bir
+	// stub — Talk and Heal her zaman İLK skorlanıyor (bkz. gecmisSnapshotlariniKaydet), sonra
+	// rakipler eklendikleri sırayla. Diğer tüm Claude çağrıları (aksiyon/içerik/yorum) sabit metin.
+	function stubApisWithScores(skorListesi: Record<string, number>[]) {
+		const { fetchMock, tabRows } = stubApis([]);
+		const orijinalUygulama = fetchMock.getMockImplementation()!;
+		let skorCagriSayaci = 0;
+		fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes('api.anthropic.com')) {
+				const body = init?.body ? (JSON.parse(init.body as string) as { system?: string }) : {};
+				if (typeof body.system === 'string' && body.system.includes('veri analistisin')) {
+					const skorlar = skorListesi[skorCagriSayaci] ?? skorListesi[skorListesi.length - 1] ?? {};
+					skorCagriSayaci++;
+					return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(skorlar) }] }), { status: 200 });
+				}
+				return new Response(JSON.stringify({ content: [{ type: 'text', text: 'Üretilen rapor metni.' }] }), { status: 200 });
+			}
+			// oauth/sheets.properties/batchUpdate/append/values — orijinal stubApis mantığına devret.
+			return orijinalUygulama(input, init);
+		});
+		return { fetchMock, tabRows };
+	}
+
+	it('rejects an invalid periyotTuru', async () => {
+		stubApis([]);
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'gunluk', rakipIds: ['x'] }),
+		});
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects an empty rakipIds list', async () => {
+		stubApis([]);
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik', rakipIds: [] }),
+		});
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects 1e1 mode with more than one rakipId', async () => {
+		stubApis([]);
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik', mod: '1e1', rakipIds: ['a', 'b'] }),
+		});
+		expect(response.status).toBe(400);
+	});
+
+	it('returns 404 when no history exists yet for the period type', async () => {
+		stubApis([]);
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'X', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik', rakipIds: [rakipId] }),
+		});
+		expect(response.status).toBe(404);
+	});
+
+	it('1e1 mode returns matching talkAndHeal/rakip series with real scores', async () => {
+		const { fetchMock } = stubApisWithScores([{ fiyat: 9 }, { fiyat: 3 }]); // 1. çağrı=Talk and Heal, 2.=rakip
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Rakip A', kaynak: 'manuel', not: 'Ucuz fiyatlar.' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/rakip-takip/uret', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik', rakipIds: [rakipId] }),
+		}); // yeniDonem
+		await authedRequest('/panel/rakip-analizi/rakip-takip/uret', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik', rakipIds: [rakipId] }),
+		}); // kapatildi — snapshot kaydedilir
+
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik', mod: '1e1', rakipIds: [rakipId], parametreler: ['fiyat'] }),
+		});
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as {
+			rakipEtiketi: string;
+			parametreSonuclari: { parametre: string; talkAndHeal: { deger: number | null }[]; rakip: { deger: number | null }[] }[];
+		};
+		expect(data.rakipEtiketi).toBe('Rakip A');
+		expect(data.parametreSonuclari).toHaveLength(1);
+		expect(data.parametreSonuclari[0].talkAndHeal[0].deger).toBe(9);
+		expect(data.parametreSonuclari[0].rakip[0].deger).toBe(3);
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(true);
+	});
+
+	it('ortalama mode averages two competitors scored on the same closed period', async () => {
+		// Sıra: 1) Talk and Heal, 2) Rakip B, 3) Rakip C (gecmisSnapshotlariniKaydet'in rakipRows sırası)
+		stubApisWithScores([{ fiyat: 5 }, { fiyat: 4 }, { fiyat: 8 }]);
+		const rakipB = (
+			(await (
+				await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: 'Rakip B', kaynak: 'manuel' }) })
+			).json()) as { id: string }
+		).id;
+		const rakipC = (
+			(await (
+				await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: 'Rakip C', kaynak: 'manuel' }) })
+			).json()) as { id: string }
+		).id;
+
+		await authedRequest('/panel/rakip-analizi/rakip-takip/uret', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'aylik', rakipIds: [rakipB, rakipC] }),
+		}); // yeniDonem
+		await authedRequest('/panel/rakip-analizi/rakip-takip/uret', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'aylik', rakipIds: [rakipB, rakipC] }),
+		}); // kapatildi — 3 snapshot birlikte kaydedilir (aynı donemBaslangicUtc)
+
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'aylik', mod: 'ortalama', rakipIds: [rakipB, rakipC], parametreler: ['fiyat'] }),
+		});
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as {
+			rakipEtiketi: string;
+			parametreSonuclari: { rakip: { deger: number | null }[] }[];
+		};
+		expect(data.rakipEtiketi).toBe('2 rakip ortalaması');
+		expect(data.parametreSonuclari[0].rakip).toHaveLength(1); // aynı dönem → tek tarih
+		expect(data.parametreSonuclari[0].rakip[0].deger).toBe(6); // (4+8)/2
+	});
+
+	it('requires panel auth', async () => {
+		stubApis([]);
+		const request = new Request('http://localhost/panel/rakip-analizi/rakip-takip/karsilastirma', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik', rakipIds: ['x'] }),
+		});
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, testEnv, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(401);
+	});
+});
