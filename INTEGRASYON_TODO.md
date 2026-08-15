@@ -1344,3 +1344,37 @@ birden fazla periyot = gözetimsiz tekrarlayan bir Anthropic API maliyeti demek,
 gerekir; (c) bu döngünün geçmiş projeksiyon/hedef/realizasyon verisi NEREDE tutulacak — hemen
 üstteki "Sheet büyümesi" kararıyla (raporları artık satır olarak saklamıyoruz) doğrudan çelişiyor,
 bu döngü için satır-bazlı-değil, sınırlı/büyümeyen ayrı bir veri modeli tasarlanması gerekiyor.
+
+**(a) ve (b) netleşti (2026-08-15):** (a) otomatik arama kriteriyle seçilecek. (b) hem cron hem
+manuel buton sunulacaktı, ama kullanıcı bunu aşağıdaki mesajla netleştirdi/sadeleştirdi — cron
+kullanıcının BAŞLAT/DURDUR açıp kapadığı bir anahtara bağlı olacak, sürekli çalışan bir arka plan
+işi DEĞİL.
+
+## Rakip Takip — başlat/durdur anahtarı + zaman içi karşılaştırma/grafik raporu (2026-08-15, birebir kaydedildi)
+
+Kullanıcının mesajı (birebir):
+
+"otomatik rakip takibi bölümünü kullanıcı manuel olarak tetikleyebilsin, yoksa her 5 rakip için
+sürekli analiz sağlayıcı tarafında ciddi fatura yaratabilir, istediğinde otomatik takibi başlatır,
+istediği sonu aldığında kapatır gibi çalışabilsin yani
+raporlarda 5'er rakibin hafta, ay, 3-6-9-12 süreçlerideki gelişimi ya da geri gidişini
+ölçümlemek için her rakibin önceki raporundan hareketler bir sonraki hafta, ay, 3-6-9-12 aylık
+değişimini, istenirse bu rakibin talk and heal ile seçilen parametrelere göre birebir ya da
+istenirse birden fazla rakibin yine seçilen parametrelere göre ortalama verileryle Talk and
+Heal'in karşılaştırılabildiği bir rapor üretilebilsin ve bu raporda talk and heal ve
+rakibin(lerin) zamana göre(burada listeye sonradan bir rakip manuel olarak eklenirse ona ait
+zaman parametresi grafikte eklenme tarihinden itibaren başlar) istenirse çizgi, pasta, sütun ve
+ücretsiz diğer alternatifler neler ise o grafik türleri ve içerik/açıklamalarla birlikte tlak and
+hela ve rakibin(lerin) ilerleme ve gerilemesinin her parametreye göre oluşturulması lazım, hatta
+bu rapor türü Rapor üret butonu ile deneme amaçlı ürettiğim raporda da olsun."
+
+**Henüz uygulanmadı — sadece kaydedildi.** Önemli bir çelişki fark edildi, inşa etmeden önce
+çözülmesi gerekiyor: bu istek her rakibin HER periyotta geçmişe dönük ayrı ayrı verisinin
+(parametre bazında) saklanmasını gerektiriyor (trend grafiği için) — ama Faz 1'in RakipTakip veri
+modeli (bkz. yukarıki bölüm) kasıtlı olarak rakip-bazlı değil, sadece periyot-türü başına TEK
+satır tutuyor ve geçmişi SAKLAMIYOR (üzerine yazıyor). Bu iki karar birbiriyle uyuşmuyor — ya
+Faz 1 modeli rakip-bazlı geçmiş tutacak şekilde genişletilmeli (o zaman "sayfa büyümesin" kararıyla
+dengelenmesi için SINIRLI/rotasyonlu bir geçmiş — ör. rakip başına son N periyot — gerekir, sonsuz
+değil ama geçmişsiz de değil), ya da geçmiş farklı bir yerde (ayrı, kompakt bir yapıda) tutulmalı.
+Grafik kütüphanesi için önceden Chart.js kararı var (bkz. rakip-analizi.html'deki CDN yorum notu,
+2026-08-09 civarı) — ücretsiz/CDN/sıfır-bağımlılık, aynı yaklaşım burada da kullanılacak.
