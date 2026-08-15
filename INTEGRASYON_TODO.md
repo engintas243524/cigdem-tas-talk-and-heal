@@ -1421,3 +1421,11 @@ yapabileceğimiz bir imkanımız var mı? Notion ı altyapıda ücretsiz kullana
 
 **Henüz yapılmadı (Faz 3-4'ün geri kalanı, ayrı bir konu):** otomatik 5 yerel + 5 genel rakip
 sınıflandırması (bkz. yukarıki "Otomatik 10 rakip takibi" bölümü).
+
+**Fikir notu (2026-08-16, henüz uygulanmadı):** yukarıdaki "Bilinen sınır"ı çözmek için —
+periyodik döngüye (RakipTakip'in "kapatildi" adımı) Çiğdem'in kendi serbest metin/ses yorumunu
+toplayan bir alan eklenebilir (mevcut Aksiyon/Hedef Analizi'ndeki "yorum" alanına benzer), böylece
+Talk and Heal'in kendi niteliksel parametreleri (sosyal medya aktifliği, fiyat şeffaflığı vb.)
+de skorlanabilir hale gelir, sadece randevu sayılarıyla sınırlı kalmaz. Kapsam/tasarım detayları
+henüz netleşmedi (nerede toplanacak — periyot kapanmadan önce mi hatırlatılacak, otomatik cron
+modunda kimse yoksa ne olacak).
