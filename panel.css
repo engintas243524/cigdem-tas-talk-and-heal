@@ -59,7 +59,10 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .rakip-table.aksiyon-kolonlu .rakip-row { grid-template-columns: 6rem 1.3fr 1.6fr 0.9fr 1.6fr 1fr 1.6fr; min-width: 800px; }
 .rakip-row.head { align-items: end; font-weight: 600; color: var(--taupe); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; background: var(--paper); }
 .rakip-row:first-child { border-top: none; }
-.rakip-row.silik { opacity: 0.55; }
+/* "Sırada daha var" önizlemesi: kesilen listenin bir SONRAKİ sırasındaki tek satır kısmen (üst
+   ~1.3 satır kadar) ve soluk görünür, "devamı gizli" hissi verir — ondan sonrakiler hiç render
+   edilmiyor (bkz. renderRakipListe/renderAramaSonuclari'nin slice(0, visible+1) kullanımı). */
+.rakip-row.silik-onizleme { opacity: 0.4; max-height: 2.1rem; overflow: hidden; }
 .rakip-col-not { color: var(--taupe); }
 
 @media (max-width: 700px) {

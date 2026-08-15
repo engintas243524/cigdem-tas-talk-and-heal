@@ -215,9 +215,11 @@
 
     rakipTabloBasligiCiz(list, '');
 
-    rakipler.forEach(function (r, i) {
+    // Görünür N satırın tam altında, SIRADAKİ tek satır kısmen/soluk bir "önizleme" olarak
+    // gösteriliyor; onun ötesindekiler hiç render edilmiyor (slice ile DOM'a hiç girmiyor).
+    rakipler.slice(0, rakipListeState.visible + 1).forEach(function (r, i) {
       var row = document.createElement('div');
-      row.className = 'rakip-row' + (i >= rakipListeState.visible ? ' silik' : '');
+      row.className = 'rakip-row' + (i === rakipListeState.visible ? ' silik-onizleme' : '');
 
       var checkboxSpan = document.createElement('span');
       var checkbox = document.createElement('input');
@@ -407,9 +409,9 @@
 
     rakipTabloBasligiCiz(list, '');
 
-    places.forEach(function (p, i) {
+    places.slice(0, rakipAramaState.visible + 1).forEach(function (p, i) {
       var row = document.createElement('div');
-      row.className = 'rakip-row' + (i >= rakipAramaState.visible ? ' silik' : '');
+      row.className = 'rakip-row' + (i === rakipAramaState.visible ? ' silik-onizleme' : '');
 
       var aksiyonSpan = document.createElement('span');
       var addBtn = document.createElement('button');
