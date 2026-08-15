@@ -93,3 +93,27 @@ export async function getAllRakipAnalizRows(env: Env): Promise<{ rowNumber: numb
 		return { rowNumber: i + 2, row };
 	});
 }
+
+// Verilen (1-indexed) satır numaralarını RakipAnalizi sekmesinden tamamen siler. Sheets API'nin
+// deleteDimension'ı her istek uygulandıkça alttaki satırları yukarı kaydırdığı için, aynı
+// batchUpdate içindeki istekler BÜYÜKTEN KÜÇÜĞE sıralanmalı — yoksa ikinci silme yanlış satırı
+// hedefler (önceki silmenin kaydırdığı satırı).
+export async function deleteRakipAnalizRows(env: Env, rowNumbers: number[]): Promise<void> {
+	if (!rowNumbers.length) return;
+	const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title)');
+	const data = (await response.json()) as { sheets?: { properties?: { sheetId?: number; title?: string } }[] };
+	const sheetId = data.sheets?.find((s) => s.properties?.title === RAKIP_ANALIZI_TAB_NAME)?.properties?.sheetId;
+	if (sheetId === undefined) throw new Error('RakipAnalizi tab bulunamadı, silme yapılamadı.');
+
+	const sortedDesc = [...rowNumbers].sort((a, b) => b - a);
+	await sheetsFetch(env, ':batchUpdate', {
+		method: 'POST',
+		body: JSON.stringify({
+			requests: sortedDesc.map((rowNumber) => ({
+				deleteDimension: {
+					range: { sheetId, dimension: 'ROWS', startIndex: rowNumber - 1, endIndex: rowNumber },
+				},
+			})),
+		}),
+	});
+}

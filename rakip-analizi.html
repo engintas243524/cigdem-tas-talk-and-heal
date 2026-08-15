@@ -69,7 +69,11 @@
       <h3>Kayıtlı Rakipler</h3>
       <p class="muted" id="rakipListeBos">Henüz kaydedilmiş rakip yok.</p>
       <div class="rakip-table" id="rakipListe"></div>
-      <button class="btn-secondary hidden" id="rakipListeToggleBtn" type="button"></button>
+      <div class="actions">
+        <button class="btn-secondary hidden" id="rakipListeToggleBtn" type="button"></button>
+        <button class="btn-secondary hidden" id="rakipSilBtn" type="button" style="background:var(--brand-deep);color:#fff;border-color:var(--brand-deep);">Seçilenleri Sil</button>
+      </div>
+      <div class="status" id="rakipSilStatus"></div>
     </div>
 
     <div class="field">
@@ -132,17 +136,26 @@
   var rakipListeCache = [];
   var rakipListeVisible = 3;
   var RAKIP_LISTE_ADIM = 3;
+  var rakipListeSecili = {}; // id -> true, seçili (silinecek) rakipler
+
+  function updateRakipSilBtn() {
+    var count = Object.keys(rakipListeSecili).length;
+    var btn = el('rakipSilBtn');
+    btn.classList.toggle('hidden', count === 0);
+    btn.textContent = 'Seçilenleri Sil (' + count + ')';
+  }
 
   function renderRakipListe() {
     var list = el('rakipListe'), bos = el('rakipListeBos'), toggleBtn = el('rakipListeToggleBtn');
     var rakipler = rakipListeCache;
     list.innerHTML = '';
     bos.classList.toggle('hidden', rakipler.length > 0);
+    updateRakipSilBtn();
     if (!rakipler.length) { toggleBtn.classList.add('hidden'); return; }
 
     var head = document.createElement('div');
     head.className = 'rakip-row head';
-    ['İsim', 'Adres', 'Kaynak', 'Nasıl Bulundu', 'Tarih', 'Not'].forEach(function (label) {
+    ['', 'İsim', 'Adres', 'Kaynak', 'Nasıl Bulundu', 'Tarih', 'Not'].forEach(function (label) {
       var span = document.createElement('span'); span.textContent = label; head.appendChild(span);
     });
     list.appendChild(head);
@@ -150,6 +163,18 @@
     rakipler.forEach(function (r, i) {
       var row = document.createElement('div');
       row.className = 'rakip-row' + (i >= rakipListeVisible ? ' silik' : '');
+
+      var checkboxSpan = document.createElement('span');
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = !!rakipListeSecili[r.id];
+      checkbox.addEventListener('change', function () {
+        if (checkbox.checked) { rakipListeSecili[r.id] = true; } else { delete rakipListeSecili[r.id]; }
+        updateRakipSilBtn();
+      });
+      checkboxSpan.appendChild(checkbox);
+      row.appendChild(checkboxSpan);
+
       var tarih = r.createdAtUtc ? new Date(r.createdAtUtc).toLocaleString('tr-TR') : '';
       var kaynakEtiket = r.kaynak === 'harita' ? 'Haritadan' : 'Manuel';
       var nasilBulundu = '—';
@@ -183,10 +208,30 @@
     renderRakipListe();
   });
 
+  el('rakipSilBtn').addEventListener('click', function () {
+    var ids = Object.keys(rakipListeSecili);
+    if (!ids.length) return;
+    var btn = el('rakipSilBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    setStatus(el('rakipSilStatus'), 'Siliniyor...', '');
+    authFetch('/panel/rakip-analizi/rakip-sil', { method: 'POST', body: JSON.stringify({ ids: ids }) })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) { setStatus(el('rakipSilStatus'), res.data.error || 'Silinemedi.', 'err'); return; }
+        rakipListeSecili = {};
+        setStatus(el('rakipSilStatus'), res.data.deleted + ' rakip silindi.', 'ok');
+        loadRakipListe();
+      })
+      .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipSilStatus'), 'Silinemedi.', 'err'); })
+      .finally(function () { btn.disabled = false; });
+  });
+
   function loadRakipListe() {
     authFetch('/panel/rakip-analizi/rakip-liste').then(function (r) { return r.json(); }).then(function (data) {
       rakipListeCache = data.rakipler || [];
       rakipListeVisible = RAKIP_LISTE_ADIM;
+      rakipListeSecili = {};
       renderRakipListe();
     }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, liste yükleme kritik değil */ } });
   }

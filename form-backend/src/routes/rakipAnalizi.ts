@@ -1,5 +1,5 @@
 import { getAllRows } from '../lib/sheets';
-import { appendRakipAnalizRow, getAllRakipAnalizRows, emptyRakipAnalizRow, ensureRakipAnaliziTab } from '../lib/rakipSheets';
+import { appendRakipAnalizRow, getAllRakipAnalizRows, emptyRakipAnalizRow, ensureRakipAnaliziTab, deleteRakipAnalizRows } from '../lib/rakipSheets';
 import { generateReport } from '../lib/claude';
 import { searchCompetitors } from '../lib/places';
 import { geocodeAddress } from '../lib/geocoding';
@@ -82,6 +82,29 @@ export async function handleRakipListe(request: Request, env: Env): Promise<Resp
 		}))
 		.sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc));
 	return json({ rakipler }, request);
+}
+
+// POST /panel/rakip-analizi/rakip-sil { ids: string[] } — seçilen rakip(ler)i hem RakipAnalizi
+// sekmesinden (gerçek satır silme, sadece işaretleme değil) hem de listeden kaldırır. id'ler
+// istemcinin gönderdiği satır numarasına değil, sunucunun o an okuduğu güncel satır numarasına
+// eşlenir — istemci elinde eski/yanlış bir satır numarası tutuyor olsa bile doğru satır silinir.
+export async function handleRakipSil(request: Request, env: Env): Promise<Response> {
+	let body: { ids?: unknown };
+	try {
+		body = (await request.json()) as typeof body;
+	} catch {
+		return errorResponse(request, 400, 'Geçersiz istek.');
+	}
+	const ids = Array.isArray(body.ids) ? body.ids.map((x) => String(x)) : [];
+	if (!ids.length) return errorResponse(request, 400, 'Silinecek rakip seçilmedi.');
+
+	await ensureRakipAnaliziTab(env);
+	const rows = await getAllRakipAnalizRows(env);
+	const rowNumbers = rows.filter(({ row }) => ids.includes(row.id)).map(({ rowNumber }) => rowNumber);
+	if (!rowNumbers.length) return errorResponse(request, 404, 'Rakip bulunamadı.');
+
+	await deleteRakipAnalizRows(env, rowNumbers);
+	return json({ deleted: rowNumbers.length }, request);
 }
 
 // GET /panel/rakip-analizi/rakip-ara?adres=&sorgu=&radiusMeters= — adres/semt metni + serbest

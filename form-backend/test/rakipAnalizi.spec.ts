@@ -32,7 +32,16 @@ function stubApis() {
 				},
 			);
 		}
-		if (url.includes(':batchUpdate')) return new Response('{}', { status: 200 });
+		if (url.includes(':batchUpdate')) {
+			const body = init?.body ? JSON.parse(init.body as string) : {};
+			for (const req of body.requests ?? []) {
+				if (req.deleteDimension) {
+					const arrIndex = req.deleteDimension.range.startIndex - 1; // sheetsAppended[0] = sheet row 2 = dimension index 1
+					if (arrIndex >= 0 && arrIndex < sheetsAppended.length) sheetsAppended.splice(arrIndex, 1);
+				}
+			}
+			return new Response('{}', { status: 200 });
+		}
 		if (url.includes(':append') && method === 'POST') {
 			const body = JSON.parse(init!.body as string);
 			sheetsAppended.push(body.values[0]);
@@ -186,6 +195,67 @@ describe('GET /panel/rakip-analizi/rakip-liste', () => {
 	it('rejects requests without a valid panel token', async () => {
 		stubApis();
 		const request = new Request('http://localhost/panel/rakip-analizi/rakip-liste');
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, testEnv, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(401);
+	});
+});
+
+describe('POST /panel/rakip-analizi/rakip-sil', () => {
+	it('deletes only the selected competitor, leaving the rest intact', async () => {
+		stubApis();
+		const first = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Silinecek', kaynak: 'manuel' }),
+		});
+		const firstId = ((await first.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Kalacak', kaynak: 'manuel' }),
+		});
+
+		const delResponse = await authedRequest('/panel/rakip-analizi/rakip-sil', {
+			method: 'POST',
+			body: JSON.stringify({ ids: [firstId] }),
+		});
+		expect(delResponse.status).toBe(200);
+		const delData = (await delResponse.json()) as { deleted: number };
+		expect(delData.deleted).toBe(1);
+
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as { rakipler: { isim: string }[] };
+		expect(listData.rakipler.map((r) => r.isim)).toEqual(['Kalacak']);
+	});
+
+	it('deletes two competitors in one call without deleting the wrong rows', async () => {
+		stubApis();
+		const ids: string[] = [];
+		for (const isim of ['A', 'B', 'C']) {
+			const r = await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: isim, kaynak: 'manuel' }) });
+			ids.push(((await r.json()) as { id: string }).id);
+		}
+		const delResponse = await authedRequest('/panel/rakip-analizi/rakip-sil', {
+			method: 'POST',
+			body: JSON.stringify({ ids: [ids[0], ids[2]] }), // A ve C, B ortada kalmalı
+		});
+		const delData = (await delResponse.json()) as { deleted: number };
+		expect(delData.deleted).toBe(2);
+
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as { rakipler: { isim: string }[] };
+		expect(listData.rakipler.map((r) => r.isim)).toEqual(['B']);
+	});
+
+	it('rejects an empty id list', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/rakip-sil', { method: 'POST', body: JSON.stringify({ ids: [] }) });
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects requests without a valid panel token', async () => {
+		stubApis();
+		const request = new Request('http://localhost/panel/rakip-analizi/rakip-sil', { method: 'POST', body: JSON.stringify({ ids: ['x'] }) });
 		const ctx = createExecutionContext();
 		const response = await worker.fetch(request, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
