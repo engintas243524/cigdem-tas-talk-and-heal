@@ -109,8 +109,9 @@
       <p class="muted" id="dalSeciliRakipler"></p>
       <!-- Görsel/Video Stratejisi'nde seçilen rakipler sadece genel/güncel trend bağlamı için
            kullanılır (rakip rakip karşılaştırma YAPILMAZ — KVKK + "içerik kopyalanmaz" ilkesi).
-           Aksiyon/Hedef Analizi'nde ise tam karşılaştırmalı analiz yapılabilir. Parametreler her
-           iki dalda da aynı üç onay kutusu — hangi boyutlara odaklanılacağını seçiyor. -->
+           Aksiyon/Hedef Analizi'nde ise tam karşılaştırmalı analiz yapılabilir. Bu 3 parametre
+           doğrudan rakip karşılaştırmasına ait olduğundan sadece Aksiyon/Hedef Analizi'nde
+           gösterilir — setDal() içinde toggle edilir, bkz. #dalParametreler .hidden mantığı. -->
       <div id="dalParametreler">
         <label><input type="checkbox" id="paramSosyalMedya" value="sosyalMedya" checked> Sosyal medya aktiflik/format sıklığı</label>
         <label><input type="checkbox" id="paramFiyat" value="fiyat" checked> Fiyat/paket karşılaştırması</label>
@@ -580,6 +581,9 @@
     el('dalAksiyonBtn').classList.toggle('active', dal === 'aksiyonAnaliz');
     el('dalIstekField').classList.toggle('tab-icerik', dal === 'icerikStrateji');
     el('dalIstekField').classList.toggle('tab-aksiyon', dal === 'aksiyonAnaliz');
+    // Bu 3 parametre (sosyal medya/fiyat/konum) doğrudan rakip karşılaştırması içindir — sadece
+    // Aksiyon/Hedef Analizi'nde anlamlı, Görsel/Video Stratejisi küratif olduğu için gösterilmez.
+    el('dalParametreler').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
     el('dalRaporAksiyonlar').classList.add('hidden');
     el('dalRapor').textContent = '';
     sonRaporMetni = '';
@@ -596,7 +600,9 @@
     setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
     el('dalRaporAksiyonlar').classList.add('hidden');
     var rakipIds = Object.keys(rakipListeSecili);
-    var parametreler = ['paramSosyalMedya', 'paramFiyat', 'paramKonum'].filter(function (id) { return el(id).checked; }).map(function (id) { return el(id).value; });
+    var parametreler = currentDal === 'aksiyonAnaliz'
+      ? ['paramSosyalMedya', 'paramFiyat', 'paramKonum'].filter(function (id) { return el(id).checked; }).map(function (id) { return el(id).value; })
+      : [];
     var path = currentDal === 'icerikStrateji' ? '/panel/rakip-analizi/icerik-strateji' : '/panel/rakip-analizi/aksiyon-analiz';
     var payload = currentDal === 'icerikStrateji'
       ? { istek: istek, rakipIds: rakipIds, parametreler: parametreler }

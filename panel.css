@@ -116,9 +116,10 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .tab-icerik   { --tab-c: #9DC9F0; }
 .tab-aksiyon  { --tab-c: #C9A3EE; }
 
-/* Görsel/Video Stratejisi ve Aksiyon/Hedef Analizi butonları + altlarında açılan istek paneli
-   tek bir görsel grup gibi ortalanıyor, panelin başlı başına bir bölüm olmadığı hemen anlaşılsın. */
-#dalButonlarWrap { justify-content: center; max-width: min(100%, 560px); margin: var(--space-2) auto 0; }
-#dalIstekField { max-width: min(100%, 560px); margin-left: auto; margin-right: auto; }
+/* Görsel/Video Stratejisi ve Aksiyon/Hedef Analizi butonları diğer bölümlerle (Bu Ayki Kullanım,
+   Konum ile Rakip Ara, vb.) aynı tam genişliği kullanır — sadece kendi aralarında flex-basis:0
+   ile TAM eşit ikiye bölünür (metin uzunluğu farkı genişliği etkilemesin), böylece altlarında
+   açılan istek paneliyle simetrik/ortalı görünürler. */
+#dalButonlarWrap button { flex: 1 1 0; }
 #dalIcerikBtn.active { background: color-mix(in srgb, #9DC9F0 55%, var(--brand)); border-color: color-mix(in srgb, #9DC9F0 55%, var(--brand)); }
 #dalAksiyonBtn.active { background: color-mix(in srgb, #C9A3EE 55%, var(--brand)); border-color: color-mix(in srgb, #C9A3EE 55%, var(--brand)); }
