@@ -291,15 +291,12 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	await ensureKullanimKaydiTab(env);
 	await logKullanim(env, 'icerikStrateji', istek.slice(0, 200));
 
-	const row = emptyRakipAnalizRow();
-	row.id = newId();
-	row.createdAtUtc = new Date().toISOString();
-	row.kaynak = 'rapor';
-	row.dal = 'icerikStrateji';
-	row.not = istek;
-	row.raporMetni = rapor;
-	await appendRakipAnalizRow(env, row);
-	return json({ id: row.id, rapor }, request);
+	// Kullanıcı kararı (2026-08-15): raporlar artık RakipAnalizi sekmesine satır olarak
+	// eklenmiyor — her "Rapor Üret" tıklaması sayfayı aşağı doğru sonsuza kadar büyütüyordu.
+	// Rapor zaten PDF/WhatsApp/e-posta/Paylaş ile dışa aktarılabiliyor (bkz. rakip-analizi.html
+	// dalRaporAksiyonlar), Sheet'te ayrıca saklanmasına gerek yok. Kullanım kaydı (yukarıdaki
+	// logKullanim) zaten ayrı, sabit büyümeyen bir sekmede tutuluyor.
+	return json({ rapor }, request);
 }
 
 // Kullanıcı kararı (2026-08-15): İçerik Stratejisi'nin aksine, burada seçilen rakiplerin TAM
@@ -363,15 +360,10 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	await ensureKullanimKaydiTab(env);
 	await logKullanim(env, 'aksiyonAnaliz', yorum.slice(0, 200));
 
-	const row = emptyRakipAnalizRow();
-	row.id = newId();
-	row.createdAtUtc = new Date().toISOString();
-	row.kaynak = 'rapor';
-	row.dal = 'aksiyonAnaliz';
-	row.not = yorum;
-	row.raporMetni = rapor;
-	await appendRakipAnalizRow(env, row);
-	return json({ id: row.id, rapor }, request);
+	// Kullanıcı kararı (2026-08-15) — bkz. handleIcerikStrateji'deki aynı not: raporlar artık
+	// RakipAnalizi sekmesine satır olarak eklenmiyor, sayfanın sonsuza kadar büyümesine sebep
+	// oluyordu.
+	return json({ rapor }, request);
 }
 
 // POST /panel/rakip-analizi/ice-aktar { tur: 'dosya' | 'link', dosyaAdi?, uzanti?, veri?(base64),

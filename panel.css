@@ -136,7 +136,10 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 #dalIceAktarBtn { margin-bottom: 0.6rem; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(20,14,16,0.5); display: flex; align-items: center; justify-content: center; padding: var(--space-3); z-index: 100; }
 .modal-box { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-3); max-width: 560px; width: 100%; max-height: 85vh; overflow-y: auto; }
-.modal-box h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0 0 0.4rem; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin: 0 0 0.4rem; }
+.modal-box h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0; }
+.modal-close { flex: 0 0 auto; width: 32px; height: 32px; font-size: 1rem; background: transparent; border: none; color: var(--taupe); }
+.modal-close:hover { color: var(--ink); }
 .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: var(--space-3); text-align: center; margin: 0.6rem 0; }
 .drop-zone.drag-over { border-color: var(--sage); background: color-mix(in srgb, var(--sage) 10%, var(--paper)); }
 .drop-zone-link { color: var(--sage); text-decoration: underline; cursor: pointer; font-weight: 600; }

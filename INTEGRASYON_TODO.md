@@ -1305,3 +1305,42 @@ jpeg, jpg, jpe türlerini desteklemesi gerek."
    (ücretsiz bir yöntem araştırılacak), Google Drive entegrasyonu (yeni bir OAuth akışı gerekir).
    Faz E (NotebookLM alternatifi — sesli özet/slayt/zihin haritası vb.) bu altyapının üstüne
    kurulacak, henüz başlanmadı.
+
+## Rakip Analizi — Otomatik 10 rakip takibi + İçe Aktar tek buton + Sheet büyümesi (2026-08-15, birebir kaydedildi)
+
+Kullanıcının mesajı (birebir):
+
+"web linki yanındaki ekle butonu fazla olmuş, zaten dosya wweb linki ve yapıştıma metin
+verildiğinde hepsini birden en alttaki Ekle butonu ile kaynak olarak içe aktarabiliriz
+rakip analizinde hem lokalde(aktif toplantı, panel, seminer, etkili sosyal medya paylaşımı,
+eğitim yapıp yerelde görünür olan) 5 rakip hem de genelde(sosyal medyada etkin, görünür,
+etkileşimi yüksek, çoklu sosyal medya platformu kullanan ve bu platformlarda etkin olan) 5
+rakibi toplamda 10 rakibi haftalık, aylık, 3-6-9-12 aylık takiplerle analiz edip hem
+görsel/video tarafında küratif hem de Aksiyon/Hedef tarafında rapor oluşturabilen otomatik bir
+yapı oluşturalım, bu yapı tıpkı manuel yapıda olduğu gibi projeksiyon>hedef>realizayon>
+hedef-realizason farkı nı bir sonraki sürece girdi olarak üretme>yeni projeksiyon>yeni hedef>yeni
+realizasyon şeklinde otomatik olarak devam etmeli.
+ayrıca oluşturulan raporlar google sheet te satırı aşağı doğru genişletip sayfanın aşağı yönlü
+uzamasına neden olmasın."
+
+**Yapıldı (2026-08-15, aynı oturumda):**
+1. İçe Aktar modalındaki ayrı "Ekle" butonları (web linki + yapıştırılan metin) tek bir alttaki
+   "Ekle" butonunda birleştirildi, modal kapatma ayrı bir ✕ ikonuna taşındı.
+2. Rapor üretimi artık RakipAnalizi sekmesine satır EKLEMİYOR (`handleIcerikStrateji`/
+   `handleAksiyonAnaliz`'deki `appendRakipAnalizRow` çağrısı kaldırıldı) — sayfa artık her
+   "Rapor Üret" tıklamasında aşağı doğru büyümüyor. Rapor sadece PDF/WhatsApp/e-posta/Paylaş ile
+   dışa aktarılıyor, ayrıca Sheet'te saklanmıyor.
+
+**Henüz yapılmadı — sadece kaydedildi, kapsam netleşmeden inşa edilmeyecek:** Otomatik 10-rakip
+(5 yerel + 5 genel) periyodik (haftalık/aylık/3-6-9-12 aylık) takip + rapor + projeksiyon>hedef>
+realizasyon>fark>yeni-projeksiyon döngüsü. Bu, daha önce kaydedilmiş "Rakip Analizi ürünü OKR/
+hedef takip sistemi" isteğiyle (bkz. bu dosyada "aksiyon hedef analizi konusunda oluşturulacak
+rapor için varsayılan parametrelere göre..." bölümü) AYNI mekanizma — burada sadece rakip
+seçimine "otomatik + 5 yerel/5 genel kriter" ekleniyor. Açık sorular (inşa etmeden önce
+netleşmeli): (a) 5 yerel/5 genel rakip nasıl seçilecek — otomatik arama kriteriyle mi, yoksa
+Çiğdem'in Kayıtlı Rakipler'den elle işaretlemesiyle mi; (b) periyodik üretim bir cron mu
+tetikleyecek (mevcut 15 dakikalık `scheduled.ts` sweep'ine ek bir iş) — 10 rakip × 2 rapor türü ×
+birden fazla periyot = gözetimsiz tekrarlayan bir Anthropic API maliyeti demek, bunun onayı
+gerekir; (c) bu döngünün geçmiş projeksiyon/hedef/realizasyon verisi NEREDE tutulacak — hemen
+üstteki "Sheet büyümesi" kararıyla (raporları artık satır olarak saklamıyoruz) doğrudan çelişiyor,
+bu döngü için satır-bazlı-değil, sınırlı/büyümeyen ayrı bir veri modeli tasarlanması gerekiyor.

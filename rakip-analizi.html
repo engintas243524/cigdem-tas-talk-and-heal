@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=3">
+<link rel="stylesheet" href="panel.css?v=4">
 </head>
 <body>
 <div class="panel-wrap">
@@ -166,8 +166,11 @@
          yapıştırılan metin destekleniyor. Ses/video/görsel/Drive/YouTube sonraki fazlar. -->
     <div class="modal-backdrop hidden" id="iceAktarModal">
       <div class="modal-box">
-        <h3>Belgelerinizden Raporlarınıza</h3>
-        <p class="muted">Rapor üretilmeden önce ek kaynak ekle — dosya, web linki ya da yapıştırılan metin, raporun bağlamına dahil edilir.</p>
+        <div class="modal-header">
+          <h3>Belgelerinizden Raporlarınıza</h3>
+          <button type="button" class="icon-btn modal-close" id="iceAktarKapatBtn" aria-label="Kapat">✕</button>
+        </div>
+        <p class="muted">Rapor üretilmeden önce ek kaynak ekle — dosya, web linki ya da yapıştırılan metin, raporun bağlamına dahil edilir. Dosyalar seçildiğinde hemen eklenir; link/metin için aşağıdaki Ekle butonunu kullan.</p>
 
         <div id="iceAktarDropZone" class="drop-zone">
           <p>Dosyaları buraya sürükle bırak ya da <label for="iceAktarFileInput" class="drop-zone-link">seç</label></p>
@@ -177,23 +180,19 @@
 
         <div class="field">
           <label for="iceAktarLinkInput">Web linki</label>
-          <div class="row">
-            <input type="url" id="iceAktarLinkInput" class="grow" placeholder="https://..." />
-            <button class="btn-secondary" id="iceAktarLinkEkleBtn" type="button">Ekle</button>
-          </div>
+          <input type="url" id="iceAktarLinkInput" placeholder="https://..." />
         </div>
 
         <div class="field">
           <label for="iceAktarMetinInput">Metin yapıştır</label>
           <textarea id="iceAktarMetinInput" placeholder="Metni buraya yapıştır..."></textarea>
-          <button class="btn-secondary" id="iceAktarMetinEkleBtn" type="button">Ekle</button>
         </div>
 
         <div class="status" id="iceAktarStatus"></div>
         <div id="iceAktarListe"></div>
 
         <div class="actions">
-          <button class="btn-primary" id="iceAktarKapatBtn" type="button">Tamam</button>
+          <button class="btn-primary" id="iceAktarEkleBtn" type="button">Ekle</button>
         </div>
       </div>
     </div>
@@ -745,10 +744,7 @@
     if (e.dataTransfer && e.dataTransfer.files) Array.prototype.forEach.call(e.dataTransfer.files, dosyaYukle);
   });
 
-  el('iceAktarLinkEkleBtn').addEventListener('click', function () {
-    var url = el('iceAktarLinkInput').value.trim();
-    if (!url) return;
-    el('iceAktarLinkInput').value = '';
+  function iceAktarLinkiEkle(url) {
     var item = iceAktarEkle({ ad: url, tur: 'link', durum: 'yukleniyor', metin: '' });
     authFetch('/panel/rakip-analizi/ice-aktar', { method: 'POST', body: JSON.stringify({ tur: 'link', url: url }) })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
@@ -756,13 +752,21 @@
         if (!res.ok) { item.durum = 'hata'; item.hata = res.data.error || 'alınamadı'; } else { item.durum = 'hazir'; item.metin = res.data.metin; }
         iceAktarListesiCiz();
       }).catch(function (e) { if (e.message !== 'unauthorized') { item.durum = 'hata'; item.hata = 'alınamadı'; iceAktarListesiCiz(); } });
-  });
+  }
 
-  el('iceAktarMetinEkleBtn').addEventListener('click', function () {
-    var metin = el('iceAktarMetinInput').value.trim();
-    if (!metin) return;
-    el('iceAktarMetinInput').value = '';
+  function iceAktarMetniEkle(metin) {
     iceAktarEkle({ ad: 'Yapıştırılan metin (' + metin.slice(0, 30) + (metin.length > 30 ? '…' : '') + ')', tur: 'metin', durum: 'hazir', metin: metin });
+  }
+
+  // Tek "Ekle" butonu: link ve/veya yapıştırılan metin alanlarında ne varsa hepsini birden kaynak
+  // olarak içe aktarır — dosyalar zaten seçildiği/sürüklendiği an ayrıca ekleniyor (dosyaYukle).
+  el('iceAktarEkleBtn').addEventListener('click', function () {
+    var url = el('iceAktarLinkInput').value.trim();
+    var metin = el('iceAktarMetinInput').value.trim();
+    if (!url && !metin) { setStatus(el('iceAktarStatus'), 'Eklenecek bir link ya da metin gir.', 'err'); return; }
+    setStatus(el('iceAktarStatus'), '', '');
+    if (url) { iceAktarLinkiEkle(url); el('iceAktarLinkInput').value = ''; }
+    if (metin) { iceAktarMetniEkle(metin); el('iceAktarMetinInput').value = ''; }
   });
 
   el('dalIceAktarBtn').addEventListener('click', function () { el('iceAktarModal').classList.remove('hidden'); });
