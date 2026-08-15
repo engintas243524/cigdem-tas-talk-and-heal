@@ -149,6 +149,7 @@
         </button>
       </div>
       <p class="muted" id="dalMicHint"></p>
+      <p class="muted hidden" id="dalKarsilastirmaLink"><a href="#rakipTakipField">Zaman içi karşılaştırma raporu (grafikli) mi istiyorsun? →</a></p>
       <button class="btn-secondary" id="dalIceAktarBtn" type="button">İçe Aktar</button>
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
@@ -807,6 +808,10 @@
     // Bu 3 parametre (sosyal medya/fiyat/konum) doğrudan rakip karşılaştırması içindir — sadece
     // Aksiyon/Hedef Analizi'nde anlamlı, Görsel/Video Stratejisi küratif olduğu için gösterilmez.
     el('dalParametreler').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
+    // Zaman içi karşılaştırma raporu ayrı bir periyot-bazlı akış (Otomatik Rakip Takibi bölümü) —
+    // burada tekrar inşa etmek yerine sadece Aksiyon/Hedef Analizi'ndeyken oraya bir link gösterir
+    // (kullanıcı isteği: "bu rapor türü Rapor üret butonuyla ürettiğim raporda da olsun").
+    el('dalKarsilastirmaLink').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
     el('dalRaporAksiyonlar').classList.add('hidden');
     el('dalRapor').textContent = '';
     sonRaporMetni = '';
