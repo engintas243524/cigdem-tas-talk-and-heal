@@ -61,6 +61,9 @@
       <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
       <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
       <div class="actions" id="rakipSonuclarToggleWrap"></div>
+      <div class="actions">
+        <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
+      </div>
       <div id="rakipHarita" style="height:320px;width:100%;margin-top:0.5rem;"></div>
     </div>
 
@@ -167,10 +170,21 @@
   var SAYFALAMA_ADIM = 3;
   var RAKIP_TABLO_BASLIKLARI = ['İsim', 'Adres', 'Kaynak', 'Nasıl Bulundu', 'Tarih', 'Not'];
 
-  function rakipTabloBasligiCiz(listEl, ilkKolonEtiketi) {
+  // tumunuSecCallback verilirse ilk hücreye "tümünü seç/kaldır" onay kutusu koyar — Kayıtlı
+  // Rakipler'de toplu silme/rapor üretme, Arama Sonuçları'nda toplu ekleme için kullanılıyor.
+  function rakipTabloBasligiCiz(listEl, tumunuSecCallback) {
     var head = document.createElement('div');
     head.className = 'rakip-row head';
-    [ilkKolonEtiketi].concat(RAKIP_TABLO_BASLIKLARI).forEach(function (label) {
+    var ilkHucre = document.createElement('span');
+    if (tumunuSecCallback) {
+      var tumunuSecKutu = document.createElement('input');
+      tumunuSecKutu.type = 'checkbox';
+      tumunuSecKutu.title = 'Tümünü seç';
+      tumunuSecKutu.addEventListener('change', function () { tumunuSecCallback(tumunuSecKutu.checked); });
+      ilkHucre.appendChild(tumunuSecKutu);
+    }
+    head.appendChild(ilkHucre);
+    RAKIP_TABLO_BASLIKLARI.forEach(function (label) {
       var span = document.createElement('span'); span.textContent = label; head.appendChild(span);
     });
     listEl.appendChild(head);
@@ -186,18 +200,25 @@
     });
   }
 
+  // state.tam, sadece "şu an her şey görünüyor mu"dan değil, "hangi buton takımındayız"dan
+  // ayrı bir bayrak — yoksa "Daha Az"a bir kez basıp visible < total'a düşer düşmez buton seti
+  // "Daha Fazla/Tümünü Göster"e geri dönüyordu, art arda -3 ilerlemesi yapılamıyordu.
   function sayfalamaButonlariCiz(wrapEl, state, total, onChange) {
     wrapEl.innerHTML = '';
     if (total <= state.adim) return;
-    if (state.visible < total) {
+    if (!state.tam) {
       var dahaFazla = document.createElement('button');
       dahaFazla.type = 'button'; dahaFazla.className = 'btn-secondary';
       dahaFazla.textContent = 'Daha Fazla (+' + Math.min(state.adim, total - state.visible) + ')';
-      dahaFazla.addEventListener('click', function () { state.visible = Math.min(total, state.visible + state.adim); onChange(); });
+      dahaFazla.addEventListener('click', function () {
+        state.visible = Math.min(total, state.visible + state.adim);
+        if (state.visible >= total) state.tam = true;
+        onChange();
+      });
       var tumu = document.createElement('button');
       tumu.type = 'button'; tumu.className = 'btn-secondary';
       tumu.textContent = 'Tümünü Göster (' + total + ')';
-      tumu.addEventListener('click', function () { state.visible = total; onChange(); });
+      tumu.addEventListener('click', function () { state.visible = total; state.tam = true; onChange(); });
       wrapEl.appendChild(dahaFazla); wrapEl.appendChild(tumu);
     } else {
       var dahaAz = document.createElement('button');
@@ -207,7 +228,7 @@
       var ilkN = document.createElement('button');
       ilkN.type = 'button'; ilkN.className = 'btn-secondary';
       ilkN.textContent = 'İlk ' + state.adim + '’e Dön';
-      ilkN.addEventListener('click', function () { state.visible = state.adim; onChange(); });
+      ilkN.addEventListener('click', function () { state.visible = state.adim; state.tam = false; onChange(); });
       wrapEl.appendChild(dahaAz); wrapEl.appendChild(ilkN);
     }
   }
@@ -216,7 +237,7 @@
   // Sheet'in RakipAnalizi sekmesinde tutuluyordu, uygulamada görünür bir yer yoktu ("Eklendi"
   // yazıyor ama nereye eklendiği belli değildi).
   var rakipListeCache = [];
-  var rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
+  var rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
   var rakipListeSecili = {}; // id -> true, seçili (silinecek) rakipler
 
   // rakipListeSecili tek bir seçim durumu — hem "Seçilenleri Sil" hem de aşağıdaki rapor
@@ -241,7 +262,10 @@
     rakipSecimGuncellendi();
     if (!rakipler.length) { toggleWrap.innerHTML = ''; return; }
 
-    rakipTabloBasligiCiz(list, '');
+    rakipTabloBasligiCiz(list, function (checked) {
+      rakipler.forEach(function (r) { if (checked) { rakipListeSecili[r.id] = true; } else { delete rakipListeSecili[r.id]; } });
+      renderRakipListe();
+    });
 
     // Görünür N satırın tam altında, SIRADAKİ tek satır kısmen/soluk bir "önizleme" olarak
     // gösteriliyor; onun ötesindekiler hiç render edilmiyor (slice ile DOM'a hiç girmiyor).
@@ -295,7 +319,7 @@
   function loadRakipListe() {
     authFetch('/panel/rakip-analizi/rakip-liste').then(function (r) { return r.json(); }).then(function (data) {
       rakipListeCache = data.rakipler || [];
-      rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
+      rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
       rakipListeSecili = {};
       renderRakipListe();
     }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, liste yükleme kritik değil */ } });
@@ -426,38 +450,68 @@
   // rakipAramaBaglam, "Ekle"ye basıldığında hangi aramanın sonucu olduğunu (aramaAdres/Sorgu/
   // Radius) kaydetmek ve "Nasıl Bulundu" hücresini doldurmak için son aramanın bağlamını tutar.
   var rakipAramaSonuclariCache = [];
-  var rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
+  var rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
   var rakipAramaBaglam = null;
+  var rakipAramaSecili = {}; // dizideki index -> true, "Seçilenleri Ekle" için
+
+  // btn opsiyonel: toplu eklemede sayfalama nedeniyle DOM'da henüz render edilmemiş seçili
+  // satırlar için buton yok, o durumda sadece istek gönderilir (görsel geri bildirim atlanır).
+  function tekRakipEkle(p, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Ekleniyor...'; }
+    return authFetch('/panel/rakip-analizi/rakip', {
+      method: 'POST',
+      body: JSON.stringify({
+        isim: p.name, adres: p.address, kaynak: 'harita',
+        aramaAdres: rakipAramaBaglam.adres, aramaSorgu: rakipAramaBaglam.sorgu, aramaRadiusMeters: rakipAramaBaglam.radius,
+      }),
+    }).then(function () { if (btn) btn.textContent = 'Eklendi'; })
+      .catch(function (e) {
+        if (btn && e.message !== 'unauthorized') { btn.disabled = false; btn.textContent = 'Ekle'; }
+        throw e;
+      });
+  }
+
+  function updateRakipSonuclarTopluBtn() {
+    var count = Object.keys(rakipAramaSecili).length;
+    var btn = el('rakipSonuclarTopluEkleBtn');
+    btn.classList.toggle('hidden', count === 0);
+    btn.textContent = 'Seçilenleri Ekle (' + count + ')';
+  }
 
   function renderAramaSonuclari() {
     var list = el('rakipSonuclar'), toggleWrap = el('rakipSonuclarToggleWrap');
     var places = rakipAramaSonuclariCache;
     list.innerHTML = '';
     el('rakipSonuclarBaslik').classList.toggle('hidden', places.length === 0);
+    updateRakipSonuclarTopluBtn();
     if (!places.length) { toggleWrap.innerHTML = ''; return; }
 
-    rakipTabloBasligiCiz(list, '');
+    rakipTabloBasligiCiz(list, function (checked) {
+      places.forEach(function (p, i) { if (checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; } });
+      renderAramaSonuclari();
+    });
 
+    // slice(0, N) sıralamayı bozmuyor, forEach'teki i == orijinal dizideki index (rakipAramaSecili
+    // anahtarları bu index'i kullanıyor).
     places.slice(0, rakipAramaState.visible + 1).forEach(function (p, i) {
       var row = document.createElement('div');
       row.className = 'rakip-row' + (i === rakipAramaState.visible ? ' silik-onizleme' : '');
 
       var aksiyonSpan = document.createElement('span');
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = !!rakipAramaSecili[i];
+      checkbox.addEventListener('change', function () {
+        if (checkbox.checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; }
+        updateRakipSonuclarTopluBtn();
+      });
       var addBtn = document.createElement('button');
       addBtn.type = 'button'; addBtn.className = 'btn-secondary'; addBtn.textContent = 'Ekle';
       addBtn.addEventListener('click', function () {
         if (addBtn.disabled) return; // hızlı çift tıklamada aynı rakibi iki kez kaydetmeyi önler
-        addBtn.disabled = true; addBtn.textContent = 'Ekleniyor...';
-        authFetch('/panel/rakip-analizi/rakip', {
-          method: 'POST',
-          body: JSON.stringify({
-            isim: p.name, adres: p.address, kaynak: 'harita',
-            aramaAdres: rakipAramaBaglam.adres, aramaSorgu: rakipAramaBaglam.sorgu, aramaRadiusMeters: rakipAramaBaglam.radius,
-          }),
-        }).then(function () { addBtn.textContent = 'Eklendi'; loadRakipListe(); })
-          .catch(function (e) { if (e.message !== 'unauthorized') { addBtn.disabled = false; addBtn.textContent = 'Ekle'; } });
+        tekRakipEkle(p, addBtn).then(function () { loadRakipListe(); }).catch(function () { /* addBtn zaten geri alındı */ });
       });
-      aksiyonSpan.appendChild(addBtn);
+      aksiyonSpan.appendChild(checkbox); aksiyonSpan.appendChild(addBtn);
       row.appendChild(aksiyonSpan);
 
       var nasilBulundu = "'" + rakipAramaBaglam.sorgu + "' aramasıyla (" + rakipAramaBaglam.radius + 'm) — ' + rakipAramaBaglam.adres;
@@ -467,6 +521,29 @@
 
     sayfalamaButonlariCiz(toggleWrap, rakipAramaState, places.length, renderAramaSonuclari);
   }
+
+  el('rakipSonuclarTopluEkleBtn').addEventListener('click', function () {
+    var btn = el('rakipSonuclarTopluEkleBtn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    // Sayfalama yüzünden seçili satırların hepsi DOM'da render edilmiş olmayabilir — şu an
+    // render edilmiş satırların butonlarını sırayla eşleştiriyoruz (rendered row i == orijinal
+    // dizideki index i, çünkü slice(0, N) sırayı bozmuyor); DOM'da olmayanlar için buton yok,
+    // sadece istek gönderilir.
+    var gorunurButonlar = {};
+    Array.prototype.forEach.call(el('rakipSonuclar').querySelectorAll('.rakip-row:not(.head)'), function (rowEl, i) {
+      gorunurButonlar[i] = rowEl.querySelector('button');
+    });
+    var indeksler = Object.keys(rakipAramaSecili).map(Number);
+    var istekler = indeksler.map(function (i) {
+      return tekRakipEkle(rakipAramaSonuclariCache[i], gorunurButonlar[i]).catch(function () {});
+    });
+    Promise.all(istekler).then(function () {
+      rakipAramaSecili = {};
+      loadRakipListe();
+      updateRakipSonuclarTopluBtn();
+    }).finally(function () { btn.disabled = false; });
+  });
 
   el('rakipAraBtn').addEventListener('click', function () {
     var adres = el('rakipAdres').value.trim(), sorgu = el('rakipSorgu').value.trim(), radius = el('rakipRadius').value;
@@ -482,7 +559,8 @@
       var places = res.data.places || [];
       rakipAramaBaglam = { adres: adres, sorgu: sorgu, radius: radius, zaman: new Date().toLocaleString('tr-TR') };
       rakipAramaSonuclariCache = places;
-      rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
+      rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
+      rakipAramaSecili = {};
       renderAramaSonuclari();
       if (!places.length) { setStatus(el('rakipAraStatus'), 'Bu konum/yarıçapta sonuç bulunamadı.', ''); return; }
       setStatus(el('rakipAraStatus'), places.length + ' sonuç bulundu.', 'ok');
