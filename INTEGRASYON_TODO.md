@@ -1378,3 +1378,15 @@ dengelenmesi için SINIRLI/rotasyonlu bir geçmiş — ör. rakip başına son N
 değil ama geçmişsiz de değil), ya da geçmiş farklı bir yerde (ayrı, kompakt bir yapıda) tutulmalı.
 Grafik kütüphanesi için önceden Chart.js kararı var (bkz. rakip-analizi.html'deki CDN yorum notu,
 2026-08-09 civarı) — ücretsiz/CDN/sıfır-bağımlılık, aynı yaklaşım burada da kullanılacak.
+
+**Durum güncellemesi (2026-08-15):**
+- Karar: rakip başına son 12 periyotluk sınırlı/rotasyonlu geçmiş (dolunca en eski silinir).
+- Sıra: önce başlat/durdur anahtarı, sonra grafik/karşılaştırma raporu — kullanıcı onayladı.
+- **Başlat/durdur anahtarı TAMAMLANDI.** Yeni `RakipTakipAyar` sekmesi (tek sabit satır) +
+  `POST /panel/rakip-analizi/rakip-takip/ayar` + `scheduled.ts`'teki `runRakipTakipSweep` — anahtar
+  kapalıyken cron hiçbir Claude çağrısı yapmıyor, açıkken sadece dönem süresi gerçekten dolan
+  periyotları ilerletiyor. Frontend'de açarken maliyet uyarılı `confirm()`.
+- **Henüz yapılmadı:** rakip-bazlı sınırlı geçmiş (12 periyot rotasyonlu) veri modeli, Talk and
+  Heal ile birebir/çoklu-rakip-ortalaması karşılaştırma raporu, zaman içi çizgi/pasta/sütun grafik
+  görselleştirmesi (sonradan eklenen rakibin zaman ekseni kendi ekleme tarihinden başlaması dahil),
+  ve bu rapor türünün mevcut "Rapor Üret" (manuel dal) akışına da eklenmesi.
