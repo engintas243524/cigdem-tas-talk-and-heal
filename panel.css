@@ -102,3 +102,23 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 #dalParametreler { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0.4rem 0 0.7rem; }
 #dalParametreler label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; font-weight: 400; color: var(--ink); }
 #dalParametreler input[type="checkbox"] { width: auto; margin: 0; }
+
+/* Sekme renk kodlama (rakip-analizi.html): her bölüm ayrı bir "sekme" gibi okunsun diye
+   services.html'in service-card paletiyle aynı aileden bir renk alıyor — sol kenarlık + hafif
+   arka plan tonu. --tab-c tek renk değişkeni, geri kalanı color-mix ile türetiliyor ki hem
+   açık hem koyu temada (data-theme="dark") otomatik doğru kontrastta kalsın. */
+.tab-panel { border-left: 4px solid var(--tab-c, var(--border)); background: color-mix(in srgb, var(--tab-c, transparent) 16%, var(--paper)); border-radius: var(--radius-sm); padding: 0.85rem 1rem 1rem; }
+.tab-panel h3 { color: color-mix(in srgb, var(--tab-c, var(--ink)) 65%, var(--ink)); }
+.tab-kullanim { --tab-c: #FFBE91; }
+.tab-ara      { --tab-c: #FFDDB0; }
+.tab-ekle     { --tab-c: #E3CE6A; }
+.tab-liste    { --tab-c: #8FE0C4; }
+.tab-icerik   { --tab-c: #9DC9F0; }
+.tab-aksiyon  { --tab-c: #C9A3EE; }
+
+/* Görsel/Video Stratejisi ve Aksiyon/Hedef Analizi butonları + altlarında açılan istek paneli
+   tek bir görsel grup gibi ortalanıyor, panelin başlı başına bir bölüm olmadığı hemen anlaşılsın. */
+#dalButonlarWrap { justify-content: center; max-width: min(100%, 560px); margin: var(--space-2) auto 0; }
+#dalIstekField { max-width: min(100%, 560px); margin-left: auto; margin-right: auto; }
+#dalIcerikBtn.active { background: color-mix(in srgb, #9DC9F0 55%, var(--brand)); border-color: color-mix(in srgb, #9DC9F0 55%, var(--brand)); }
+#dalAksiyonBtn.active { background: color-mix(in srgb, #C9A3EE 55%, var(--brand)); border-color: color-mix(in srgb, #C9A3EE 55%, var(--brand)); }

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=1">
+<link rel="stylesheet" href="panel.css?v=2">
 </head>
 <body>
 <div class="panel-wrap">
@@ -41,12 +41,12 @@
       <a class="btn-secondary" href="panel.html" id="backToNoteLink">◂ Not Paneline Git</a>
     </div>
 
-    <div class="field" id="kullanimSayaciField">
+    <div class="field tab-panel tab-kullanim" id="kullanimSayaciField">
       <h3>Bu Ayki Kullanım</h3>
       <div id="kullanimSayaci" class="kota-grid"></div>
     </div>
 
-    <div class="field">
+    <div class="field tab-panel tab-ara" id="rakipAramaField">
       <h3>Konum ile Rakip Ara</h3>
       <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
       <input type="text" id="rakipSorgu" placeholder="Ne arıyorsun? (örn: psikolog, terapi merkezi, danışmanlık)">
@@ -67,7 +67,7 @@
       <div id="rakipHarita" style="height:320px;width:100%;margin-top:0.5rem;"></div>
     </div>
 
-    <div class="field" id="rakipEkleField">
+    <div class="field tab-panel tab-ekle" id="rakipEkleField">
       <h3>Rakip Ekle</h3>
       <input type="text" id="rakipIsim" placeholder="Rakip ismi">
       <input type="text" id="rakipLink" placeholder="Link (opsiyonel)">
@@ -87,7 +87,7 @@
       <div class="status" id="rakipEkleStatus"></div>
     </div>
 
-    <div class="field" id="rakipListeField">
+    <div class="field tab-panel tab-liste" id="rakipListeField">
       <h3>Kayıtlı Rakipler</h3>
       <p class="muted" id="rakipListeBos">Henüz kaydedilmiş rakip yok.</p>
       <p class="muted">Onay kutusuyla seçtiğin rakip(ler) hem silme hem de aşağıdaki rapor üretimi (Görsel/Video Stratejisi, Aksiyon/Hedef Analizi) için kullanılır.</p>
@@ -99,12 +99,12 @@
       <div class="status" id="rakipSilStatus"></div>
     </div>
 
-    <div class="actions">
+    <div class="actions" id="dalButonlarWrap">
       <button class="btn-secondary" id="dalIcerikBtn" type="button">Görsel/Video Stratejisi</button>
       <button class="btn-secondary" id="dalAksiyonBtn" type="button">Aksiyon/Hedef Analizi</button>
     </div>
 
-    <div class="field" id="dalIstekField">
+    <div class="field tab-panel" id="dalIstekField">
       <h3 id="dalBaslik">İstek</h3>
       <p class="muted" id="dalSeciliRakipler"></p>
       <!-- Görsel/Video Stratejisi'nde seçilen rakipler sadece genel/güncel trend bağlamı için
@@ -578,6 +578,8 @@
     el('dalBaslik').textContent = dal === 'icerikStrateji' ? 'Görsel/Video Stratejisi İsteği' : 'Aksiyon/Hedef Analizi İsteği';
     el('dalIcerikBtn').classList.toggle('active', dal === 'icerikStrateji');
     el('dalAksiyonBtn').classList.toggle('active', dal === 'aksiyonAnaliz');
+    el('dalIstekField').classList.toggle('tab-icerik', dal === 'icerikStrateji');
+    el('dalIstekField').classList.toggle('tab-aksiyon', dal === 'aksiyonAnaliz');
     el('dalRaporAksiyonlar').classList.add('hidden');
     el('dalRapor').textContent = '';
     sonRaporMetni = '';
