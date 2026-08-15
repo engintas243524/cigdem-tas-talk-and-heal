@@ -123,6 +123,7 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .tab-liste    { --tab-c: #8FE0C4; }
 .tab-icerik   { --tab-c: #9DC9F0; }
 .tab-aksiyon  { --tab-c: #C9A3EE; }
+.tab-takip    { --tab-c: #F4A9B7; }
 
 /* Görsel/Video Stratejisi ve Aksiyon/Hedef Analizi butonları diğer bölümlerle (Bu Ayki Kullanım,
    Konum ile Rakip Ara, vb.) aynı tam genişliği kullanır — sadece kendi aralarında flex-basis:0
@@ -147,3 +148,8 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .ice-aktar-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0; border-top: 1px solid var(--border); font-size: 0.85rem; }
 .ice-aktar-item:first-child { border-top: none; }
 .ice-aktar-item .icon-btn { width: 32px; height: 32px; font-size: 0.9rem; }
+
+/* Otomatik Rakip Takibi (rakip-analizi.html, Faz 2) */
+.rakip-takip-item { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; padding: 0.55rem 0; border-top: 1px solid var(--border); font-size: 0.88rem; }
+.rakip-takip-item:first-child { border-top: none; }
+.rakip-takip-item button { flex: 0 0 auto; padding: 0.4rem 0.8rem; font-size: 0.8rem; }

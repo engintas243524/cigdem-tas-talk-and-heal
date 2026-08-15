@@ -189,7 +189,7 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 // Kullanıcı kararı (2026-08-15): rakip seçimi bu dalda da mümkün ama seçilen rakiplerin
 // birebir/karşılaştırmalı analizi YAPILMAZ — sadece genel/güncel trend bağlamı için kullanılır
 // (KVKK ve "içerik kopyalanmaz" ilkesiyle tutarlı). Tam karşılaştırma Aksiyon/Hedef Analizi'nde.
-const ICERIK_STRATEJI_SYSTEM_PROMPT = `Sen Talk and Heal'in (Çiğdem Taş'ın terapi pratiği) sosyal medya içerik stratejisti olarak çalışıyorsun.
+export const ICERIK_STRATEJI_SYSTEM_PROMPT = `Sen Talk and Heal'in (Çiğdem Taş'ın terapi pratiği) sosyal medya içerik stratejisti olarak çalışıyorsun.
 Sana verilen rakip verisini ASLA rakip rakip karşılaştırma/analiz yapmadan, sadece genel bir pazar/
 güncel trend hissi vermek için arka plan bağlamı olarak kullan. Rakiplerin içeriklerini ASLA
 kopyalamadan, sadece stratejilerinden (hangi platformda, ne sıklıkla, hangi format/konu daha çok
@@ -221,7 +221,7 @@ const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 
 // Seçilen (veya boşsa TÜM kayıtlı) rakiplerin özet metnini üretir. parametreler, hangi
 // boyutlara odaklanılacağını modele açıkça söyler (ör. sadece sosyal medya, fiyatı hariç tut).
-function rakipOzetOlustur(
+export function rakipOzetOlustur(
 	rakipler: { row: { id: string; isim: string; adres: string; not: string; aramaRadiusMeters: string } }[],
 	rakipIds: string[],
 	parametreler: string[],
@@ -301,7 +301,7 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 
 // Kullanıcı kararı (2026-08-15): İçerik Stratejisi'nin aksine, burada seçilen rakiplerin TAM
 // karşılaştırmalı analizi yapılır — randevu/hedef verisiyle birlikte doğrudan rakip kıyası.
-const AKSIYON_ANALIZ_SYSTEM_PROMPT = `Sen Talk and Heal'in (Çiğdem Taş'ın terapi pratiği) iş stratejisti olarak çalışıyorsun.
+export const AKSIYON_ANALIZ_SYSTEM_PROMPT = `Sen Talk and Heal'in (Çiğdem Taş'ın terapi pratiği) iş stratejisti olarak çalışıyorsun.
 Sana verilen randevu/gelir verisi, (varsa) seçilen rakiplerin verisi ve Çiğdem'in gözlem/yorumuna
 dayanarak haftalık/aylık/3-6-9-12 aylık somut hedefler, bir yol haritası ve atılması gereken
 adımları öner. Rakip verisi verilmişse, İçerik Stratejisi analizinin aksine burada rakip rakip

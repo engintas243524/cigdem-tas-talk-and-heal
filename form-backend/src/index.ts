@@ -26,6 +26,7 @@ import {
 	handleAksiyonAnaliz,
 	handleIceAktar,
 } from './routes/rakipAnalizi';
+import { handleRakipTakipDurum, handleRakipTakipUret } from './routes/rakipTakip';
 import { runReminderSweep, runSessionNoteFallback } from './scheduled';
 import { corsHeaders } from './lib/http';
 
@@ -91,6 +92,10 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handleAksiyonAnaliz(request, env);
 			case 'POST /panel/rakip-analizi/ice-aktar':
 				return (await requirePanelAuth(request, env)) ?? handleIceAktar(request, env);
+			case 'GET /panel/rakip-analizi/rakip-takip':
+				return (await requirePanelAuth(request, env)) ?? handleRakipTakipDurum(request, env);
+			case 'POST /panel/rakip-analizi/rakip-takip/uret':
+				return (await requirePanelAuth(request, env)) ?? handleRakipTakipUret(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}

@@ -357,3 +357,15 @@ export const RAKIP_TAKIP_COLUMN_LABELS: Record<(typeof RAKIP_TAKIP_COLUMNS)[numb
 export const RAKIP_TAKIP_PERIYOT_TURLERI = ['haftalik', 'aylik', 'ucAylik', 'altiAylik', 'dokuzAylik', 'onikiAylik'] as const;
 
 export type RakipTakipPeriyotTuru = (typeof RAKIP_TAKIP_PERIYOT_TURLERI)[number];
+
+// Takvim ayı/çeyrek hesaplarının zaman dilimi/gün-sayısı tuzaklarına (bkz. CLAUDE.md'nin
+// Europe/London varsayılanı) girmemek için sabit gün sayısı kullanılıyor — takvimsel değil,
+// yaklaşık bir periyot uzunluğu yeterli (OKR döngüsü zaten kesin takvim hizalaması gerektirmiyor).
+export const RAKIP_TAKIP_PERIYOT_GUN_SAYISI: Record<RakipTakipPeriyotTuru, number> = {
+	haftalik: 7,
+	aylik: 30,
+	ucAylik: 90,
+	altiAylik: 180,
+	dokuzAylik: 270,
+	onikiAylik: 365,
+};
