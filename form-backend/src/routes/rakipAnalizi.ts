@@ -44,6 +44,19 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 	return json({ id: row.id, rowNumber }, request);
 }
 
+// GET /panel/rakip-analizi/rakip-liste — Çiğdem'in şu ana kadar eklediği (manuel veya haritadan
+// seçilerek) rakiplerin listesi. 'rapor' kaynaklı satırlar (İçerik Stratejisi/Aksiyon Analizi
+// çıktıları) burada gösterilmiyor — onlar rakip değil, üretilmiş rapor kaydı.
+export async function handleRakipListe(request: Request, env: Env): Promise<Response> {
+	await ensureRakipAnaliziTab(env);
+	const rows = await getAllRakipAnalizRows(env);
+	const rakipler = rows
+		.filter(({ row }) => row.kaynak === 'manuel' || row.kaynak === 'harita')
+		.map(({ row }) => ({ id: row.id, createdAtUtc: row.createdAtUtc, kaynak: row.kaynak, isim: row.isim, link: row.link, adres: row.adres, not: row.not }))
+		.sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc));
+	return json({ rakipler }, request);
+}
+
 // GET /panel/rakip-analizi/rakip-ara?adres=&sorgu=&radiusMeters= — adres/semt metni + serbest
 // arama terimi (ör. "psikolog", "terapi merkezi", "avukat") + yarıçap bazlı arama. `sorgu`
 // Çiğdem'in kendi yazdığı metin — Google'ın sabit place-type listesine (ör. 'psychotherapist')

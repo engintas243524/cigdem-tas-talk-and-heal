@@ -3,7 +3,10 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import worker from '../src';
 import { signPanelToken } from '../src/lib/panel-auth';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+	vi.unstubAllGlobals();
+	vi.useRealTimers();
+});
 
 const testEnv = {
 	...env,
@@ -135,6 +138,43 @@ describe('GET /panel/rakip-analizi/rakip-ara', () => {
 		stubApis();
 		const response = await authedRequest('/panel/rakip-analizi/rakip-ara?adres=London&sorgu=psikolog&radiusMeters=0');
 		expect(response.status).toBe(400);
+	});
+});
+
+describe('GET /panel/rakip-analizi/rakip-liste', () => {
+	it('lists manual and map-sourced competitors, newest first, excluding report rows', async () => {
+		stubApis();
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-08-15T10:00:00.000Z'));
+		await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'İlk Eklenen', kaynak: 'manuel', not: 'Eski not' }),
+		});
+		vi.setSystemTime(new Date('2026-08-15T10:05:00.000Z'));
+		await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'İkinci Eklenen', adres: 'Kadıköy', kaynak: 'harita' }),
+		});
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum' }),
+		});
+
+		const response = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { rakipler: { isim: string; kaynak: string; adres: string }[] };
+		expect(data.rakipler).toHaveLength(2);
+		expect(data.rakipler.map((r) => r.isim)).toEqual(['İkinci Eklenen', 'İlk Eklenen']);
+		expect(data.rakipler.every((r) => r.kaynak === 'manuel' || r.kaynak === 'harita')).toBe(true);
+	});
+
+	it('rejects requests without a valid panel token', async () => {
+		stubApis();
+		const request = new Request('http://localhost/panel/rakip-analizi/rakip-liste');
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, testEnv, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(401);
 	});
 });
 

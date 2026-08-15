@@ -65,6 +65,12 @@
       <div class="status" id="rakipEkleStatus"></div>
     </div>
 
+    <div class="field" id="rakipListeField">
+      <h3>Kayıtlı Rakipler</h3>
+      <p class="muted" id="rakipListeBos">Henüz kaydedilmiş rakip yok.</p>
+      <ul id="rakipListe"></ul>
+    </div>
+
     <div class="field">
       <h3>Konum ile Rakip Ara</h3>
       <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
@@ -116,7 +122,26 @@
   var el = function (id) { return document.getElementById(id); };
   var raLoginView = el('raLoginView'), rakipAnaliziSection = el('rakipAnaliziSection');
 
-  function showApp() { raLoginView.classList.add('hidden'); rakipAnaliziSection.classList.remove('hidden'); }
+  // Şu ana kadar eklenen (manuel veya haritadan) rakiplerin listesi — bunlar sadece Google
+  // Sheet'in RakipAnalizi sekmesinde tutuluyordu, uygulamada görünür bir yer yoktu ("Eklendi"
+  // yazıyor ama nereye eklendiği belli değildi). Kaynak/tarih/not birlikte gösteriliyor.
+  function loadRakipListe() {
+    authFetch('/panel/rakip-analizi/rakip-liste').then(function (r) { return r.json(); }).then(function (data) {
+      var list = el('rakipListe'), bos = el('rakipListeBos');
+      var rakipler = data.rakipler || [];
+      list.innerHTML = '';
+      bos.classList.toggle('hidden', rakipler.length > 0);
+      rakipler.forEach(function (r) {
+        var li = document.createElement('li');
+        var tarih = r.createdAtUtc ? new Date(r.createdAtUtc).toLocaleString('tr-TR') : '';
+        var kaynakEtiket = r.kaynak === 'harita' ? 'Haritadan' : 'Manuel';
+        li.textContent = r.isim + (r.adres ? ' — ' + r.adres : '') + ' (' + kaynakEtiket + (tarih ? ', ' + tarih : '') + ')' + (r.not ? ': ' + r.not : '');
+        list.appendChild(li);
+      });
+    }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, liste yükleme kritik değil */ } });
+  }
+
+  function showApp() { raLoginView.classList.add('hidden'); rakipAnaliziSection.classList.remove('hidden'); loadRakipListe(); }
   function showLogin() { rakipAnaliziSection.classList.add('hidden'); raLoginView.classList.remove('hidden'); }
 
   function setStatus(elm, msg, kind) {
@@ -177,8 +202,9 @@
       method: 'POST',
       body: JSON.stringify({ isim: isim, link: el('rakipLink').value.trim(), not: el('rakipNot').value, kaynak: 'manuel' }),
     }).then(function (r) { return r.json(); }).then(function () {
-      setStatus(el('rakipEkleStatus'), "'" + isim + "' eklendi (RakipAnalizi sekmesine kaydedildi).", 'ok');
+      setStatus(el('rakipEkleStatus'), "'" + isim + "' eklendi — aşağıdaki 'Kayıtlı Rakipler' listesinde görünüyor.", 'ok');
       el('rakipIsim').value = ''; el('rakipLink').value = ''; el('rakipNot').value = '';
+      loadRakipListe();
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipEkleStatus'), 'Eklenemedi.', 'err'); });
   });
 
@@ -206,7 +232,7 @@
           authFetch('/panel/rakip-analizi/rakip', {
             method: 'POST',
             body: JSON.stringify({ isim: p.name, adres: p.address, kaynak: 'harita' }),
-          }).then(function () { addBtn.disabled = true; addBtn.textContent = 'Eklendi'; });
+          }).then(function () { addBtn.disabled = true; addBtn.textContent = 'Eklendi'; loadRakipListe(); });
         });
         li.appendChild(addBtn);
         list.appendChild(li);
