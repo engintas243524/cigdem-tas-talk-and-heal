@@ -3,6 +3,9 @@ import { getAllRows, writeCellMirrored } from './lib/sheets';
 import { sendTemplate } from './lib/whatsapp';
 import { getLocalDateParts, localTimeToUtc } from './lib/timezone';
 import { closeOutSessionNote, sessionFields, bookedSessionIndexes } from './lib/notes';
+import { ensureRakipTakipTab, getAllRakipTakipRows } from './lib/rakipTakipSheets';
+import { getRakipTakipAyar } from './lib/rakipTakipAyarSheets';
+import { rakipTakipAdimUygula, gecerliPeriyotTuru } from './routes/rakipTakip';
 import type { Env, SheetRow } from './types';
 
 // Çiğdem's fixed local timezone (Madde 5 design assumption) — the "end of the session's own day" a
@@ -96,6 +99,34 @@ export async function runSessionNoteFallback(env: Env, now: Date = new Date()): 
 			} catch (err) {
 				console.error(`Note fallback failed for row ${rowNumber} (${row.stripeSessionId}), session ${index}`, err);
 			}
+		}
+	}
+}
+
+// Otomatik Rakip Takibi'nin cron tarafı (2026-08-15 kullanıcı kararı). İLK KONTROL, her şeyden
+// önce, en ucuz olanı: anahtar kapalıysa (varsayılan) hiçbir Sheets/Claude çağrısı yapmadan çık —
+// "sürekli analiz sağlayıcı tarafında ciddi fatura yaratabilir" endişesi tam olarak bunun için.
+// Anahtar açıksa bile her periyot satırı için sadece dönemi GERÇEKTEN bitmişse (ya da hiç
+// başlamamışsa/kapanmışsa) bir adım atılır — açık ve süresi dolmamış bir dönem için 15 dakikada
+// bir gereksiz Claude çağrısı yapılmaz.
+export async function runRakipTakipSweep(env: Env, now: Date = new Date()): Promise<void> {
+	const ayar = await getRakipTakipAyar(env);
+	if (ayar.otomatikAcik !== 'true') return;
+
+	await ensureRakipTakipTab(env);
+	const satirlar = await getAllRakipTakipRows(env);
+	for (const { row } of satirlar) {
+		const periyotTuru = row.periyotTuru;
+		if (!gecerliPeriyotTuru(periyotTuru)) continue;
+		const acikVeSuresiDolmamis = row.projeksiyon && !row.realizasyon && new Date(row.donemBitisUtc) > now;
+		if (acikVeSuresiDolmamis) continue;
+
+		try {
+			// Faz 3 (otomatik 5+5 yerel/genel sınıflandırma) henüz yok — boş rakipIds,
+			// rakipTakipAdimUygula'nın "boşsa tüm kayıtlı rakipler" varsayılan davranışını kullanır.
+			await rakipTakipAdimUygula(env, periyotTuru, []);
+		} catch (err) {
+			console.error(`RakipTakip sweep failed for periyotTuru=${periyotTuru}`, err);
 		}
 	}
 }

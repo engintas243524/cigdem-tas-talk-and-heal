@@ -369,3 +369,17 @@ export const RAKIP_TAKIP_PERIYOT_GUN_SAYISI: Record<RakipTakipPeriyotTuru, numbe
 	dokuzAylik: 270,
 	onikiAylik: 365,
 };
+
+// Otomatik Rakip Takibi'nin başlat/durdur anahtarı (2026-08-15) — kullanıcı kararı: "sürekli analiz
+// sağlayıcı tarafında ciddi fatura yaratabilir", o yüzden cron sweep varsayılan KAPALI ve sadece bu
+// anahtar açıkken çalışır (bkz. scheduled.ts runRakipTakipSweep). Tek satırlık, sabit — RakipTakip
+// ile aynı "asla append etme, yerinde güncelle" prensibi.
+export const RAKIP_TAKIP_AYAR_TAB_NAME = 'RakipTakipAyar';
+
+export const RAKIP_TAKIP_AYAR_COLUMNS = ['otomatikAcik', 'acildigiZamanUtc', 'kapandigiZamanUtc'] as const;
+
+export const RAKIP_TAKIP_AYAR_COLUMN_LABELS: Record<(typeof RAKIP_TAKIP_AYAR_COLUMNS)[number], string> = {
+	otomatikAcik: 'Otomatik Takip Açık mı',
+	acildigiZamanUtc: 'Açıldığı Zaman (UTC)',
+	kapandigiZamanUtc: 'Kapandığı Zaman (UTC)',
+};

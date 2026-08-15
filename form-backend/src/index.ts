@@ -26,8 +26,8 @@ import {
 	handleAksiyonAnaliz,
 	handleIceAktar,
 } from './routes/rakipAnalizi';
-import { handleRakipTakipDurum, handleRakipTakipUret } from './routes/rakipTakip';
-import { runReminderSweep, runSessionNoteFallback } from './scheduled';
+import { handleRakipTakipDurum, handleRakipTakipUret, handleRakipTakipAyar } from './routes/rakipTakip';
+import { runReminderSweep, runSessionNoteFallback, runRakipTakipSweep } from './scheduled';
 import { corsHeaders } from './lib/http';
 
 // Routes are added here as their build session lands (see plan doc, Phase 2 build order).
@@ -96,6 +96,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handleRakipTakipDurum(request, env);
 			case 'POST /panel/rakip-analizi/rakip-takip/uret':
 				return (await requirePanelAuth(request, env)) ?? handleRakipTakipUret(request, env);
+			case 'POST /panel/rakip-analizi/rakip-takip/ayar':
+				return (await requirePanelAuth(request, env)) ?? handleRakipTakipAyar(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}
@@ -104,5 +106,6 @@ export default {
 	async scheduled(_controller, env): Promise<void> {
 		await runReminderSweep(env);
 		await runSessionNoteFallback(env);
+		await runRakipTakipSweep(env);
 	},
 } satisfies ExportedHandler<Env>;

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=5">
+<link rel="stylesheet" href="panel.css?v=6">
 </head>
 <body>
 <div class="panel-wrap">
@@ -197,11 +197,15 @@
       </div>
     </div>
 
-    <!-- Otomatik Rakip Takibi (Faz 2): manuel tetikleme, otomatik-cron seçeneği ayrı bir faz.
-         Her buton tıklaması döngüyü bir adım ilerletir — bkz. handleRakipTakipUret'in 3 durumu. -->
+    <!-- Otomatik Rakip Takibi: aşağıdaki butonlar her zaman manuel/deneme amaçlı tek adım
+         ilerletir. Anahtar açıkken AYRICA arka planda (15 dakikalık cron) dönem süresi dolan
+         periyotları kendiliğinden ilerletir — kapalıyken cron hiçbir Claude çağrısı yapmaz
+         (maliyet güvenliği, kullanıcı kararı 2026-08-15). -->
     <div class="field tab-panel tab-takip" id="rakipTakipField">
       <h3>Otomatik Rakip Takibi</h3>
-      <p class="muted">Her periyot türü için manuel tetikleme: tıklama döngüyü bir adım ilerletir (yeni dönem başlat → dönemi kapat/farkı analiz et → yeni döneme ilerle). Kayıtlı Rakipler'den seçtiğin rakip(ler) kullanılır.</p>
+      <p class="muted">Kayıtlı Rakipler'den seçtiğin rakip(ler) kullanılır (seçim yoksa tüm kayıtlı rakipler).</p>
+      <label class="rakip-takip-anahtar"><input type="checkbox" id="rakipTakipAnahtari"> Otomatik takibi başlat (dönem süresi dolunca arka planda kendiliğinden ilerler)</label>
+      <p class="muted">Aşağıdaki butonlar her zaman çalışır — anahtar kapalıyken bile tek seferlik deneme/manuel adım atmak için kullanılabilir.</p>
       <div id="rakipTakipListe"></div>
       <div class="status" id="rakipTakipStatus"></div>
       <div id="rakipTakipSonuc" class="muted" style="white-space:pre-wrap;"></div>
@@ -438,6 +442,7 @@
 
   function loadRakipTakip() {
     authFetch('/panel/rakip-analizi/rakip-takip').then(function (r) { return r.json(); }).then(function (data) {
+      el('rakipTakipAnahtari').checked = !!(data.ayar && data.ayar.otomatikAcik);
       var container = el('rakipTakipListe');
       container.innerHTML = '';
       (data.periyotlar || []).forEach(function (p) {
@@ -454,6 +459,21 @@
       });
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Durum yüklenemedi.', 'err'); });
   }
+
+  // Anahtar açılırken maliyet uyarısı — kapatmadan önce onay istemiyor, sadece açarken (kullanıcı
+  // kararı: "ücretli alternatif seçildiğinde ekstra maliyet yaratabileceği uyarısı yapıldıktan
+  // sonra seçip devam edebilsin").
+  el('rakipTakipAnahtari').addEventListener('change', function () {
+    var acik = this.checked;
+    if (acik && !confirm('Otomatik takip açılınca, dönem süresi dolan her periyot arka planda kendiliğinden yeni bir rapor üretecek (Anthropic API çağrısı — ek maliyet oluşturabilir). Devam etmek istiyor musun?')) {
+      this.checked = false;
+      return;
+    }
+    authFetch('/panel/rakip-analizi/rakip-takip/ayar', { method: 'POST', body: JSON.stringify({ acik: acik }) })
+      .then(function (r) { return r.json(); })
+      .then(function () { setStatus(el('rakipTakipStatus'), acik ? 'Otomatik takip açıldı.' : 'Otomatik takip kapatıldı.', 'ok'); })
+      .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Ayar kaydedilemedi.', 'err'); });
+  });
 
   function rakipTakipUret(periyotTuru, btn) {
     btn.disabled = true;

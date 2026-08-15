@@ -153,3 +153,5 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .rakip-takip-item { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; padding: 0.55rem 0; border-top: 1px solid var(--border); font-size: 0.88rem; }
 .rakip-takip-item:first-child { border-top: none; }
 .rakip-takip-item button { flex: 0 0 auto; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+.rakip-takip-anahtar { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; font-weight: 500; color: var(--ink); margin: 0.5rem 0; }
+.rakip-takip-anahtar input[type="checkbox"] { width: auto; margin: 0; }

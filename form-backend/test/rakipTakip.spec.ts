@@ -2,6 +2,7 @@ import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import worker from '../src';
 import { signPanelToken } from '../src/lib/panel-auth';
+import { runRakipTakipSweep } from '../src/scheduled';
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -159,5 +160,62 @@ describe('POST /panel/rakip-analizi/rakip-takip/uret', () => {
 		const response = await worker.fetch(request, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(401);
+	});
+});
+
+describe('POST /panel/rakip-analizi/rakip-takip/ayar', () => {
+	it('turns the automatic switch on and reflects it back', async () => {
+		stubApis([]);
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/ayar', { method: 'POST', body: JSON.stringify({ acik: true }) });
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { ayar: { otomatikAcik: boolean } };
+		expect(data.ayar.otomatikAcik).toBe(true);
+	});
+
+	it('turns it back off', async () => {
+		stubApis([]);
+		await authedRequest('/panel/rakip-analizi/rakip-takip/ayar', { method: 'POST', body: JSON.stringify({ acik: true }) });
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/ayar', {
+			method: 'POST',
+			body: JSON.stringify({ acik: false }),
+		});
+		const data = (await response.json()) as { ayar: { otomatikAcik: boolean } };
+		expect(data.ayar.otomatikAcik).toBe(false);
+	});
+
+	it('defaults to off, and GET /rakip-takip reflects that default', async () => {
+		stubApis([]);
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip');
+		const data = (await response.json()) as { ayar: { otomatikAcik: boolean } };
+		expect(data.ayar.otomatikAcik).toBe(false);
+	});
+});
+
+describe('runRakipTakipSweep (cron)', () => {
+	it('makes zero Sheets/Claude calls beyond the switch check when the switch is off (cost safety)', async () => {
+		const { fetchMock } = stubApis([]);
+		await runRakipTakipSweep(env);
+		// Sadece ayar okuması (oauth + ?fields=sheets.properties + values GET) yapılmalı — hiç
+		// RakipTakip/Claude çağrısı olmamalı.
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
+	});
+
+	it('advances a due period automatically once the switch is on', async () => {
+		const { fetchMock } = stubApis([]);
+		await authedRequest('/panel/rakip-analizi/rakip-takip/ayar', { method: 'POST', body: JSON.stringify({ acik: true }) });
+
+		await runRakipTakipSweep(env); // 1. tick: her periyot türü için "yeniDonem" başlatır
+		const anthropicCallsAfterFirst = fetchMock.mock.calls.filter((c) => String(c[0]).includes('api.anthropic.com')).length;
+		expect(anthropicCallsAfterFirst).toBeGreaterThan(0);
+	});
+
+	it('does not touch an already-open period whose end date has not arrived yet', async () => {
+		const { fetchMock } = stubApis([]);
+		await authedRequest('/panel/rakip-analizi/rakip-takip/ayar', { method: 'POST', body: JSON.stringify({ acik: true }) });
+		await runRakipTakipSweep(env); // starts all 6 periods (donemBitisUtc is in the future for all)
+		fetchMock.mockClear();
+
+		await runRakipTakipSweep(env); // 2. tick, hemen sonra — hiçbir dönemin süresi dolmamış olmalı
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
 	});
 });
