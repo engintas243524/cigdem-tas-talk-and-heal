@@ -383,3 +383,44 @@ export const RAKIP_TAKIP_AYAR_COLUMN_LABELS: Record<(typeof RAKIP_TAKIP_AYAR_COL
 	acildigiZamanUtc: 'Açıldığı Zaman (UTC)',
 	kapandigiZamanUtc: 'Kapandığı Zaman (UTC)',
 };
+
+// Zaman-içi karşılaştırma/grafik raporu (2026-08-15) — her varlığın (Talk and Heal'in kendisi +
+// takip edilen rakipler) periyot başına SNAPSHOT'ı. RakipTakip'in aksine bu tab append EDER (her
+// kapanan dönem yeni bir satır), ama SINIRSIZ değil: (varlikId, periyotTuru) çifti başına en fazla
+// RAKIP_TAKIP_GECMIS_MAX_KAYIT satır tutulur, dolunca en eski satır silinir (rotasyon). Bu, "hiç
+// büyümesin" (RakipTakip) ile "trend grafiği için geçmiş lazım" ihtiyacı arasındaki, kullanıcıyla
+// netleştirilmiş orta yol — sonsuz değil, ama son 12 periyotluk bir pencere var.
+export const RAKIP_TAKIP_GECMIS_TAB_NAME = 'RakipTakipGecmis';
+
+export const RAKIP_TAKIP_GECMIS_MAX_KAYIT = 12;
+
+// varlikId: Talk and Heal'in kendisi için sabit 'talkAndHeal', rakipler için RakipAnalizi
+// sekmesindeki row.id. varlikAdi ayrıca tutuluyor ki rakip ismi sonradan değişse/silinse bile
+// geçmiş grafikte doğru etiketle görünsün (snapshot anındaki isim donuyor).
+export const RAKIP_TAKIP_GECMIS_COLUMNS = [
+	'id',
+	'varlikId',
+	'varlikAdi',
+	'periyotTuru',
+	'donemBaslangicUtc',
+	'donemBitisUtc',
+	'parametreSkorlariJson', // '{"fiyat": 7, "konum": null, ...}' — null: bu dönem için veri/kanıt yoktu
+	'raporMetni',
+	'eklenmeTarihUtc',
+] as const;
+
+export const RAKIP_TAKIP_GECMIS_COLUMN_LABELS: Record<(typeof RAKIP_TAKIP_GECMIS_COLUMNS)[number], string> = {
+	id: 'ID',
+	varlikId: 'Varlık ID',
+	varlikAdi: 'Varlık Adı',
+	periyotTuru: 'Periyot Türü',
+	donemBaslangicUtc: 'Dönem Başlangıç (UTC)',
+	donemBitisUtc: 'Dönem Bitiş (UTC)',
+	parametreSkorlariJson: 'Parametre Skorları (JSON)',
+	raporMetni: 'Rapor Metni',
+	eklenmeTarihUtc: 'Eklenme Tarihi (UTC)',
+};
+
+// Talk and Heal'in kendi varlık kimliği — bir rakip id'siyle asla çakışmaz (crypto.randomUUID
+// formatı değil, sabit okunabilir bir string).
+export const TALK_AND_HEAL_VARLIK_ID = 'talkAndHeal';
