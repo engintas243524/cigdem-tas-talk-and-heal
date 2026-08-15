@@ -1404,10 +1404,11 @@ raporlar için notion gibi bir araçtan destek alarak yazı dili, özet, vs ayar
 yapabileceğimiz bir imkanımız var mı? Notion ı altyapıda ücretsiz kullanabilir miyiz, yoksa
 ücretsiz açık kaynak bir araç bulabilir miyiz?"
 
-Madde 1: yukarıdaki "Durum güncellemesi" bölümünde zaten karar verilmiş plan — şimdi inşa
-aşamasına geçiliyor. Madde 2: Sheets hücre `wrapStrategy` formatı — `values.update` sadece değer
-yazıyor, satır yüksekliğinin büyümemesi için ayrı bir `batchUpdate` (`repeatCell` +
-`userEnteredFormat.wrapStrategy`) gerekiyor. Madde 3: Notion AI'ın üçüncü taraf bir backend'den
-programatik/ücretsiz kullanılabilir bir API'si olup olmadığı araştırılacak; muhtemel ve daha basit
-alternatif, raporları zaten ÜRETEN Claude'un kendi system promptlarına "sade/gündelik dil" talimatı
-eklemek (harici bir araç gerektirmez, mevcut altyapıda hiçbir ek maliyet yok).
+**Üçü de tamamlandı (2026-08-15):**
+- Madde 1: `RakipTakipGecmis` sekmesi — (varlikId, periyotTuru) başına son 12 snapshot, rotasyonlu.
+  Henüz hiçbir route bunu YAZMIYOR/OKUMUYOR (sadece veri katmanı hazır) — karşılaştırma raporu +
+  grafik UI'ı (asıl "zaman-içi karşılaştırma" özelliği) hâlâ yapılmadı, sıradaki adım bu.
+- Madde 2: RakipTakip'in projeksiyon/hedef/realizasyon/fark sütunlarına CLIP wrapStrategy uygulandı.
+- Madde 3: Notion AI'ın ücretsiz/programatik metin-sadeleştirme API'si olmadığı doğrulandı; bunun
+  yerine ICERIK_STRATEJI_SYSTEM_PROMPT + AKSIYON_ANALIZ_SYSTEM_PROMPT'a sade/gündelik dil talimatı
+  eklendi.
