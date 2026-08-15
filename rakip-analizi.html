@@ -181,9 +181,11 @@
       if (r.kaynak === 'harita' && (r.aramaSorgu || r.aramaAdres)) {
         nasilBulundu = "'" + (r.aramaSorgu || '?') + "' aramasıyla" + (r.aramaRadiusMeters ? ' (' + r.aramaRadiusMeters + 'm)' : '') + (r.aramaAdres ? ' — ' + r.aramaAdres : '');
       }
+      var kolonEtiketleri = ['İsim', 'Adres', 'Kaynak', 'Nasıl Bulundu', 'Tarih', 'Not'];
       [r.isim, r.adres || '—', kaynakEtiket, nasilBulundu, tarih, r.not || '—'].forEach(function (val, colIdx) {
         var span = document.createElement('span');
         if (colIdx === 5) span.className = 'rakip-col-not';
+        span.setAttribute('data-label', kolonEtiketleri[colIdx]);
         span.textContent = val;
         row.appendChild(span);
       });

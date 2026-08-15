@@ -49,13 +49,22 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .sess.cancel-trigger { display: block; margin-top: 0.5rem; color: #fff; background: var(--brand-deep); border-color: var(--brand-deep); font-weight: 500; }
 .muted { color: var(--taupe); font-size: 0.82rem; }
 /* Kayıtlı Rakipler tablosu (rakip-analizi.html) */
-.rakip-table { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-.rakip-row { display: grid; grid-template-columns: 1.6rem repeat(auto-fit, minmax(130px, 1fr)); gap: 0.4rem 0.8rem; padding: 0.6rem 0.85rem; border-top: 1px solid var(--border); font-size: 0.86rem; align-items: center; }
-.rakip-row.head { align-items: end; }
+/* auto-fit ile denendi ama başlık satırı ile veri satırları farklı genişlikte içerik yüzünden
+   farklı sütun sayısına "fit" olabiliyordu, dar ekranda hücreler üst üste biniyordu — sabit
+   (fixed) 7 sütun + dar ekranda ayrı bir kart düzenine geçiş daha güvenilir. */
+.rakip-table { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; }
+.rakip-row { display: grid; grid-template-columns: 1.6rem 1.3fr 1.6fr 0.9fr 1.6fr 1fr 1.6fr; gap: 0.4rem 0.8rem; padding: 0.6rem 0.85rem; border-top: 1px solid var(--border); font-size: 0.86rem; align-items: center; min-width: 760px; }
+.rakip-row.head { align-items: end; font-weight: 600; color: var(--taupe); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; background: var(--paper); }
 .rakip-row:first-child { border-top: none; }
-.rakip-row.head { font-weight: 600; color: var(--taupe); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; background: var(--paper); }
 .rakip-row.silik { opacity: 0.55; }
 .rakip-col-not { color: var(--taupe); }
+
+@media (max-width: 700px) {
+  .rakip-table { overflow-x: visible; }
+  .rakip-row.head { display: none; }
+  .rakip-row { display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; min-width: 0; }
+  .rakip-row span[data-label]::before { content: attr(data-label) ": "; font-weight: 600; color: var(--taupe); }
+}
 .cancel-summary { color: var(--brand-deep); }
 #clientSearchField { margin-bottom: 0.5rem; }
 .cancel-box { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.85rem; margin-top: var(--space-2); }
