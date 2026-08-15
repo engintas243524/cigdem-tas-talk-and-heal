@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=6">
+<link rel="stylesheet" href="panel.css?v=7">
 </head>
 <body>
 <div class="panel-wrap">
@@ -209,6 +209,35 @@
       <div id="rakipTakipListe"></div>
       <div class="status" id="rakipTakipStatus"></div>
       <div id="rakipTakipSonuc" class="muted" style="white-space:pre-wrap;"></div>
+
+      <!-- Zaman İçi Karşılaştırma Raporu: RakipTakipGecmis'teki (son 12 periyot, rotasyonlu)
+           geçmişten Talk and Heal ile seçilen rakib(ler)i grafikle karşılaştırır. En az bir
+           kapanmış dönem gerekir (yukarıdaki "Bu periyodun raporunu üret" ile). Parametre seçimi
+           şimdilik yok — tüm 20 parametre için, veri olanlar gösteriliyor. -->
+      <h4 style="margin:1.2rem 0 0.4rem;">Zaman İçi Karşılaştırma Raporu</h4>
+      <p class="muted">Kayıtlı Rakipler'den seçtiğin rakip(ler) kullanılır — birebir modda tam olarak 1, ortalama modda istediğin kadar.</p>
+      <div class="row">
+        <select id="karsilastirmaPeriyot" class="grow">
+          <option value="haftalik">Haftalık</option>
+          <option value="aylik">Aylık</option>
+          <option value="ucAylik">3 Aylık</option>
+          <option value="altiAylik">6 Aylık</option>
+          <option value="dokuzAylik">9 Aylık</option>
+          <option value="onikiAylik">12 Aylık</option>
+        </select>
+        <select id="karsilastirmaMod" class="grow">
+          <option value="1e1">Bir rakiple birebir</option>
+          <option value="ortalama">Birden fazla rakibin ortalaması</option>
+        </select>
+        <select id="karsilastirmaGrafikTuru" class="grow">
+          <option value="line">Çizgi grafik</option>
+          <option value="bar">Sütun grafik</option>
+        </select>
+      </div>
+      <button class="btn-secondary" id="karsilastirmaUretBtn" type="button">Karşılaştırma Raporu Üret</button>
+      <div class="status" id="karsilastirmaStatus"></div>
+      <div id="karsilastirmaNarratif" class="muted" style="white-space:pre-wrap;"></div>
+      <div id="karsilastirmaGrafikler"></div>
     </div>
   </section>
 
@@ -218,6 +247,8 @@
 <!-- Rapor PDF indirme için — açık kaynak, ücretsiz, build adımı gerektirmiyor (bkz. daha önceki
      Chart.js kararıyla aynı gerekçe: CDN script, sıfır bağımlılık kurulumu). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Zaman içi karşılaştırma grafiği için — açık kaynak, ücretsiz, build adımı gerektirmiyor. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script>
 (function () {
   // Local dev (python3 -m http.server + wrangler dev) uses localhost:8787; every other origin
@@ -491,6 +522,66 @@
         loadRakipTakip();
       }).catch(function (e) { btn.disabled = false; if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Üretilemedi, tekrar dene.', 'err'); });
   }
+
+  // Zaman İçi Karşılaştırma Raporu — RakipTakipGecmis'teki geçmişten Talk and Heal'i seçilen
+  // rakib(ler)le grafikle karşılaştırır. Chart.js CDN ile yükleniyor (aynı jsPDF/sıfır-bağımlılık
+  // kararı). Pasta grafiği kasıtlı olarak sunulmuyor — bu bir zaman serisi (ilerleme/gerileme),
+  // pasta grafiği bir ANDAKİ oranları göstermek için uygun, trend göstermek için değil.
+  var karsilastirmaChartlar = [];
+  el('karsilastirmaUretBtn').addEventListener('click', function () {
+    var periyotTuru = el('karsilastirmaPeriyot').value;
+    var mod = el('karsilastirmaMod').value;
+    var grafikTuru = el('karsilastirmaGrafikTuru').value;
+    var rakipIds = Object.keys(rakipListeSecili);
+    if (!rakipIds.length) { setStatus(el('karsilastirmaStatus'), 'Önce Kayıtlı Rakipler tablosundan en az bir rakip seç.', 'err'); return; }
+    if (mod === '1e1' && rakipIds.length !== 1) { setStatus(el('karsilastirmaStatus'), 'Birebir karşılaştırma için tam olarak 1 rakip seçili olmalı.', 'err'); return; }
+    setStatus(el('karsilastirmaStatus'), 'Üretiliyor...', '');
+    el('karsilastirmaNarratif').textContent = '';
+    el('karsilastirmaGrafikler').innerHTML = '';
+    karsilastirmaChartlar.forEach(function (c) { c.destroy(); });
+    karsilastirmaChartlar = [];
+    authFetch('/panel/rakip-analizi/rakip-takip/karsilastirma', { method: 'POST', body: JSON.stringify({ periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds }) })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) { setStatusLimit(el('karsilastirmaStatus'), res.data.error || 'Üretilemedi.', res.data.limitUrl); return; }
+        setStatus(el('karsilastirmaStatus'), '', '');
+        el('karsilastirmaNarratif').textContent = res.data.narratif || '';
+        (res.data.parametreSonuclari || []).forEach(function (p) {
+          var veriVar = p.talkAndHeal.some(function (d) { return d.deger !== null; }) || p.rakip.some(function (d) { return d.deger !== null; });
+          if (!veriVar) return;
+          var baslik = document.createElement('p');
+          baslik.innerHTML = '<strong>' + p.aciklama + '</strong>';
+          el('karsilastirmaGrafikler').appendChild(baslik);
+          var canvasWrap = document.createElement('div');
+          canvasWrap.style.marginBottom = '1rem';
+          var canvas = document.createElement('canvas');
+          canvasWrap.appendChild(canvas);
+          el('karsilastirmaGrafikler').appendChild(canvasWrap);
+          var etiketler = Array.prototype.slice.call(p.talkAndHeal).concat(p.rakip).map(function (d) { return d.tarih; });
+          etiketler = etiketler.filter(function (t, i) { return etiketler.indexOf(t) === i; }).sort();
+          function seriyeGoreDegerler(seri) {
+            var map = {};
+            seri.forEach(function (d) { map[d.tarih] = d.deger; });
+            return etiketler.map(function (t) { return Object.prototype.hasOwnProperty.call(map, t) ? map[t] : null; });
+          }
+          var chart = new Chart(canvas.getContext('2d'), {
+            type: grafikTuru,
+            data: {
+              labels: etiketler.map(function (t) { return t.slice(0, 10); }),
+              datasets: [
+                { label: 'Talk and Heal', data: seriyeGoreDegerler(p.talkAndHeal), borderColor: '#7C9C4A', backgroundColor: '#7C9C4A', spanGaps: true },
+                { label: res.data.rakipEtiketi, data: seriyeGoreDegerler(p.rakip), borderColor: '#C97452', backgroundColor: '#C97452', spanGaps: true },
+              ],
+            },
+            options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { position: 'bottom' } } },
+          });
+          karsilastirmaChartlar.push(chart);
+        });
+        if (!el('karsilastirmaGrafikler').children.length) {
+          el('karsilastirmaGrafikler').textContent = 'Hiçbir parametre için henüz yeterli veri yok.';
+        }
+      }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('karsilastirmaStatus'), 'Üretilemedi, tekrar dene.', 'err'); });
+  });
 
   // 402 (kota/bakiye doldu) yanıtlarında, düz hata mesajının yanına tıklanabilir bir "hallet"
   // linki eklemek için — backend'in verdiği sabit limitUrl (Anthropic/Google), kullanıcı girdisi
