@@ -187,7 +187,11 @@
     if (!adres || !sorgu || !radius) { setStatus(el('rakipAraStatus'), 'Adres, arama terimi ve yarıçap gerekli.', 'err'); return; }
     setStatus(el('rakipAraStatus'), 'Aranıyor...', '');
     var qs = '?adres=' + encodeURIComponent(adres) + '&sorgu=' + encodeURIComponent(sorgu) + '&radiusMeters=' + encodeURIComponent(radius);
-    authFetch('/panel/rakip-analizi/rakip-ara' + qs).then(function (r) { return r.json(); }).then(function (data) {
+    authFetch('/panel/rakip-analizi/rakip-ara' + qs).then(function (r) {
+      return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+    }).then(function (res) {
+      if (!res.ok) { setStatus(el('rakipAraStatus'), res.data.error || 'Arama başarısız.', 'err'); return; }
+      var data = res.data;
       var list = el('rakipSonuclar');
       list.innerHTML = '';
       var places = data.places || [];

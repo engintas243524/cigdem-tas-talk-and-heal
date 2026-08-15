@@ -19,11 +19,12 @@ export async function geocodeAddress(env: Env, address: string): Promise<Geocode
 	}
 	const data = (await response.json()) as {
 		status?: string;
+		error_message?: string;
 		results?: { geometry?: { location?: { lat?: number; lng?: number } } }[];
 	};
 	const location = data.results?.[0]?.geometry?.location;
 	if (data.status !== 'OK' || location?.lat == null || location?.lng == null) {
-		throw new Error(`Adres bulunamadı: "${address}" (status: ${data.status ?? 'unknown'})`);
+		throw new Error(`Adres bulunamadı: "${address}" (status: ${data.status ?? 'unknown'}${data.error_message ? `, ${data.error_message}` : ''})`);
 	}
 	return { lat: location.lat, lng: location.lng };
 }
