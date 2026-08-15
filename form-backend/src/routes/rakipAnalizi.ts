@@ -1,13 +1,16 @@
 import { getAllRows } from '../lib/sheets';
 import { appendRakipAnalizRow, getAllRakipAnalizRows, emptyRakipAnalizRow, ensureRakipAnaliziTab, deleteRakipAnalizRows } from '../lib/rakipSheets';
-import { generateReport } from '../lib/claude';
+import { generateReport, InsufficientCreditError } from '../lib/claude';
 import { searchCompetitors } from '../lib/places';
 import { geocodeAddress } from '../lib/geocoding';
 import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
+import { ensureKullanimKaydiTab, logKullanim, getKullanimOzet, kotaDolduMu } from '../lib/kullanimKaydi';
 import type { Env } from '../types';
 
 const NOTE_MAX_LENGTH = 5000;
+const ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
+const GOOGLE_QUOTA_URL = 'https://console.cloud.google.com/iam-admin/quotas';
 
 function newId(): string {
 	return crypto.randomUUID();
@@ -84,6 +87,15 @@ export async function handleRakipListe(request: Request, env: Env): Promise<Resp
 	return json({ rakipler }, request);
 }
 
+// GET /panel/rakip-analizi/kullanim-ozet — bu ayki kullanım sayacı. Detaylı olay-bazlı kayıt
+// (hangi tarihte, hangi kategoride, hangi arama/istek) sadece Sheet'in KullanimKaydi sekmesinde
+// tutuluyor; burası sadece ekranda gösterilecek özet toplamları döner.
+export async function handleKullanimOzet(request: Request, env: Env): Promise<Response> {
+	await ensureKullanimKaydiTab(env);
+	const ozet = await getKullanimOzet(env);
+	return json({ ozet }, request);
+}
+
 // POST /panel/rakip-analizi/rakip-sil { ids: string[] } — seçilen rakip(ler)i hem RakipAnalizi
 // sekmesinden (gerçek satır silme, sadece işaretleme değil) hem de listeden kaldırır. id'ler
 // istemcinin gönderdiği satır numarasına değil, sunucunun o an okuduğu güncel satır numarasına
@@ -123,9 +135,27 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 	if (!adres || !sorgu || !Number.isFinite(radiusMeters) || radiusMeters <= 0) {
 		return errorResponse(request, 400, 'Geçersiz adres/arama terimi/yarıçap.');
 	}
+
+	await ensureKullanimKaydiTab(env);
+	// Google, ücretsiz aylık kotayı (Adres Bulma 10.000 / Rakip Arama 5.000) aşınca isteği
+	// reddetmiyor, sessizce kayıtlı karttan faturalandırmaya başlıyor — bu yüzden çağrıyı hiç
+	// yapmadan ÖNCE kendi sayacımızla kontrol edip durduruyoruz (sürpriz fatura riskini önler).
+	if (await kotaDolduMu(env, 'adresBulma')) {
+		return json({ error: 'Bu ayki ücretsiz Adres Bulma kotası doldu (10.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL }, request, {
+			status: 402,
+		});
+	}
+	if (await kotaDolduMu(env, 'rakipArama')) {
+		return json({ error: 'Bu ayki ücretsiz Rakip Arama kotası doldu (5.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL }, request, {
+			status: 402,
+		});
+	}
+
 	try {
 		const { lat, lng } = await geocodeAddress(env, adres);
+		await logKullanim(env, 'adresBulma', adres);
 		const places = await searchCompetitors(env, sorgu, lat, lng, radiusMeters);
+		await logKullanim(env, 'rakipArama', `'${sorgu}' (${radiusMeters}m) — ${adres}`);
 		return json({ places }, request);
 	} catch (err) {
 		return errorResponse(request, 502, 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', err);
@@ -164,8 +194,15 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	try {
 		rapor = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, userPrompt);
 	} catch (err) {
+		if (err instanceof InsufficientCreditError) {
+			return json({ error: 'Anthropic bakiyeniz bitti. Devam etmek için kredi yüklemeniz gerekiyor.', limitUrl: ANTHROPIC_BILLING_URL }, request, {
+				status: 402,
+			});
+		}
 		return errorResponse(request, 502, 'Rapor şu an üretilemedi, lütfen tekrar dene.', err);
 	}
+	await ensureKullanimKaydiTab(env);
+	await logKullanim(env, 'icerikStrateji', istek.slice(0, 200));
 
 	const row = emptyRakipAnalizRow();
 	row.id = newId();
@@ -208,8 +245,15 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	try {
 		rapor = await generateReport(env, AKSIYON_ANALIZ_SYSTEM_PROMPT, userPrompt);
 	} catch (err) {
+		if (err instanceof InsufficientCreditError) {
+			return json({ error: 'Anthropic bakiyeniz bitti. Devam etmek için kredi yüklemeniz gerekiyor.', limitUrl: ANTHROPIC_BILLING_URL }, request, {
+				status: 402,
+			});
+		}
 		return errorResponse(request, 502, 'Analiz şu an üretilemedi, lütfen tekrar dene.', err);
 	}
+	await ensureKullanimKaydiTab(env);
+	await logKullanim(env, 'aksiyonAnaliz', yorum.slice(0, 200));
 
 	await ensureRakipAnaliziTab(env);
 	const row = emptyRakipAnalizRow();

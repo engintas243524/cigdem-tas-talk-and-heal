@@ -40,6 +40,12 @@
     <div class="actions">
       <a class="btn-secondary" href="panel.html" id="backToNoteLink">◂ Not Paneline Git</a>
     </div>
+
+    <div class="field" id="kullanimSayaciField">
+      <h3>Bu Ayki Kullanım</h3>
+      <div id="kullanimSayaci" class="kota-grid"></div>
+    </div>
+
     <div class="actions">
       <button class="btn-secondary" id="dalIcerikBtn" type="button">Görsel/Video Stratejisi</button>
       <button class="btn-secondary" id="dalAksiyonBtn" type="button">Aksiyon/Hedef Analizi</button>
@@ -238,7 +244,57 @@
     }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, liste yükleme kritik değil */ } });
   }
 
-  function showApp() { raLoginView.classList.add('hidden'); rakipAnaliziSection.classList.remove('hidden'); loadRakipListe(); }
+  // Bu ayki kullanım sayacı — Google aramaları (Adres Bulma/Rakip Arama) sabit bir aylık kotaya
+  // karşı, Anthropic çağrıları (Görsel/Video Stratejisi, Aksiyon/Hedef Analizi) ise sınırsız
+  // sayılıyor ama bakiye bitince backend zaten 402 döndürüyor (bkz. setStatusLimit). Detaylı
+  // olay kaydı (hangi tarihte, hangi aramada) sadece Sheet'in KullanimKaydi sekmesinde.
+  function loadKullanimSayaci() {
+    authFetch('/panel/rakip-analizi/kullanim-ozet').then(function (r) { return r.json(); }).then(function (data) {
+      var container = el('kullanimSayaci');
+      container.innerHTML = '';
+      var ozet = data.ozet || {};
+      Object.keys(ozet).forEach(function (kategori) {
+        var k = ozet[kategori];
+        var tile = document.createElement('div');
+        tile.className = 'kota-tile';
+        var baslik = document.createElement('div');
+        baslik.className = 'kota-baslik';
+        baslik.textContent = k.etiket;
+        var deger = document.createElement('div');
+        deger.className = 'kota-deger';
+        deger.textContent = k.aylikLimit != null ? (k.kullanilan + ' / ' + k.aylikLimit) : (k.kullanilan + ' kullanım');
+        tile.appendChild(baslik); tile.appendChild(deger);
+        if (k.aylikLimit != null) {
+          var bar = document.createElement('div');
+          bar.className = 'kota-bar';
+          var doluluk = document.createElement('div');
+          doluluk.style.width = Math.min(100, (k.kullanilan / k.aylikLimit) * 100) + '%';
+          if (k.kullanilan >= k.aylikLimit) doluluk.className = 'dolu';
+          bar.appendChild(doluluk);
+          tile.appendChild(bar);
+        }
+        container.appendChild(tile);
+      });
+    }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, sayaç kritik değil */ } });
+  }
+
+  // 402 (kota/bakiye doldu) yanıtlarında, düz hata mesajının yanına tıklanabilir bir "hallet"
+  // linki eklemek için — backend'in verdiği sabit limitUrl (Anthropic/Google), kullanıcı girdisi
+  // değil, o yüzden güvenle link olarak basılabilir.
+  function setStatusLimit(elm, msg, url) {
+    elm.className = 'status err';
+    elm.textContent = '';
+    var span = document.createElement('span');
+    span.textContent = msg + ' ';
+    elm.appendChild(span);
+    if (url) {
+      var a = document.createElement('a');
+      a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Buradan hallet →';
+      elm.appendChild(a);
+    }
+  }
+
+  function showApp() { raLoginView.classList.add('hidden'); rakipAnaliziSection.classList.remove('hidden'); loadRakipListe(); loadKullanimSayaci(); }
   function showLogin() { rakipAnaliziSection.classList.add('hidden'); raLoginView.classList.remove('hidden'); }
 
   function setStatus(elm, msg, kind) {
@@ -317,7 +373,8 @@
     authFetch('/panel/rakip-analizi/rakip-ara' + qs).then(function (r) {
       return r.json().then(function (data) { return { ok: r.ok, data: data }; });
     }).then(function (res) {
-      if (!res.ok) { setStatus(el('rakipAraStatus'), res.data.error || 'Arama başarısız.', 'err'); return; }
+      loadKullanimSayaci();
+      if (!res.ok) { setStatusLimit(el('rakipAraStatus'), res.data.error || 'Arama başarısız.', res.data.limitUrl); return; }
       var data = res.data;
       var list = el('rakipSonuclar');
       list.innerHTML = '';
@@ -365,9 +422,13 @@
     setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
     var path = currentDal === 'icerikStrateji' ? '/panel/rakip-analizi/icerik-strateji' : '/panel/rakip-analizi/aksiyon-analiz';
     var payload = currentDal === 'icerikStrateji' ? { istek: istek } : { yorum: istek };
-    authFetch(path, { method: 'POST', body: JSON.stringify(payload) }).then(function (r) { return r.json(); }).then(function (data) {
+    authFetch(path, { method: 'POST', body: JSON.stringify(payload) }).then(function (r) {
+      return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+    }).then(function (res) {
+      loadKullanimSayaci();
+      if (!res.ok) { setStatusLimit(el('dalStatus'), res.data.error || 'Rapor üretilemedi.', res.data.limitUrl); return; }
       setStatus(el('dalStatus'), '', '');
-      el('dalRapor').textContent = data.rapor;
+      el('dalRapor').textContent = res.data.rapor;
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('dalStatus'), 'Rapor şu an üretilemedi, lütfen tekrar dene.', 'err'); });
   });
 

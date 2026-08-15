@@ -294,3 +294,31 @@ export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[
 	aramaSorgu: 'Arama Terimi',
 	aramaRadiusMeters: 'Arama Yarıçapı (m)',
 };
+
+// Rakip Analizi ekranının kullanım kotası/sayaç sistemi (2026-08-15). Her API çağrısı burada bir
+// "kategori" olarak loglanır — hem Sheet'te insan-okunur bir kayıt (hangi tarihte hangi işlem)
+// hem de aylık kota kontrolü için tek kaynak. aylikLimit olan kategoriler (Google Places/
+// Geocoding — Google ücretsiz kotayı aşınca engellemez, sessizce faturalandırmaya başlar, o
+// yüzden BİZİM kendi sayacımızla sert durdurmamız gerekiyor) aşılınca istek reddedilir.
+// aylikLimit=null olan kategoriler (Anthropic/Claude çağrıları) sayılır ama sayıyla
+// engellenmez — Anthropic'in kendi bakiyesi bittiğinde zaten kendisi reddediyor
+// (bkz. lib/claude.ts InsufficientCreditError), o an yakalanıp aynı şekilde engellenmiş gösterilir.
+export const KULLANIM_KAYDI_TAB_NAME = 'KullanimKaydi';
+
+export const KULLANIM_KAYDI_COLUMNS = ['id', 'tarihUtc', 'kategori', 'detay'] as const;
+
+export const KULLANIM_KAYDI_COLUMN_LABELS: Record<(typeof KULLANIM_KAYDI_COLUMNS)[number], string> = {
+	id: 'ID',
+	tarihUtc: 'Tarih (UTC)',
+	kategori: 'Kategori',
+	detay: 'Detay',
+};
+
+export const KULLANIM_KATEGORILERI = {
+	adresBulma: { etiket: 'Adres Bulma', aylikLimit: 10000 as number | null },
+	rakipArama: { etiket: 'Rakip Arama', aylikLimit: 5000 as number | null },
+	icerikStrateji: { etiket: 'Görsel/Video Stratejisi', aylikLimit: null as number | null },
+	aksiyonAnaliz: { etiket: 'Aksiyon/Hedef Analizi', aylikLimit: null as number | null },
+} as const;
+
+export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;

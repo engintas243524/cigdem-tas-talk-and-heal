@@ -82,3 +82,12 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
   border-top: 1px solid var(--border); padding: 0.5rem 0; font-size: 0.9rem; }
 #rakipSonuclar li:first-child { border-top: none; }
 #rakipSonuclar li button { flex: 0 0 auto; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+/* Kullanım Sayacı (rakip-analizi.html) */
+.kota-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem; }
+.kota-tile { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.6rem 0.75rem; }
+.kota-baslik { font-size: 0.78rem; color: var(--taupe); margin-bottom: 0.25rem; }
+.kota-deger { font-size: 1.05rem; font-weight: 600; }
+.kota-bar { height: 5px; border-radius: 3px; background: var(--paper); margin-top: 0.4rem; overflow: hidden; }
+.kota-bar > div { height: 100%; background: var(--sage); border-radius: 3px; }
+.kota-bar > div.dolu { background: var(--brand-deep); }
+.status.err a { color: inherit; font-weight: 600; text-decoration: underline; margin-left: 0.2rem; }

@@ -16,7 +16,15 @@ import {
 	handlePanelCancel,
 	requirePanelAuth,
 } from './routes/panel';
-import { handleRakipEkle, handleRakipAra, handleRakipListe, handleRakipSil, handleIcerikStrateji, handleAksiyonAnaliz } from './routes/rakipAnalizi';
+import {
+	handleRakipEkle,
+	handleRakipAra,
+	handleRakipListe,
+	handleRakipSil,
+	handleKullanimOzet,
+	handleIcerikStrateji,
+	handleAksiyonAnaliz,
+} from './routes/rakipAnalizi';
 import { runReminderSweep, runSessionNoteFallback } from './scheduled';
 import { corsHeaders } from './lib/http';
 
@@ -74,6 +82,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handleRakipListe(request, env);
 			case 'POST /panel/rakip-analizi/rakip-sil':
 				return (await requirePanelAuth(request, env)) ?? handleRakipSil(request, env);
+			case 'GET /panel/rakip-analizi/kullanim-ozet':
+				return (await requirePanelAuth(request, env)) ?? handleKullanimOzet(request, env);
 			case 'POST /panel/rakip-analizi/icerik-strateji':
 				return (await requirePanelAuth(request, env)) ?? handleIcerikStrateji(request, env);
 			case 'POST /panel/rakip-analizi/aksiyon-analiz':
