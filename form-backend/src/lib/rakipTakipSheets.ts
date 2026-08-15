@@ -20,6 +20,13 @@ function emptyRakipTakipRow(): RakipTakipRow {
 // hücreye tıklayınca formül çubuğunda tam metin yine okunabilir.
 const UZUN_METIN_KOLON_ARALIGI = { startColumnIndex: 3, endColumnIndex: 7 }; // projeksiyon..fark
 
+// CLIP tek başına YETMİYOR: bir satırın yüksekliği WRAP ile bir kez büyüdükten sonra Sheets onu
+// sabit bir piksel boyutu olarak saklıyor — wrapStrategy'yi sonradan CLIP'e çevirmek o satırı
+// otomatik geri küçültmüyor (2026-08-15'te canlıda gözlemlendi). Çözüm: header + 6 sabit periyot
+// satırının hepsini standart Sheets satır yüksekliğine (21px) SABİTLEMEK — her ensureRakipTakipTab
+// çağrısında yeniden uygulanıyor, o yüzden daha önce şişmiş satırlar da geri küçülüyor.
+const STANDART_SATIR_YUKSEKLIGI_PX = 21;
+
 export async function ensureRakipTakipTab(env: Env): Promise<void> {
 	const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title,gridProperties.columnCount)');
 	const data = (await response.json()) as {
@@ -77,6 +84,18 @@ export async function ensureRakipTakipTab(env: Env): Promise<void> {
 							range: { sheetId, ...UZUN_METIN_KOLON_ARALIGI },
 							cell: { userEnteredFormat: { wrapStrategy: 'CLIP' } },
 							fields: 'userEnteredFormat.wrapStrategy',
+						},
+					},
+					{
+						updateDimensionProperties: {
+							range: {
+								sheetId,
+								dimension: 'ROWS',
+								startIndex: 0,
+								endIndex: 1 + RAKIP_TAKIP_PERIYOT_TURLERI.length, // header + 6 sabit satır
+							},
+							properties: { pixelSize: STANDART_SATIR_YUKSEKLIGI_PX },
+							fields: 'pixelSize',
 						},
 					},
 				],

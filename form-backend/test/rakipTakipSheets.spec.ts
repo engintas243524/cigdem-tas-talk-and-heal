@@ -118,4 +118,22 @@ describe('rakipTakipSheets', () => {
 		};
 		expect(body.requests[0].repeatCell.cell.userEnteredFormat.wrapStrategy).toBe('CLIP');
 	});
+
+	it('pins header+6 rows to the standard row height, so a previously-wrapped-tall row shrinks back (CLIP alone does not do this retroactively)', async () => {
+		const { fetchMock } = stubSheetsApi([]);
+		await ensureRakipTakipTab(env);
+		const dimensionCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string) as { requests?: { updateDimensionProperties?: unknown }[] };
+			return body.requests?.some((r) => r.updateDimensionProperties);
+		});
+		expect(dimensionCall).toBeDefined();
+		const body = JSON.parse((dimensionCall![1] as RequestInit).body as string) as {
+			requests: { updateDimensionProperties: { range: { startIndex: number; endIndex: number }; properties: { pixelSize: number } } }[];
+		};
+		const req = body.requests.find((r) => r.updateDimensionProperties)!.updateDimensionProperties;
+		expect(req.range.startIndex).toBe(0);
+		expect(req.range.endIndex).toBe(7); // header + 6 sabit periyot satırı
+		expect(req.properties.pixelSize).toBe(21);
+	});
 });
