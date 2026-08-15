@@ -34,6 +34,7 @@ export async function searchCompetitors(
 	lat: number,
 	lng: number,
 	radiusMeters: number,
+	maxResultCount: number,
 ): Promise<NearbyPlace[]> {
 	const response = await fetch(PLACES_API, {
 		method: 'POST',
@@ -44,7 +45,10 @@ export async function searchCompetitors(
 		},
 		body: JSON.stringify({
 			textQuery,
-			maxResultCount: 20,
+			// Bir Text Search çağrısı Google'a TEK istek olarak faturalanır, döndürülen sonuç
+			// sayısından (1-20) bağımsız — bu parametre kota tüketimini azaltmaz, sadece Çiğdem'in
+			// aynı arama içinde kaç sonuç görmek istediğini kontrol eder.
+			maxResultCount,
 			// Text Search (New)'de 'locationRestriction' sadece dikdörtgen (rectangle) kabul ediyor —
 			// çember (circle) göndermek sessizce reddediliyor (400 değil, boş sonuç). Yarıçapı gerçek
 			// bir dikdörtgen sınıra çeviriyoruz ki Çiğdem'in girdiği yarıçap gerçekten sınırlasın
