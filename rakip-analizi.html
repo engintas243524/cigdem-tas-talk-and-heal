@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=2">
+<link rel="stylesheet" href="panel.css?v=3">
 </head>
 <body>
 <div class="panel-wrap">
@@ -149,6 +149,7 @@
         </button>
       </div>
       <p class="muted" id="dalMicHint"></p>
+      <button class="btn-secondary" id="dalIceAktarBtn" type="button">İçe Aktar</button>
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
       <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
@@ -157,6 +158,43 @@
         <button class="btn-secondary" id="dalWhatsappBtn" type="button">WhatsApp'ta Paylaş</button>
         <button class="btn-secondary" id="dalEpostaBtn" type="button">E-posta ile Paylaş</button>
         <button class="btn-secondary hidden" id="dalPaylasBtn" type="button">Paylaş</button>
+      </div>
+    </div>
+
+    <!-- İçe Aktar modalı: rapor üretilmeden önce ek kaynak belge/link/metin eklemek için.
+         Faz D1 — sadece metin/döküman türleri (pdf/txt/md/docx/csv/pptx/epub) + web linki +
+         yapıştırılan metin destekleniyor. Ses/video/görsel/Drive/YouTube sonraki fazlar. -->
+    <div class="modal-backdrop hidden" id="iceAktarModal">
+      <div class="modal-box">
+        <h3>Belgelerinizden Raporlarınıza</h3>
+        <p class="muted">Rapor üretilmeden önce ek kaynak ekle — dosya, web linki ya da yapıştırılan metin, raporun bağlamına dahil edilir.</p>
+
+        <div id="iceAktarDropZone" class="drop-zone">
+          <p>Dosyaları buraya sürükle bırak ya da <label for="iceAktarFileInput" class="drop-zone-link">seç</label></p>
+          <p class="hint">Desteklenen: PDF, TXT, MD, DOCX, CSV, PPTX, EPUB</p>
+          <input type="file" id="iceAktarFileInput" accept=".pdf,.txt,.md,.docx,.csv,.pptx,.epub" multiple class="hidden" />
+        </div>
+
+        <div class="field">
+          <label for="iceAktarLinkInput">Web linki</label>
+          <div class="row">
+            <input type="url" id="iceAktarLinkInput" class="grow" placeholder="https://..." />
+            <button class="btn-secondary" id="iceAktarLinkEkleBtn" type="button">Ekle</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="iceAktarMetinInput">Metin yapıştır</label>
+          <textarea id="iceAktarMetinInput" placeholder="Metni buraya yapıştır..."></textarea>
+          <button class="btn-secondary" id="iceAktarMetinEkleBtn" type="button">Ekle</button>
+        </div>
+
+        <div class="status" id="iceAktarStatus"></div>
+        <div id="iceAktarListe"></div>
+
+        <div class="actions">
+          <button class="btn-primary" id="iceAktarKapatBtn" type="button">Tamam</button>
+        </div>
       </div>
     </div>
   </section>
@@ -621,6 +659,116 @@
   setDal('icerikStrateji');
   if (typeof navigator !== 'undefined' && navigator.share) { el('dalPaylasBtn').classList.remove('hidden'); }
 
+  // --- İçe Aktar (Faz D1: pdf/txt/md/docx/csv/pptx/epub + web linki + yapıştırılan metin).
+  // Görsel/Video Stratejisi ile Aksiyon/Hedef Analizi arasında dal değişse de eklenen kaynaklar
+  // kalıcı kalır (dal-özel değil, genel bağlam) — setDal() bu listeyi sıfırlamıyor.
+  var iceAktarilanlar = [];
+  var ICE_AKTAR_UZANTILAR = ['pdf', 'txt', 'md', 'docx', 'csv', 'pptx', 'epub'];
+
+  function iceAktarOzetGuncelle() {
+    var hazir = iceAktarilanlar.filter(function (x) { return x.durum === 'hazir'; }).length;
+    el('dalIceAktarBtn').textContent = hazir ? 'İçe Aktar (' + hazir + ')' : 'İçe Aktar';
+  }
+
+  function iceAktarListesiCiz() {
+    var wrap = el('iceAktarListe');
+    wrap.innerHTML = '';
+    iceAktarilanlar.forEach(function (item) {
+      var row = document.createElement('div');
+      row.className = 'ice-aktar-item';
+      var etiket = document.createElement('span');
+      etiket.textContent = item.ad + (item.durum === 'yukleniyor' ? ' — yükleniyor...' : item.durum === 'hata' ? ' — hata: ' + item.hata : '');
+      row.appendChild(etiket);
+      var silBtn = document.createElement('button');
+      silBtn.type = 'button'; silBtn.className = 'icon-btn'; silBtn.setAttribute('aria-label', 'Kaldır'); silBtn.textContent = '✕';
+      silBtn.addEventListener('click', function () {
+        iceAktarilanlar = iceAktarilanlar.filter(function (x) { return x.id !== item.id; });
+        iceAktarListesiCiz();
+      });
+      row.appendChild(silBtn);
+      wrap.appendChild(row);
+    });
+    iceAktarOzetGuncelle();
+  }
+
+  function iceAktarEkle(item) {
+    item.id = 'ia' + Date.now() + Math.random().toString(36).slice(2);
+    iceAktarilanlar.push(item);
+    iceAktarListesiCiz();
+    return item;
+  }
+
+  function dosyaUzantisi(ad) { return ad.split('.').pop().toLowerCase(); }
+
+  function dosyaYukle(file) {
+    var uzanti = dosyaUzantisi(file.name);
+    if (ICE_AKTAR_UZANTILAR.indexOf(uzanti) === -1) {
+      setStatus(el('iceAktarStatus'), file.name + ': desteklenmeyen dosya türü (.' + uzanti + ').', 'err');
+      return;
+    }
+    var item = iceAktarEkle({ ad: file.name, tur: 'dosya', durum: 'yukleniyor', metin: '' });
+    var reader = new FileReader();
+    reader.onload = function () {
+      var base64 = String(reader.result).split(',')[1];
+      // PDF'ler sunucuya hiç yüklenmeden lokalde tutulur — Claude'un native PDF desteği sayesinde
+      // rapor üretimi anında doğrudan Claude'a gönderilir (bkz. dalGonderBtn, kaynakPdfler alanı),
+      // ayrı bir metin çıkarma turu gereksiz (bkz. lib/belgeCikar.ts başındaki not).
+      if (uzanti === 'pdf') {
+        item.durum = 'hazir';
+        item.pdfBase64 = base64;
+        iceAktarListesiCiz();
+        return;
+      }
+      authFetch('/panel/rakip-analizi/ice-aktar', { method: 'POST', body: JSON.stringify({ tur: 'dosya', dosyaAdi: file.name, uzanti: uzanti, veri: base64 }) })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          if (!res.ok) { item.durum = 'hata'; item.hata = res.data.error || 'okunamadı'; } else { item.durum = 'hazir'; item.metin = res.data.metin; }
+          iceAktarListesiCiz();
+        }).catch(function (e) { if (e.message !== 'unauthorized') { item.durum = 'hata'; item.hata = 'okunamadı'; iceAktarListesiCiz(); } });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  el('iceAktarFileInput').addEventListener('change', function () {
+    Array.prototype.forEach.call(this.files, dosyaYukle);
+    this.value = '';
+  });
+
+  var iceAktarDropZone = el('iceAktarDropZone');
+  ['dragover', 'dragenter'].forEach(function (evt) {
+    iceAktarDropZone.addEventListener(evt, function (e) { e.preventDefault(); iceAktarDropZone.classList.add('drag-over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (evt) {
+    iceAktarDropZone.addEventListener(evt, function (e) { e.preventDefault(); iceAktarDropZone.classList.remove('drag-over'); });
+  });
+  iceAktarDropZone.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) Array.prototype.forEach.call(e.dataTransfer.files, dosyaYukle);
+  });
+
+  el('iceAktarLinkEkleBtn').addEventListener('click', function () {
+    var url = el('iceAktarLinkInput').value.trim();
+    if (!url) return;
+    el('iceAktarLinkInput').value = '';
+    var item = iceAktarEkle({ ad: url, tur: 'link', durum: 'yukleniyor', metin: '' });
+    authFetch('/panel/rakip-analizi/ice-aktar', { method: 'POST', body: JSON.stringify({ tur: 'link', url: url }) })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) { item.durum = 'hata'; item.hata = res.data.error || 'alınamadı'; } else { item.durum = 'hazir'; item.metin = res.data.metin; }
+        iceAktarListesiCiz();
+      }).catch(function (e) { if (e.message !== 'unauthorized') { item.durum = 'hata'; item.hata = 'alınamadı'; iceAktarListesiCiz(); } });
+  });
+
+  el('iceAktarMetinEkleBtn').addEventListener('click', function () {
+    var metin = el('iceAktarMetinInput').value.trim();
+    if (!metin) return;
+    el('iceAktarMetinInput').value = '';
+    iceAktarEkle({ ad: 'Yapıştırılan metin (' + metin.slice(0, 30) + (metin.length > 30 ? '…' : '') + ')', tur: 'metin', durum: 'hazir', metin: metin });
+  });
+
+  el('dalIceAktarBtn').addEventListener('click', function () { el('iceAktarModal').classList.remove('hidden'); });
+  el('iceAktarKapatBtn').addEventListener('click', function () { el('iceAktarModal').classList.add('hidden'); });
+  el('iceAktarModal').addEventListener('click', function (e) { if (e.target.id === 'iceAktarModal') el('iceAktarModal').classList.add('hidden'); });
+
   el('dalGonderBtn').addEventListener('click', function () {
     var istek = el('dalIstek').value.trim();
     if (!istek) { setStatus(el('dalStatus'), 'İstek metni gerekli.', 'err'); return; }
@@ -631,9 +779,12 @@
       ? Array.prototype.map.call(document.querySelectorAll('#dalParametreler input[type="checkbox"]:checked'), function (cb) { return cb.value; })
       : [];
     var path = currentDal === 'icerikStrateji' ? '/panel/rakip-analizi/icerik-strateji' : '/panel/rakip-analizi/aksiyon-analiz';
+    var hazirIceAktarilanlar = iceAktarilanlar.filter(function (x) { return x.durum === 'hazir'; });
+    var kaynakBelgeler = hazirIceAktarilanlar.filter(function (x) { return !x.pdfBase64; }).map(function (x) { return x.metin; });
+    var kaynakPdfler = hazirIceAktarilanlar.filter(function (x) { return x.pdfBase64; }).map(function (x) { return x.pdfBase64; });
     var payload = currentDal === 'icerikStrateji'
-      ? { istek: istek, rakipIds: rakipIds, parametreler: parametreler }
-      : { yorum: istek, rakipIds: rakipIds, parametreler: parametreler };
+      ? { istek: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler }
+      : { yorum: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler };
     authFetch(path, { method: 'POST', body: JSON.stringify(payload) }).then(function (r) {
       return r.json().then(function (data) { return { ok: r.ok, data: data }; });
     }).then(function (res) {

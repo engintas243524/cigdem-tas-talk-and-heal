@@ -232,7 +232,10 @@ describe('POST /panel/rakip-analizi/rakip-sil', () => {
 		stubApis();
 		const ids: string[] = [];
 		for (const isim of ['A', 'B', 'C']) {
-			const r = await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: isim, kaynak: 'manuel' }) });
+			const r = await authedRequest('/panel/rakip-analizi/rakip', {
+				method: 'POST',
+				body: JSON.stringify({ isim: isim, kaynak: 'manuel' }),
+			});
 			ids.push(((await r.json()) as { id: string }).id);
 		}
 		const delResponse = await authedRequest('/panel/rakip-analizi/rakip-sil', {
@@ -282,7 +285,10 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			body: JSON.stringify({ isim: 'Seçilen Rakip', kaynak: 'manuel' }),
 		});
 		const secilecekId = ((await secilecek.json()) as { id: string }).id;
-		await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: 'Seçilmeyen Rakip', kaynak: 'manuel' }) });
+		await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Seçilmeyen Rakip', kaynak: 'manuel' }),
+		});
 
 		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
 			method: 'POST',
@@ -293,6 +299,30 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).toContain('Seçilen Rakip');
 		expect(anthropicBody.messages[0].content).not.toContain('Seçilmeyen Rakip');
+	});
+
+	it('includes İçe Aktar (kaynakBelgeler) text in the prompt', async () => {
+		const { fetchMock } = stubApis();
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', kaynakBelgeler: ['İçe aktarılan belge içeriği burada.'] }),
+		});
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).toContain('İçe aktarılan belge içeriği burada.');
+	});
+
+	it('sends İçe Aktar PDFs (kaynakPdfler) as document content blocks, not inline text', async () => {
+		const { fetchMock } = stubApis();
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', kaynakPdfler: ['ZmFrZS1wZGYtYnl0ZXM='] }),
+		});
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(Array.isArray(anthropicBody.messages[0].content)).toBe(true);
+		const docBlock = anthropicBody.messages[0].content.find((b: { type: string }) => b.type === 'document');
+		expect(docBlock.source).toEqual({ type: 'base64', media_type: 'application/pdf', data: 'ZmFrZS1wZGYtYnl0ZXM=' });
 	});
 });
 
@@ -333,5 +363,102 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).not.toContain('Seçilen rakip verisi');
+	});
+});
+
+describe('POST /panel/rakip-analizi/ice-aktar', () => {
+	it('extracts text from a plain .txt file (base64)', async () => {
+		stubApis();
+		const veri = Buffer.from('Merhaba dünya, bu bir test dosyasıdır.', 'utf8').toString('base64');
+		const response = await authedRequest('/panel/rakip-analizi/ice-aktar', {
+			method: 'POST',
+			body: JSON.stringify({ tur: 'dosya', dosyaAdi: 'test.txt', uzanti: 'txt', veri }),
+		});
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { metin: string };
+		expect(data.metin).toBe('Merhaba dünya, bu bir test dosyasıdır.');
+	});
+
+	it('extracts text from a minimal real .docx (zip of word/document.xml)', async () => {
+		stubApis();
+		const { zipSync, strToU8 } = await import('fflate');
+		const documentXml =
+			'<?xml version="1.0"?><w:document xmlns:w="ns"><w:body>' +
+			'<w:p><w:r><w:t>Birinci paragraf.</w:t></w:r></w:p>' +
+			'<w:p><w:r><w:t>İkinci paragraf.</w:t></w:r></w:p>' +
+			'</w:body></w:document>';
+		const zipped = zipSync({ 'word/document.xml': strToU8(documentXml) });
+		const veri = Buffer.from(zipped).toString('base64');
+		const response = await authedRequest('/panel/rakip-analizi/ice-aktar', {
+			method: 'POST',
+			body: JSON.stringify({ tur: 'dosya', dosyaAdi: 'test.docx', uzanti: 'docx', veri }),
+		});
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { metin: string };
+		expect(data.metin).toBe('Birinci paragraf.\nİkinci paragraf.');
+	});
+
+	it('rejects an unsupported file extension', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/ice-aktar', {
+			method: 'POST',
+			body: JSON.stringify({ tur: 'dosya', dosyaAdi: 'test.exe', uzanti: 'exe', veri: btoa('x') }),
+		});
+		expect(response.status).toBe(400);
+		const data = (await response.json()) as { error: string };
+		expect(data.error).toContain('Desteklenmeyen');
+	});
+
+	it('rejects a file upload with no veri', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/ice-aktar', {
+			method: 'POST',
+			body: JSON.stringify({ tur: 'dosya', dosyaAdi: 'test.txt', uzanti: 'txt' }),
+		});
+		expect(response.status).toBe(400);
+	});
+
+	it('scrapes text from a web link', async () => {
+		const { fetchMock } = stubApis();
+		fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url === 'https://example.com/makale') {
+				return new Response('<html><body><p>Makale içeriği burada.</p></body></html>', {
+					status: 200,
+					headers: { 'content-type': 'text/html' },
+				});
+			}
+			throw new Error(`Unexpected fetch in test: ${url}`);
+		});
+		const response = await authedRequest('/panel/rakip-analizi/ice-aktar', {
+			method: 'POST',
+			body: JSON.stringify({ tur: 'link', url: 'https://example.com/makale' }),
+		});
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { metin: string };
+		expect(data.metin).toContain('Makale içeriği burada.');
+	});
+
+	it('rejects YouTube links (transcript extraction not supported yet)', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/ice-aktar', {
+			method: 'POST',
+			body: JSON.stringify({ tur: 'link', url: 'https://www.youtube.com/watch?v=abc123' }),
+		});
+		expect(response.status).toBe(400);
+		const data = (await response.json()) as { error: string };
+		expect(data.error).toContain('YouTube');
+	});
+
+	it('requires panel auth', async () => {
+		stubApis();
+		const request = new Request('http://localhost/panel/rakip-analizi/ice-aktar', {
+			method: 'POST',
+			body: JSON.stringify({ tur: 'dosya', dosyaAdi: 'test.txt', uzanti: 'txt', veri: btoa('x') }),
+		});
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, testEnv, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(401);
 	});
 });

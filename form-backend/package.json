@@ -17,6 +17,7 @@
     "wrangler": "^4.112.0"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "jose": "^6.2.3",
     "libphonenumber-js": "^1.13.9",
     "stripe": "^22.3.2"

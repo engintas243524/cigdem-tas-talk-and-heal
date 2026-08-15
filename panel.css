@@ -131,3 +131,16 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 #dalButonlarWrap button { flex: 1 1 0; }
 #dalIcerikBtn.active { background: color-mix(in srgb, #9DC9F0 55%, var(--brand)); border-color: color-mix(in srgb, #9DC9F0 55%, var(--brand)); }
 #dalAksiyonBtn.active { background: color-mix(in srgb, #C9A3EE 55%, var(--brand)); border-color: color-mix(in srgb, #C9A3EE 55%, var(--brand)); }
+
+/* İçe Aktar modalı (rakip-analizi.html, Faz D1) */
+#dalIceAktarBtn { margin-bottom: 0.6rem; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(20,14,16,0.5); display: flex; align-items: center; justify-content: center; padding: var(--space-3); z-index: 100; }
+.modal-box { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-3); max-width: 560px; width: 100%; max-height: 85vh; overflow-y: auto; }
+.modal-box h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0 0 0.4rem; }
+.drop-zone { border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: var(--space-3); text-align: center; margin: 0.6rem 0; }
+.drop-zone.drag-over { border-color: var(--sage); background: color-mix(in srgb, var(--sage) 10%, var(--paper)); }
+.drop-zone-link { color: var(--sage); text-decoration: underline; cursor: pointer; font-weight: 600; }
+#iceAktarMetinInput { min-height: 90px; margin-bottom: 0.5rem; }
+.ice-aktar-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.4rem 0; border-top: 1px solid var(--border); font-size: 0.85rem; }
+.ice-aktar-item:first-child { border-top: none; }
+.ice-aktar-item .icon-btn { width: 32px; height: 32px; font-size: 0.9rem; }

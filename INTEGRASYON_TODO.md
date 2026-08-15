@@ -1275,3 +1275,28 @@ sayaç çünkü, talk and heal da da aylık 10.000 aramadan kalanlar görünür 
 **Henüz uygulanmadı.** Karar verilmesi gerekenler: gerçek bir sert limit mi (aşınca engellenir) yoksa
 sadece bilgilendirme amaçlı bir sayaç mı, ay başında nasıl sıfırlanacak, sayım nerede tutulacak
 (Sheet'te yeni bir sekme/satır mı, KV mi). Bir sonraki oturumda bu konuya dönülecek, atlanmasın.
+
+## Rakip Analizi — Sektöre göre parametre + İçe Aktar dosya türleri (2026-08-15, birebir kaydedildi)
+
+(Aksiyon/Hedef Analizi parametre dropdown'u 3 checkbox'tan 20 parametreye genişletildikten hemen
+sonra, kullanıcının verdiği orijinal metin — CLAUDE.md'nin birebir kayıt kuralı gereği.)
+
+Kullanıcının mesajı:
+
+"bu 20 parametrenin seçilen sektör/branşa/mesleğe göre farklı olabileceğini sanıyorum,
+sektör/branşa/mesleğe göre bu 20 parametrenin otomatik yüklenmesi mümkün mü?
+İçe aktar butonuyla aktarılacak olan dosyaların drag-drop/dosya yükle(cihazdan)/web
+linki(buna youtube linki de dahil ve linlerdeki videoların transkriptlerini ücretsiz site veya
+uygulamalardan çekip alacak)/Drive/Yapıştırılan Metin Desteklenen dosya türleri olarak: pdf, txt,
+md, docx, csv, pptx, epub, 3g2, 3gp, aac, aif, aifc, aiff, amr, au, avi, cda, m4a, mid, mp3, mp4,
+mpeg, ogg, opus, ra, ram, snd, wav, wma, avif, bmp, gif, ico, jp2, png, webp, tif, tiff, heic, heif,
+jpeg, jpg, jpe türlerini desteklemesi gerek."
+
+**Henüz uygulanmadı — sadece kaydedildi.** İki ayrı iş:
+1. Sektöre/branşa/mesleğe göre parametre setinin otomatik yüklenmesi — kapsam netleştirilmesi
+   gerekiyor (sadece terapi/danışmanlık alt dalları mı, yoksa `rakipSorgu` alanına yazılan
+   HERHANGİ bir meslek/sektör için mi — bu ikincisi çok daha büyük bir iş, muhtemelen AI ile
+   dinamik parametre üretimi gerektirir).
+2. İçe Aktar modalının desteklemesi gereken tam dosya türü listesi yukarıda birebir — NotebookLM'in
+   kendi desteklediği format listesiyle örtüşüyor (metin/döküman + ses + video + görsel). Faz D
+   (İçe Aktar) ve Faz E (NotebookLM alternatifi) için ortak altyapı ihtiyacı.

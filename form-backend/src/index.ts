@@ -24,6 +24,7 @@ import {
 	handleKullanimOzet,
 	handleIcerikStrateji,
 	handleAksiyonAnaliz,
+	handleIceAktar,
 } from './routes/rakipAnalizi';
 import { runReminderSweep, runSessionNoteFallback } from './scheduled';
 import { corsHeaders } from './lib/http';
@@ -88,6 +89,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handleIcerikStrateji(request, env);
 			case 'POST /panel/rakip-analizi/aksiyon-analiz':
 				return (await requirePanelAuth(request, env)) ?? handleAksiyonAnaliz(request, env);
+			case 'POST /panel/rakip-analizi/ice-aktar':
+				return (await requirePanelAuth(request, env)) ?? handleIceAktar(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}

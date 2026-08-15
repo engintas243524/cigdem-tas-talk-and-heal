@@ -1,14 +1,24 @@
 import { getAllRows } from '../lib/sheets';
-import { appendRakipAnalizRow, getAllRakipAnalizRows, emptyRakipAnalizRow, ensureRakipAnaliziTab, deleteRakipAnalizRows } from '../lib/rakipSheets';
+import {
+	appendRakipAnalizRow,
+	getAllRakipAnalizRows,
+	emptyRakipAnalizRow,
+	ensureRakipAnaliziTab,
+	deleteRakipAnalizRows,
+} from '../lib/rakipSheets';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
 import { searchCompetitors } from '../lib/places';
 import { geocodeAddress } from '../lib/geocoding';
 import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
 import { ensureKullanimKaydiTab, logKullanim, getKullanimOzet, kotaDolduMu } from '../lib/kullanimKaydi';
+import { belgedenMetinCikar, metinCikarWebLink } from '../lib/belgeCikar';
 import type { Env } from '../types';
 
 const NOTE_MAX_LENGTH = 5000;
+// İçe Aktar (Faz D1) tek seferde en fazla kaç kaynak belge/link kabul eder — hem prompt boyutunu
+// hem de kullanıcının yanlışlıkla onlarca dosya sürükleyip bırakmasını sınırlamak için.
+const ICE_AKTAR_MAX_ADET = 10;
 const ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
 const GOOGLE_QUOTA_URL = 'https://console.cloud.google.com/iam-admin/quotas';
 
@@ -145,14 +155,22 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 	// reddetmiyor, sessizce kayıtlı karttan faturalandırmaya başlıyor — bu yüzden çağrıyı hiç
 	// yapmadan ÖNCE kendi sayacımızla kontrol edip durduruyoruz (sürpriz fatura riskini önler).
 	if (await kotaDolduMu(env, 'adresBulma')) {
-		return json({ error: 'Bu ayki ücretsiz Adres Bulma kotası doldu (10.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL }, request, {
-			status: 402,
-		});
+		return json(
+			{ error: 'Bu ayki ücretsiz Adres Bulma kotası doldu (10.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL },
+			request,
+			{
+				status: 402,
+			},
+		);
 	}
 	if (await kotaDolduMu(env, 'rakipArama')) {
-		return json({ error: 'Bu ayki ücretsiz Rakip Arama kotası doldu (5.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL }, request, {
-			status: 402,
-		});
+		return json(
+			{ error: 'Bu ayki ücretsiz Rakip Arama kotası doldu (5.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL },
+			request,
+			{
+				status: 402,
+			},
+		);
 	}
 
 	try {
@@ -224,11 +242,19 @@ function rakipOzetOlustur(
 	return parametreSatiri + satirlar.join('\n');
 }
 
+// İçe Aktar (Faz D1) ile eklenen metin kaynaklarını (docx/pptx/epub/txt/md/csv/web linki/yapıştırılan
+// metin — pdf'ler burada yok, onlar generateReport'a ayrı bir document content block olarak gidiyor)
+// rapor promptuna ekler.
+function iceAktarPromptEki(kaynakBelgeler: string[]): string {
+	if (!kaynakBelgeler.length) return '';
+	return `\n\nİçe aktarılan ek kaynaklar:\n${kaynakBelgeler.map((t, i) => `--- Kaynak ${i + 1} ---\n${t}`).join('\n\n')}`;
+}
+
 // POST /panel/rakip-analizi/icerik-strateji { istek, rakipIds?, parametreler? } — seçilen (ya da
 // boşsa tüm) rakip verisi + Çiğdem'in serbest metin/ses isteği Claude'a gönderilir, küratif öneri
 // raporu üretilir ve kaydedilir.
 export async function handleIcerikStrateji(request: Request, env: Env): Promise<Response> {
-	let body: { istek?: unknown; rakipIds?: unknown; parametreler?: unknown };
+	let body: { istek?: unknown; rakipIds?: unknown; parametreler?: unknown; kaynakBelgeler?: unknown; kaynakPdfler?: unknown };
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -239,20 +265,26 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	const istek = await cleanDictation(env, rawIstek);
 	const rakipIds = Array.isArray(body.rakipIds) ? body.rakipIds.map((x) => String(x)) : [];
 	const parametreler = Array.isArray(body.parametreler) ? body.parametreler.map((x) => String(x)) : [];
+	const kaynakBelgeler = Array.isArray(body.kaynakBelgeler) ? body.kaynakBelgeler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
+	const kaynakPdfler = Array.isArray(body.kaynakPdfler) ? body.kaynakPdfler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 
 	await ensureRakipAnaliziTab(env);
 	const rakipler = await getAllRakipAnalizRows(env);
 	const rakipOzet = rakipOzetOlustur(rakipler, rakipIds, parametreler);
-	const userPrompt = `Toplanan rakip verisi:\n${rakipOzet}\n\nÇiğdem'in isteği: ${istek}`;
+	const userPrompt = `Toplanan rakip verisi:\n${rakipOzet}\n\nÇiğdem'in isteği: ${istek}` + iceAktarPromptEki(kaynakBelgeler);
 
 	let rapor: string;
 	try {
-		rapor = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, userPrompt);
+		rapor = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, userPrompt, kaynakPdfler);
 	} catch (err) {
 		if (err instanceof InsufficientCreditError) {
-			return json({ error: 'Anthropic bakiyeniz bitti. Devam etmek için kredi yüklemeniz gerekiyor.', limitUrl: ANTHROPIC_BILLING_URL }, request, {
-				status: 402,
-			});
+			return json(
+				{ error: 'Anthropic bakiyeniz bitti. Devam etmek için kredi yüklemeniz gerekiyor.', limitUrl: ANTHROPIC_BILLING_URL },
+				request,
+				{
+					status: 402,
+				},
+			);
 		}
 		return errorResponse(request, 502, 'Rapor şu an üretilemedi, lütfen tekrar dene.', err);
 	}
@@ -286,7 +318,7 @@ analiz edip bir sonraki dönem için düzeltilmiş hedef/yol haritası öner. T�
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses
 // yorumu birlikte Claude'a gönderilir.
 export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<Response> {
-	let body: { yorum?: unknown; rakipIds?: unknown; parametreler?: unknown };
+	let body: { yorum?: unknown; rakipIds?: unknown; parametreler?: unknown; kaynakBelgeler?: unknown; kaynakPdfler?: unknown };
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -297,6 +329,8 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const yorum = await cleanDictation(env, rawYorum);
 	const rakipIds = Array.isArray(body.rakipIds) ? body.rakipIds.map((x) => String(x)) : [];
 	const parametreler = Array.isArray(body.parametreler) ? body.parametreler.map((x) => String(x)) : [];
+	const kaynakBelgeler = Array.isArray(body.kaynakBelgeler) ? body.kaynakBelgeler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
+	const kaynakPdfler = Array.isArray(body.kaynakPdfler) ? body.kaynakPdfler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 
 	const bookingRows = await getAllRows(env);
 	const aktifRandevu = bookingRows.filter(({ row }) => !row.cancelledAt).length;
@@ -308,16 +342,21 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const userPrompt =
 		`Sayısal özet: ${sayisalOzet}` +
 		(rakipOzet ? `\n\nSeçilen rakip verisi:\n${rakipOzet}` : '') +
-		`\n\nÇiğdem'in yorumu: ${yorum}`;
+		`\n\nÇiğdem'in yorumu: ${yorum}` +
+		iceAktarPromptEki(kaynakBelgeler);
 
 	let rapor: string;
 	try {
-		rapor = await generateReport(env, AKSIYON_ANALIZ_SYSTEM_PROMPT, userPrompt);
+		rapor = await generateReport(env, AKSIYON_ANALIZ_SYSTEM_PROMPT, userPrompt, kaynakPdfler);
 	} catch (err) {
 		if (err instanceof InsufficientCreditError) {
-			return json({ error: 'Anthropic bakiyeniz bitti. Devam etmek için kredi yüklemeniz gerekiyor.', limitUrl: ANTHROPIC_BILLING_URL }, request, {
-				status: 402,
-			});
+			return json(
+				{ error: 'Anthropic bakiyeniz bitti. Devam etmek için kredi yüklemeniz gerekiyor.', limitUrl: ANTHROPIC_BILLING_URL },
+				request,
+				{
+					status: 402,
+				},
+			);
 		}
 		return errorResponse(request, 502, 'Analiz şu an üretilemedi, lütfen tekrar dene.', err);
 	}
@@ -333,4 +372,38 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	row.raporMetni = rapor;
 	await appendRakipAnalizRow(env, row);
 	return json({ id: row.id, rapor }, request);
+}
+
+// POST /panel/rakip-analizi/ice-aktar { tur: 'dosya' | 'link', dosyaAdi?, uzanti?, veri?(base64),
+// url? } — Faz D1: pdf/txt/md/docx/csv/pptx/epub + web linki. pdf kasıtlı olarak buraya hiç
+// gelmiyor (frontend onu hiç yüklemeden base64'ünü lokalde tutup rapor üretimi anındaki
+// kaynakPdfler alanına ekliyor, bkz. rakip-analizi.html dosyaYukle()). Sadece metin döndürür,
+// hiçbir şey kaydetmez — kaydetme/rapor üretimi ayrı adımlarda (icerik-strateji/aksiyon-analiz).
+export async function handleIceAktar(request: Request, env: Env): Promise<Response> {
+	let body: { tur?: unknown; dosyaAdi?: unknown; uzanti?: unknown; veri?: unknown; url?: unknown };
+	try {
+		body = (await request.json()) as typeof body;
+	} catch {
+		return errorResponse(request, 400, 'Geçersiz istek.');
+	}
+	const tur = String(body.tur ?? '');
+	try {
+		if (tur === 'link') {
+			const url = String(body.url ?? '').trim();
+			if (!url) return errorResponse(request, 400, 'Link gerekli.');
+			const metin = await metinCikarWebLink(url);
+			return json({ metin }, request);
+		}
+		if (tur === 'dosya') {
+			const uzanti = String(body.uzanti ?? '').toLowerCase();
+			const veri = String(body.veri ?? '');
+			if (!veri) return errorResponse(request, 400, 'Dosya verisi gerekli.');
+			const bytes = Uint8Array.from(atob(veri), (c) => c.charCodeAt(0));
+			const metin = belgedenMetinCikar(uzanti, bytes);
+			return json({ metin }, request);
+		}
+		return errorResponse(request, 400, 'Geçersiz tür.');
+	} catch (err) {
+		return errorResponse(request, 400, err instanceof Error ? err.message : 'Belge okunamadı.', err);
+	}
 }

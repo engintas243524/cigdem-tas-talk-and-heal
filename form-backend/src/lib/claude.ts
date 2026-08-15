@@ -13,7 +13,16 @@ export class InsufficientCreditError extends Error {}
 // İnce sarmalayıcı — Rakip Analizi'nin iki dalı (içerik-strateji, aksiyon-analiz) da aynı
 // şekilde bir sistem talimatı + kullanıcı isteği verip düz metin rapor alıyor, ekstra
 // (tool use, streaming vb.) bir şey gerekmiyor.
-export async function generateReport(env: Env, systemPrompt: string, userPrompt: string): Promise<string> {
+//
+// pdfBase64ler (İçe Aktar, Faz D1): PDF'ler burada kendi metnimizi çıkarmadan, Claude'un native
+// "document" content block'u olarak doğrudan gönderiliyor — Claude API PDF'i GA olarak destekliyor
+// (32MB/600 sayfa sınırı), ayrı bir PDF-parse kütüphanesi eklemeye gerek yok (bkz. lib/belgeCikar.ts
+// başındaki not: aynı sebeple docx/pptx/epub kendi metnimizi çıkarıyor, pdf çıkarmıyor).
+export async function generateReport(env: Env, systemPrompt: string, userPrompt: string, pdfBase64ler: string[] = []): Promise<string> {
+	const content: unknown[] = [{ type: 'text', text: userPrompt }];
+	for (const data of pdfBase64ler) {
+		content.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } });
+	}
 	const response = await fetch(ANTHROPIC_API, {
 		method: 'POST',
 		headers: {
@@ -25,7 +34,7 @@ export async function generateReport(env: Env, systemPrompt: string, userPrompt:
 			model: MODEL,
 			max_tokens: 4096,
 			system: systemPrompt,
-			messages: [{ role: 'user', content: userPrompt }],
+			messages: [{ role: 'user', content: pdfBase64ler.length ? content : userPrompt }],
 		}),
 	});
 	if (!response.ok) {
