@@ -1,12 +1,24 @@
 import { getAllRows } from '../lib/sheets';
-import { getAllRakipAnalizRows, ensureRakipAnaliziTab } from '../lib/rakipSheets';
+import { getAllRakipAnalizRows, ensureRakipAnaliziTab, type RakipAnalizRow } from '../lib/rakipSheets';
 import { ensureRakipTakipTab, getAllRakipTakipRows, getRakipTakipDurumu, updateRakipTakipRow } from '../lib/rakipTakipSheets';
 import { ensureRakipTakipAyarTab, getRakipTakipAyar, setRakipTakipAyar } from '../lib/rakipTakipAyarSheets';
+import { ensureRakipTakipGecmisTab, addRakipTakipGecmisKaydi } from '../lib/rakipTakipGecmisSheets';
+import { parametreSkorlariUret } from '../lib/rakipParametreSkor';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
 import { errorResponse, json } from '../lib/http';
 import { ensureKullanimKaydiTab, logKullanim } from '../lib/kullanimKaydi';
-import { rakipOzetOlustur, AKSIYON_ANALIZ_SYSTEM_PROMPT, ICERIK_STRATEJI_SYSTEM_PROMPT } from './rakipAnalizi';
-import { RAKIP_TAKIP_PERIYOT_TURLERI, RAKIP_TAKIP_PERIYOT_GUN_SAYISI, type RakipTakipPeriyotTuru } from '../config';
+import {
+	rakipOzetOlustur,
+	AKSIYON_ANALIZ_SYSTEM_PROMPT,
+	ICERIK_STRATEJI_SYSTEM_PROMPT,
+	ANALIZ_PARAMETRE_ACIKLAMALARI,
+} from './rakipAnalizi';
+import {
+	RAKIP_TAKIP_PERIYOT_TURLERI,
+	RAKIP_TAKIP_PERIYOT_GUN_SAYISI,
+	TALK_AND_HEAL_VARLIK_ID,
+	type RakipTakipPeriyotTuru,
+} from '../config';
 import type { Env, SheetRow } from '../types';
 
 const ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
@@ -29,6 +41,51 @@ function donemRealizasyonuHesapla(bookingRows: { row: SheetRow }[], baslangicUtc
 	const aktif = donemIcindekiler.filter(({ row }) => !row.cancelledAt).length;
 	const iptal = donemIcindekiler.filter(({ row }) => row.cancelledAt).length;
 	return `Toplam randevu: ${donemIcindekiler.length}, aktif: ${aktif}, iptal: ${iptal} (dönem: ${baslangicUtc} – ${bitisUtc})`;
+}
+
+// Bir dönem KAPANDIĞINDA (aşağıdaki 'kapatildi' dalı), Talk and Heal'in kendisi + takip edilen her
+// rakip için parametre bazlı bir puan anlık görüntüsü üretip RakipTakipGecmis'e kaydeder — zaman-
+// içi karşılaştırma/grafik raporunun (INTEGRASYON_TODO.md 2026-08-15) veri kaynağı budur. Talk and
+// Heal'in bağlamı şimdilik sadece randevu sayıları (gerceklesen) — sosyal medya/fiyat şeffaflığı
+// gibi NİTELİKSEL parametreler için Çiğdem'den ayrıca serbest metin toplanmıyor, o yüzden çoğu
+// parametre dürüstçe null (veri yok) dönecek; bu, halüsinasyon üretmekten daha doğru bir sonuç.
+async function gecmisSnapshotlariniKaydet(
+	env: Env,
+	periyotTuru: RakipTakipPeriyotTuru,
+	donemBaslangicUtc: string,
+	donemBitisUtc: string,
+	talkAndHealBaglam: string,
+	rakipRows: { row: RakipAnalizRow }[],
+	rakipIds: string[],
+): Promise<void> {
+	const parametreAnahtarlari = Object.keys(ANALIZ_PARAMETRE_ACIKLAMALARI);
+	await ensureRakipTakipGecmisTab(env);
+
+	const talkAndHealSkorlari = await parametreSkorlariUret(env, talkAndHealBaglam, parametreAnahtarlari);
+	await addRakipTakipGecmisKaydi(env, {
+		varlikId: TALK_AND_HEAL_VARLIK_ID,
+		varlikAdi: 'Talk and Heal',
+		periyotTuru,
+		donemBaslangicUtc,
+		donemBitisUtc,
+		parametreSkorlari: talkAndHealSkorlari,
+		raporMetni: talkAndHealBaglam,
+	});
+
+	const secilenRakipler = rakipIds.length ? rakipRows.filter(({ row }) => rakipIds.includes(row.id)) : rakipRows;
+	for (const { row } of secilenRakipler) {
+		const baglam = [row.isim, row.adres, row.not].filter(Boolean).join('\n');
+		const skorlar = await parametreSkorlariUret(env, baglam, parametreAnahtarlari);
+		await addRakipTakipGecmisKaydi(env, {
+			varlikId: row.id,
+			varlikAdi: row.isim,
+			periyotTuru,
+			donemBaslangicUtc,
+			donemBitisUtc,
+			parametreSkorlari: skorlar,
+			raporMetni: baglam,
+		});
+	}
 }
 
 export interface RakipTakipAdimSonucu {
@@ -88,6 +145,13 @@ export async function rakipTakipAdimUygula(
 		asama = 'kapatildi';
 		aksiyonRaporu = farkMetni;
 		mesaj = 'Bu dönem kapatıldı, hedef-realizasyon farkı analiz edildi.';
+		try {
+			await gecmisSnapshotlariniKaydet(env, periyotTuru, row.donemBaslangicUtc, new Date().toISOString(), gerceklesen, rakipRows, rakipIds);
+		} catch (err) {
+			// Snapshot kaydı başarısız olsa bile döngünün asıl adımı (dönem kapatma) zaten
+			// tamamlandı — bir sonraki tetiklemede snapshot'sız kalınır ama döngü kilitlenmez.
+			console.error(`RakipTakip geçmiş snapshot kaydı başarısız (${periyotTuru})`, err);
+		}
 	} else {
 		const simdi = new Date();
 		const bitis = new Date(simdi.getTime() + RAKIP_TAKIP_PERIYOT_GUN_SAYISI[periyotTuru] * 86400000);

@@ -198,7 +198,7 @@ etkileşim alıyor) ilham alarak Talk and Heal için ORİJİNAL, telifsiz-stok v
 pazarlama/iş jargonu, uzun karmaşık cümleler ve süslü terimlerden kaçın; hiç bu alanda uzman
 olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.`;
 
-const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
+export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
 	fiyat: 'Fiyat/paket karşılaştırması (Not alanında fiyat bilgisi varsa)',
 	konum: "Konum/yakınlık (Çiğdem'e ne kadar yakın — arama yarıçapından)",

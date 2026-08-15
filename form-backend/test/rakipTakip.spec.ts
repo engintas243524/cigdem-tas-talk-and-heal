@@ -191,6 +191,31 @@ describe('POST /panel/rakip-analizi/rakip-takip/ayar', () => {
 	});
 });
 
+describe('RakipTakipGecmis snapshot recording (kapatildi step)', () => {
+	it('records a RakipTakipGecmis snapshot for Talk and Heal and each tracked competitor when a period closes', async () => {
+		const { tabRows } = stubApis([]);
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Takip Edilen Rakip', kaynak: 'manuel', not: 'Fiyatlar düşük.' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+
+		const call = () =>
+			authedRequest('/panel/rakip-analizi/rakip-takip/uret', {
+				method: 'POST',
+				body: JSON.stringify({ periyotTuru: 'haftalik', rakipIds: [rakipId] }),
+			});
+		await call(); // yeniDonem
+		const kapatildi = (await (await call()).json()) as { asama: string };
+		expect(kapatildi.asama).toBe('kapatildi');
+
+		const gecmisRows = tabRows.get('RakipTakipGecmis');
+		expect(gecmisRows).toBeDefined();
+		// header + Talk and Heal snapshot'ı + 1 rakip snapshot'ı = 3
+		expect(gecmisRows?.size).toBe(3);
+	});
+});
+
 describe('runRakipTakipSweep (cron)', () => {
 	it('makes zero Sheets/Claude calls beyond the switch check when the switch is off (cost safety)', async () => {
 		const { fetchMock } = stubApis([]);
