@@ -73,7 +73,7 @@ function stubApis() {
 		throw new Error(`Unexpected fetch in test: ${method} ${url}`);
 	});
 	vi.stubGlobal('fetch', fetchMock);
-	return { sheetsAppended };
+	return { sheetsAppended, fetchMock };
 }
 
 async function authedRequest(path: string, init: RequestInit = {}) {
@@ -274,6 +274,26 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		const data = (await response.json()) as { rapor: string };
 		expect(data.rapor).toBe('Üretilen rapor metni.');
 	});
+
+	it('only includes the selected competitor(s) in the prompt, not unselected ones', async () => {
+		const { fetchMock } = stubApis();
+		const secilecek = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Seçilen Rakip', kaynak: 'manuel' }),
+		});
+		const secilecekId = ((await secilecek.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: 'Seçilmeyen Rakip', kaynak: 'manuel' }) });
+
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [secilecekId] }),
+		});
+
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).toContain('Seçilen Rakip');
+		expect(anthropicBody.messages[0].content).not.toContain('Seçilmeyen Rakip');
+	});
 });
 
 describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
@@ -286,5 +306,32 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as { rapor: string };
 		expect(data.rapor).toBe('Üretilen rapor metni.');
+	});
+
+	it('includes selected competitor data in the prompt when rakipIds is given', async () => {
+		const { fetchMock } = stubApis();
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Kıyaslanacak Rakip', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+
+		await authedRequest('/panel/rakip-analizi/aksiyon-analiz', {
+			method: 'POST',
+			body: JSON.stringify({ yorum: 'Bu ay randevular azaldı', rakipIds: [rakipId] }),
+		});
+
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).toContain('Kıyaslanacak Rakip');
+		expect(anthropicBody.messages[0].content).toContain('Seçilen rakip verisi');
+	});
+
+	it('omits the competitor section entirely when no rakipIds are given', async () => {
+		const { fetchMock } = stubApis();
+		await authedRequest('/panel/rakip-analizi/aksiyon-analiz', { method: 'POST', body: JSON.stringify({ yorum: 'Yorum' }) });
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).not.toContain('Seçilen rakip verisi');
 	});
 });

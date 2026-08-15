@@ -46,9 +46,22 @@
       <div id="kullanimSayaci" class="kota-grid"></div>
     </div>
 
-    <div class="actions">
-      <button class="btn-secondary" id="dalIcerikBtn" type="button">Görsel/Video Stratejisi</button>
-      <button class="btn-secondary" id="dalAksiyonBtn" type="button">Aksiyon/Hedef Analizi</button>
+    <div class="field">
+      <h3>Konum ile Rakip Ara</h3>
+      <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
+      <input type="text" id="rakipSorgu" placeholder="Ne arıyorsun? (örn: psikolog, terapi merkezi, danışmanlık)">
+      <input type="number" id="rakipRadius" placeholder="Yarıçap (metre)" value="2000">
+      <label for="rakipMaxSonuc">Kaç sonuç görmek istersin? (Google'ın tek aramada izin verdiği üst sınır: 20 — listeden seç ya da yaz)</label>
+      <input type="number" id="rakipMaxSonuc" list="rakipMaxSonucOnerileri" min="1" max="20" value="20">
+      <datalist id="rakipMaxSonucOnerileri">
+        <option value="3"><option value="5"><option value="10"><option value="15"><option value="20">
+      </datalist>
+      <button class="btn-secondary" id="rakipAraBtn" type="button">Ara</button>
+      <div class="status" id="rakipAraStatus"></div>
+      <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
+      <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
+      <div class="actions" id="rakipSonuclarToggleWrap"></div>
+      <div id="rakipHarita" style="height:320px;width:100%;margin-top:0.5rem;"></div>
     </div>
 
     <div class="field" id="rakipEkleField">
@@ -74,6 +87,7 @@
     <div class="field" id="rakipListeField">
       <h3>Kayıtlı Rakipler</h3>
       <p class="muted" id="rakipListeBos">Henüz kaydedilmiş rakip yok.</p>
+      <p class="muted">Onay kutusuyla seçtiğin rakip(ler) hem silme hem de aşağıdaki rapor üretimi (Görsel/Video Stratejisi, Aksiyon/Hedef Analizi) için kullanılır.</p>
       <div class="rakip-table" id="rakipListe"></div>
       <div class="actions" id="rakipListeToggleWrap"></div>
       <div class="actions">
@@ -82,26 +96,23 @@
       <div class="status" id="rakipSilStatus"></div>
     </div>
 
-    <div class="field">
-      <h3>Konum ile Rakip Ara</h3>
-      <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
-      <input type="text" id="rakipSorgu" placeholder="Ne arıyorsun? (örn: psikolog, terapi merkezi, danışmanlık)">
-      <input type="number" id="rakipRadius" placeholder="Yarıçap (metre)" value="2000">
-      <label for="rakipMaxSonuc">Kaç sonuç görmek istersin? (Google'ın tek aramada izin verdiği üst sınır: 20 — listeden seç ya da yaz)</label>
-      <input type="number" id="rakipMaxSonuc" list="rakipMaxSonucOnerileri" min="1" max="20" value="20">
-      <datalist id="rakipMaxSonucOnerileri">
-        <option value="3"><option value="5"><option value="10"><option value="15"><option value="20">
-      </datalist>
-      <button class="btn-secondary" id="rakipAraBtn" type="button">Ara</button>
-      <div class="status" id="rakipAraStatus"></div>
-      <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
-      <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
-      <div class="actions" id="rakipSonuclarToggleWrap"></div>
-      <div id="rakipHarita" style="height:320px;width:100%;margin-top:0.5rem;"></div>
+    <div class="actions">
+      <button class="btn-secondary" id="dalIcerikBtn" type="button">Görsel/Video Stratejisi</button>
+      <button class="btn-secondary" id="dalAksiyonBtn" type="button">Aksiyon/Hedef Analizi</button>
     </div>
 
     <div class="field" id="dalIstekField">
       <h3 id="dalBaslik">İstek</h3>
+      <p class="muted" id="dalSeciliRakipler"></p>
+      <!-- Görsel/Video Stratejisi'nde seçilen rakipler sadece genel/güncel trend bağlamı için
+           kullanılır (rakip rakip karşılaştırma YAPILMAZ — KVKK + "içerik kopyalanmaz" ilkesi).
+           Aksiyon/Hedef Analizi'nde ise tam karşılaştırmalı analiz yapılabilir. Parametreler her
+           iki dalda da aynı üç onay kutusu — hangi boyutlara odaklanılacağını seçiyor. -->
+      <div id="dalParametreler">
+        <label><input type="checkbox" id="paramSosyalMedya" value="sosyalMedya" checked> Sosyal medya aktiflik/format sıklığı</label>
+        <label><input type="checkbox" id="paramFiyat" value="fiyat" checked> Fiyat/paket karşılaştırması</label>
+        <label><input type="checkbox" id="paramKonum" value="konum" checked> Konum/yakınlık</label>
+      </div>
       <div class="row">
         <textarea id="dalIstek" class="grow" placeholder="İsteğinizi yazın ya da mikrofonla dikte edin..."></textarea>
         <div class="mic-lang-toggle" id="dalMicLangToggle">
@@ -117,12 +128,21 @@
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
       <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
+      <div class="actions hidden" id="dalRaporAksiyonlar">
+        <button class="btn-secondary" id="dalIndirBtn" type="button">İndir (PDF)</button>
+        <button class="btn-secondary" id="dalWhatsappBtn" type="button">WhatsApp'ta Paylaş</button>
+        <button class="btn-secondary" id="dalEpostaBtn" type="button">E-posta ile Paylaş</button>
+        <button class="btn-secondary hidden" id="dalPaylasBtn" type="button">Paylaş</button>
+      </div>
     </div>
   </section>
 
 </div>
 
 <script src="panel-voice.js?v=1"></script>
+<!-- Rapor PDF indirme için — açık kaynak, ücretsiz, build adımı gerektirmiyor (bkz. daha önceki
+     Chart.js kararıyla aynı gerekçe: CDN script, sıfır bağımlılık kurulumu). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function () {
   // Local dev (python3 -m http.server + wrangler dev) uses localhost:8787; every other origin
@@ -199,11 +219,18 @@
   var rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
   var rakipListeSecili = {}; // id -> true, seçili (silinecek) rakipler
 
-  function updateRakipSilBtn() {
-    var count = Object.keys(rakipListeSecili).length;
+  // rakipListeSecili tek bir seçim durumu — hem "Seçilenleri Sil" hem de aşağıdaki rapor
+  // üretiminin ("Görsel/Video Stratejisi"/"Aksiyon/Hedef Analizi") hangi rakiplere bakacağını
+  // besler. Seçim her değiştiğinde ikisi de güncellensin diye tek yerden çağrılıyor.
+  function rakipSecimGuncellendi() {
+    var secilenIsimler = rakipListeCache.filter(function (r) { return rakipListeSecili[r.id]; }).map(function (r) { return r.isim; });
+    var count = secilenIsimler.length;
     var btn = el('rakipSilBtn');
     btn.classList.toggle('hidden', count === 0);
     btn.textContent = 'Seçilenleri Sil (' + count + ')';
+    el('dalSeciliRakipler').textContent = count
+      ? 'Seçili rakip(ler): ' + secilenIsimler.join(', ')
+      : 'Rakip seçilmedi — yukarıdaki Kayıtlı Rakipler tablosundan onay kutusuyla seçebilirsin (opsiyonel).';
   }
 
   function renderRakipListe() {
@@ -211,7 +238,7 @@
     var rakipler = rakipListeCache;
     list.innerHTML = '';
     bos.classList.toggle('hidden', rakipler.length > 0);
-    updateRakipSilBtn();
+    rakipSecimGuncellendi();
     if (!rakipler.length) { toggleWrap.innerHTML = ''; return; }
 
     rakipTabloBasligiCiz(list, '');
@@ -228,7 +255,7 @@
       checkbox.checked = !!rakipListeSecili[r.id];
       checkbox.addEventListener('change', function () {
         if (checkbox.checked) { rakipListeSecili[r.id] = true; } else { delete rakipListeSecili[r.id]; }
-        updateRakipSilBtn();
+        rakipSecimGuncellendi();
       });
       checkboxSpan.appendChild(checkbox);
       row.appendChild(checkboxSpan);
@@ -467,30 +494,76 @@
   });
 
   var currentDal = 'icerikStrateji';
+  var sonRaporMetni = '';
   function setDal(dal) {
     currentDal = dal;
     el('dalBaslik').textContent = dal === 'icerikStrateji' ? 'Görsel/Video Stratejisi İsteği' : 'Aksiyon/Hedef Analizi İsteği';
     el('dalIcerikBtn').classList.toggle('active', dal === 'icerikStrateji');
     el('dalAksiyonBtn').classList.toggle('active', dal === 'aksiyonAnaliz');
+    el('dalRaporAksiyonlar').classList.add('hidden');
+    el('dalRapor').textContent = '';
+    sonRaporMetni = '';
+    rakipSecimGuncellendi();
   }
   el('dalIcerikBtn').addEventListener('click', function () { setDal('icerikStrateji'); });
   el('dalAksiyonBtn').addEventListener('click', function () { setDal('aksiyonAnaliz'); });
   setDal('icerikStrateji');
+  if (typeof navigator !== 'undefined' && navigator.share) { el('dalPaylasBtn').classList.remove('hidden'); }
 
   el('dalGonderBtn').addEventListener('click', function () {
     var istek = el('dalIstek').value.trim();
     if (!istek) { setStatus(el('dalStatus'), 'İstek metni gerekli.', 'err'); return; }
     setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
+    el('dalRaporAksiyonlar').classList.add('hidden');
+    var rakipIds = Object.keys(rakipListeSecili);
+    var parametreler = ['paramSosyalMedya', 'paramFiyat', 'paramKonum'].filter(function (id) { return el(id).checked; }).map(function (id) { return el(id).value; });
     var path = currentDal === 'icerikStrateji' ? '/panel/rakip-analizi/icerik-strateji' : '/panel/rakip-analizi/aksiyon-analiz';
-    var payload = currentDal === 'icerikStrateji' ? { istek: istek } : { yorum: istek };
+    var payload = currentDal === 'icerikStrateji'
+      ? { istek: istek, rakipIds: rakipIds, parametreler: parametreler }
+      : { yorum: istek, rakipIds: rakipIds, parametreler: parametreler };
     authFetch(path, { method: 'POST', body: JSON.stringify(payload) }).then(function (r) {
       return r.json().then(function (data) { return { ok: r.ok, data: data }; });
     }).then(function (res) {
       loadKullanimSayaci();
       if (!res.ok) { setStatusLimit(el('dalStatus'), res.data.error || 'Rapor üretilemedi.', res.data.limitUrl); return; }
       setStatus(el('dalStatus'), '', '');
-      el('dalRapor').textContent = res.data.rapor;
+      sonRaporMetni = res.data.rapor;
+      el('dalRapor').textContent = sonRaporMetni;
+      el('dalRaporAksiyonlar').classList.remove('hidden');
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('dalStatus'), 'Rapor şu an üretilemedi, lütfen tekrar dene.', 'err'); });
+  });
+
+  // Rapor indirme/paylaşma — hem Görsel/Video Stratejisi hem Aksiyon/Hedef Analizi raporları
+  // için aynı butonlar (sonRaporMetni, hangi dal üretildiyse onu tutuyor).
+  function raporDosyaAdi() {
+    return (currentDal === 'icerikStrateji' ? 'gorsel-video-stratejisi' : 'aksiyon-hedef-analizi') + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
+  }
+
+  el('dalIndirBtn').addEventListener('click', function () {
+    if (!sonRaporMetni || !window.jspdf) return;
+    var doc = new window.jspdf.jsPDF();
+    var satirlar = doc.splitTextToSize(sonRaporMetni, 180);
+    doc.setFontSize(11);
+    doc.text(satirlar, 15, 15);
+    doc.save(raporDosyaAdi());
+  });
+
+  el('dalWhatsappBtn').addEventListener('click', function () {
+    if (!sonRaporMetni) return;
+    var metin = sonRaporMetni.length > 1500 ? sonRaporMetni.slice(0, 1500) + '... (tam metin için PDF\'i indir)' : sonRaporMetni;
+    window.open('https://wa.me/?text=' + encodeURIComponent(metin), '_blank');
+  });
+
+  el('dalEpostaBtn').addEventListener('click', function () {
+    if (!sonRaporMetni) return;
+    var konu = currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu';
+    var metin = sonRaporMetni.length > 1500 ? sonRaporMetni.slice(0, 1500) + '... (tam metin için PDF\'i indir)' : sonRaporMetni;
+    window.location.href = 'mailto:?subject=' + encodeURIComponent(konu) + '&body=' + encodeURIComponent(metin);
+  });
+
+  el('dalPaylasBtn').addEventListener('click', function () {
+    if (!sonRaporMetni || !navigator.share) return;
+    navigator.share({ title: currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu', text: sonRaporMetni }).catch(function () { /* kullanıcı iptal etti, sorun değil */ });
   });
 
   // Resume an existing session-token on reload (e.g. already logged in via panel.html).

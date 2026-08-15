@@ -168,16 +168,50 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 
 // Görsel/video stratejisi için sistem talimatı — rakip içeriği KOPYALANMAZ, sadece stratejiden
 // (format/sıklık/platform) ilham alınır; küratif yaklaşımın kod-seviyesindeki karşılığı bu.
+// Kullanıcı kararı (2026-08-15): rakip seçimi bu dalda da mümkün ama seçilen rakiplerin
+// birebir/karşılaştırmalı analizi YAPILMAZ — sadece genel/güncel trend bağlamı için kullanılır
+// (KVKK ve "içerik kopyalanmaz" ilkesiyle tutarlı). Tam karşılaştırma Aksiyon/Hedef Analizi'nde.
 const ICERIK_STRATEJI_SYSTEM_PROMPT = `Sen Talk and Heal'in (Çiğdem Taş'ın terapi pratiği) sosyal medya içerik stratejisti olarak çalışıyorsun.
-Sana verilen rakip verisini analiz ederek, o rakiplerin içeriklerini ASLA kopyalamadan, sadece
-stratejilerinden (hangi platformda, ne sıklıkla, hangi format/konu daha çok etkileşim alıyor)
-ilham alarak Talk and Heal için ORİJİNAL, telifsiz-stok veya AI-üretilmiş içerik önerileri sun.
-Türkçe yaz, somut ve uygulanabilir öneriler ver.`;
+Sana verilen rakip verisini ASLA rakip rakip karşılaştırma/analiz yapmadan, sadece genel bir pazar/
+güncel trend hissi vermek için arka plan bağlamı olarak kullan. Rakiplerin içeriklerini ASLA
+kopyalamadan, sadece stratejilerinden (hangi platformda, ne sıklıkla, hangi format/konu daha çok
+etkileşim alıyor) ilham alarak Talk and Heal için ORİJİNAL, telifsiz-stok veya AI-üretilmiş içerik
+önerileri sun. Türkçe yaz, somut ve uygulanabilir öneriler ver.`;
 
-// POST /panel/rakip-analizi/icerik-strateji { istek } — toplanan tüm rakip verisi + Çiğdem'in
-// serbest metin/ses isteği Claude'a gönderilir, küratif öneri raporu üretilir ve kaydedilir.
+const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
+	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
+	fiyat: 'Fiyat/paket karşılaştırması (Not alanında fiyat bilgisi varsa)',
+	konum: "Konum/yakınlık (Çiğdem'e ne kadar yakın — arama yarıçapından)",
+};
+
+// Seçilen (veya boşsa TÜM kayıtlı) rakiplerin özet metnini üretir. parametreler, hangi
+// boyutlara odaklanılacağını modele açıkça söyler (ör. sadece sosyal medya, fiyatı hariç tut).
+function rakipOzetOlustur(
+	rakipler: { row: { id: string; isim: string; adres: string; not: string; aramaRadiusMeters: string } }[],
+	rakipIds: string[],
+	parametreler: string[],
+): string {
+	const secililer = rakipIds.length ? rakipler.filter(({ row }) => rakipIds.includes(row.id)) : rakipler;
+	if (!secililer.length) return '(henüz rakip verisi yok)';
+	const odaklanilacakParametreler = parametreler.filter((p) => p in ANALIZ_PARAMETRE_ACIKLAMALARI);
+	const parametreSatiri = odaklanilacakParametreler.length
+		? `Odaklanılacak boyutlar: ${odaklanilacakParametreler.map((p) => ANALIZ_PARAMETRE_ACIKLAMALARI[p]).join('; ')}.\n\n`
+		: '';
+	const satirlar = secililer.map(({ row }) => {
+		const parcalar = [row.isim];
+		if (row.adres) parcalar.push(`adres: ${row.adres}`);
+		if (row.aramaRadiusMeters) parcalar.push(`yakınlık: ${row.aramaRadiusMeters}m yarıçap içinde bulundu`);
+		if (row.not) parcalar.push(`not: ${row.not}`);
+		return `- ${parcalar.join(', ')}`;
+	});
+	return parametreSatiri + satirlar.join('\n');
+}
+
+// POST /panel/rakip-analizi/icerik-strateji { istek, rakipIds?, parametreler? } — seçilen (ya da
+// boşsa tüm) rakip verisi + Çiğdem'in serbest metin/ses isteği Claude'a gönderilir, küratif öneri
+// raporu üretilir ve kaydedilir.
 export async function handleIcerikStrateji(request: Request, env: Env): Promise<Response> {
-	let body: { istek?: unknown };
+	let body: { istek?: unknown; rakipIds?: unknown; parametreler?: unknown };
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -186,13 +220,13 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	const rawIstek = String(body.istek ?? '').slice(0, NOTE_MAX_LENGTH);
 	if (!rawIstek) return errorResponse(request, 400, 'İstek metni gerekli.');
 	const istek = await cleanDictation(env, rawIstek);
+	const rakipIds = Array.isArray(body.rakipIds) ? body.rakipIds.map((x) => String(x)) : [];
+	const parametreler = Array.isArray(body.parametreler) ? body.parametreler.map((x) => String(x)) : [];
 
 	await ensureRakipAnaliziTab(env);
 	const rakipler = await getAllRakipAnalizRows(env);
-	const rakipOzet = rakipler
-		.map(({ row }) => `- ${row.isim}${row.adres ? ` (${row.adres})` : ''}${row.not ? `: ${row.not}` : ''}`)
-		.join('\n');
-	const userPrompt = `Toplanan rakip verisi:\n${rakipOzet || '(henüz rakip verisi yok)'}\n\nÇiğdem'in isteği: ${istek}`;
+	const rakipOzet = rakipOzetOlustur(rakipler, rakipIds, parametreler);
+	const userPrompt = `Toplanan rakip verisi:\n${rakipOzet}\n\nÇiğdem'in isteği: ${istek}`;
 
 	let rapor: string;
 	try {
@@ -219,17 +253,23 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	return json({ id: row.id, rapor }, request);
 }
 
+// Kullanıcı kararı (2026-08-15): İçerik Stratejisi'nin aksine, burada seçilen rakiplerin TAM
+// karşılaştırmalı analizi yapılır — randevu/hedef verisiyle birlikte doğrudan rakip kıyası.
 const AKSIYON_ANALIZ_SYSTEM_PROMPT = `Sen Talk and Heal'in (Çiğdem Taş'ın terapi pratiği) iş stratejisti olarak çalışıyorsun.
-Sana verilen randevu/gelir verisi ve Çiğdem'in gözlem/yorumuna dayanarak haftalık/aylık/
-3-6-9-12 aylık somut hedefler, bir yol haritası ve atılması gereken adımları öner. Eğer
-önceki bir dönemin hedefi verilmişse, "neredeydik / ne yaptık / neredeyiz" üçlemesiyle
-realizasyonu değerlendir; sapma varsa nedenini analiz edip bir sonraki dönem için
-düzeltilmiş hedef/yol haritası öner. Türkçe yaz, somut ve ölçülebilir ol.`;
+Sana verilen randevu/gelir verisi, (varsa) seçilen rakiplerin verisi ve Çiğdem'in gözlem/yorumuna
+dayanarak haftalık/aylık/3-6-9-12 aylık somut hedefler, bir yol haritası ve atılması gereken
+adımları öner. Rakip verisi verilmişse, İçerik Stratejisi analizinin aksine burada rakip rakip
+DOĞRUDAN karşılaştırma yapabilirsin (fiyat/konum/sosyal medya aktifliği gibi verilen boyutlarda
+Çiğdem'in nerede güçlü/zayıf olduğunu somutça belirt). Eğer önceki bir dönemin hedefi verilmişse,
+"neredeydik / ne yaptık / neredeyiz" üçlemesiyle realizasyonu değerlendir; sapma varsa nedenini
+analiz edip bir sonraki dönem için düzeltilmiş hedef/yol haritası öner. Türkçe yaz, somut ve
+ölçülebilir ol.`;
 
-// POST /panel/rakip-analizi/aksiyon-analiz { yorum } — booking Sheet'inden (Sayfa1) otomatik
-// sayısal özet + Çiğdem'in yazı/ses yorumu birlikte Claude'a gönderilir.
+// POST /panel/rakip-analizi/aksiyon-analiz { yorum, rakipIds?, parametreler? } — booking
+// Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses
+// yorumu birlikte Claude'a gönderilir.
 export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<Response> {
-	let body: { yorum?: unknown };
+	let body: { yorum?: unknown; rakipIds?: unknown; parametreler?: unknown };
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -238,12 +278,20 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const rawYorum = String(body.yorum ?? '').slice(0, NOTE_MAX_LENGTH);
 	if (!rawYorum) return errorResponse(request, 400, 'Yorum metni gerekli.');
 	const yorum = await cleanDictation(env, rawYorum);
+	const rakipIds = Array.isArray(body.rakipIds) ? body.rakipIds.map((x) => String(x)) : [];
+	const parametreler = Array.isArray(body.parametreler) ? body.parametreler.map((x) => String(x)) : [];
 
 	const bookingRows = await getAllRows(env);
 	const aktifRandevu = bookingRows.filter(({ row }) => !row.cancelledAt).length;
 	const iptalRandevu = bookingRows.filter(({ row }) => row.cancelledAt).length;
 	const sayisalOzet = `Toplam randevu: ${bookingRows.length}, aktif: ${aktifRandevu}, iptal: ${iptalRandevu}`;
-	const userPrompt = `Sayısal özet: ${sayisalOzet}\n\nÇiğdem'in yorumu: ${yorum}`;
+
+	await ensureRakipAnaliziTab(env);
+	const rakipOzet = rakipIds.length ? rakipOzetOlustur(await getAllRakipAnalizRows(env), rakipIds, parametreler) : null;
+	const userPrompt =
+		`Sayısal özet: ${sayisalOzet}` +
+		(rakipOzet ? `\n\nSeçilen rakip verisi:\n${rakipOzet}` : '') +
+		`\n\nÇiğdem'in yorumu: ${yorum}`;
 
 	let rapor: string;
 	try {
@@ -259,7 +307,6 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	await ensureKullanimKaydiTab(env);
 	await logKullanim(env, 'aksiyonAnaliz', yorum.slice(0, 200));
 
-	await ensureRakipAnaliziTab(env);
 	const row = emptyRakipAnalizRow();
 	row.id = newId();
 	row.createdAtUtc = new Date().toISOString();
