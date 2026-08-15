@@ -1292,11 +1292,16 @@ md, docx, csv, pptx, epub, 3g2, 3gp, aac, aif, aifc, aiff, amr, au, avi, cda, m4
 mpeg, ogg, opus, ra, ram, snd, wav, wma, avif, bmp, gif, ico, jp2, png, webp, tif, tiff, heic, heif,
 jpeg, jpg, jpe türlerini desteklemesi gerek."
 
-**Henüz uygulanmadı — sadece kaydedildi.** İki ayrı iş:
-1. Sektöre/branşa/mesleğe göre parametre setinin otomatik yüklenmesi — kapsam netleştirilmesi
-   gerekiyor (sadece terapi/danışmanlık alt dalları mı, yoksa `rakipSorgu` alanına yazılan
-   HERHANGİ bir meslek/sektör için mi — bu ikincisi çok daha büyük bir iş, muhtemelen AI ile
-   dinamik parametre üretimi gerektirir).
-2. İçe Aktar modalının desteklemesi gereken tam dosya türü listesi yukarıda birebir — NotebookLM'in
-   kendi desteklediği format listesiyle örtüşüyor (metin/döküman + ses + video + görsel). Faz D
-   (İçe Aktar) ve Faz E (NotebookLM alternatifi) için ortak altyapı ihtiyacı.
+İki ayrı iş:
+1. **Karar verildi (2026-08-15), uygulanmayacak burada:** Talk and Heal tek-sektörlü olduğu için
+   mevcut 20 parametre sabit kalıyor. Sektöre göre statik (dinamik AI çağrısı OLMADAN) parametre
+   yükleme fikri Sparrow'un gelecekteki çok-sektörlü Rakip Analizi ürününe taşındı — bkz. Sparrow
+   `ISTEKLER.md`, "Rakip Analizi ürünü — sektöre göre statik parametre yükleme" bölümü.
+2. İçe Aktar dosya türleri — **Faz D1 tamamlandı (2026-08-15):** pdf/txt/md/docx/csv/pptx/epub +
+   web linki (YouTube hariç) + yapıştırılan metin canlıda (bkz. `lib/belgeCikar.ts`,
+   `POST /panel/rakip-analizi/ice-aktar`). **Henüz yapılmadı:** ses/video dosyaları (aac/mp3/mp4/
+   wav vb. — transkripsiyon servisi araştırması gerekiyor), görseller (Claude vision ile çoğu
+   format doğrudan çalışır ama henüz İçe Aktar modalına bağlanmadı), YouTube linki transkripti
+   (ücretsiz bir yöntem araştırılacak), Google Drive entegrasyonu (yeni bir OAuth akışı gerekir).
+   Faz E (NotebookLM alternatifi — sesli özet/slayt/zihin haritası vb.) bu altyapının üstüne
+   kurulacak, henüz başlanmadı.
