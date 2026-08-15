@@ -182,6 +182,23 @@ const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
 	fiyat: 'Fiyat/paket karşılaştırması (Not alanında fiyat bilgisi varsa)',
 	konum: "Konum/yakınlık (Çiğdem'e ne kadar yakın — arama yarıçapından)",
+	googlePuani: 'Google puanı/yorum sayısı ve içeriği (Not alanında varsa)',
+	webSitesi: 'Web sitesi kalitesi/SEO görünürlüğü (Not alanında varsa)',
+	randevuSistemi: 'Online randevu alma kolaylığı (Not alanında varsa)',
+	uzmanlikCesitliligi: 'Uzmanlık alanı/terapi yöntemi çeşitliliği (Not alanında varsa)',
+	seansSekli: 'Online/yüz yüze seans seçenekleri (Not alanında varsa)',
+	calismaSaatleri: 'Çalışma saatleri esnekliği — akşam/hafta sonu (Not alanında varsa)',
+	markaGuveni: 'Marka güveni — sertifika, dernek üyeliği, medya görünürlüğü (Not alanında varsa)',
+	reklamGorunurlugu: 'Reklam/pazarlama görünürlüğü — Google Ads, sponsorlu içerik (Not alanında varsa)',
+	dilSecenekleri: 'Dil seçenekleri — çoklu dil hizmeti (Not alanında varsa)',
+	hedefKitle: 'Hedef kitle/niş konumlandırma — çift, ergen, travma vb. özel odak (Not alanında varsa)',
+	ekipBuyuklugu: 'Ekip büyüklüğü/kapasite — tek terapist mi, çok terapistli klinik mi (Not alanında varsa)',
+	deneyimSuresi: 'Deneyim süresi/kuruluş yılı (Not alanında varsa)',
+	sigortaKurumsal: 'Sigorta/kurumsal anlaşmalar (Not alanında varsa)',
+	ucretsizOnGorusme: 'Ücretsiz ön görüşme/deneme seansı sunuyor mu (Not alanında varsa)',
+	referansVakaPaylasimi: 'Referans/vaka paylaşımı derinliği (Not alanında varsa)',
+	topluluktEtkinlik: 'Atölye/webinar/topluluk etkinliği düzenliyor mu (Not alanında varsa)',
+	fiyatSeffafligi: 'Fiyatı web sitesinde açıkça paylaşıyor mu — şeffaflık (Not alanında varsa)',
 };
 
 // Seçilen (veya boşsa TÜM kayıtlı) rakiplerin özet metnini üretir. parametreler, hangi

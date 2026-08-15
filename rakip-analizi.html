@@ -112,11 +112,31 @@
            Aksiyon/Hedef Analizi'nde ise tam karşılaştırmalı analiz yapılabilir. Bu 3 parametre
            doğrudan rakip karşılaştırmasına ait olduğundan sadece Aksiyon/Hedef Analizi'nde
            gösterilir — setDal() içinde toggle edilir, bkz. #dalParametreler .hidden mantığı. -->
-      <div id="dalParametreler">
-        <label><input type="checkbox" id="paramSosyalMedya" value="sosyalMedya" checked> Sosyal medya aktiflik/format sıklığı</label>
-        <label><input type="checkbox" id="paramFiyat" value="fiyat" checked> Fiyat/paket karşılaştırması</label>
-        <label><input type="checkbox" id="paramKonum" value="konum" checked> Konum/yakınlık</label>
-      </div>
+      <details id="dalParametreler" class="param-dropdown">
+        <summary id="dalParametreOzet">Analiz parametreleri</summary>
+        <div class="param-dropdown-list">
+          <label><input type="checkbox" id="paramSosyalMedya" value="sosyalMedya" checked> Sosyal medya aktiflik/format sıklığı</label>
+          <label><input type="checkbox" id="paramFiyat" value="fiyat" checked> Fiyat/paket karşılaştırması</label>
+          <label><input type="checkbox" id="paramKonum" value="konum" checked> Konum/yakınlık</label>
+          <label><input type="checkbox" id="paramGooglePuani" value="googlePuani" checked> Google puanı/yorum sayısı ve içeriği</label>
+          <label><input type="checkbox" id="paramWebSitesi" value="webSitesi" checked> Web sitesi kalitesi/SEO görünürlüğü</label>
+          <label><input type="checkbox" id="paramRandevuSistemi" value="randevuSistemi" checked> Online randevu alma kolaylığı</label>
+          <label><input type="checkbox" id="paramUzmanlikCesitliligi" value="uzmanlikCesitliligi" checked> Uzmanlık alanı/terapi yöntemi çeşitliliği</label>
+          <label><input type="checkbox" id="paramSeansSekli" value="seansSekli" checked> Online/yüz yüze seans seçenekleri</label>
+          <label><input type="checkbox" id="paramCalismaSaatleri" value="calismaSaatleri" checked> Çalışma saatleri esnekliği (akşam/hafta sonu)</label>
+          <label><input type="checkbox" id="paramMarkaGuveni" value="markaGuveni" checked> Marka güveni (sertifika, dernek üyeliği, medya görünürlüğü)</label>
+          <label><input type="checkbox" id="paramReklamGorunurlugu" value="reklamGorunurlugu" checked> Reklam/pazarlama görünürlüğü (Google Ads, sponsorlu içerik)</label>
+          <label><input type="checkbox" id="paramDilSecenekleri" value="dilSecenekleri" checked> Dil seçenekleri (çoklu dil hizmeti)</label>
+          <label><input type="checkbox" id="paramHedefKitle" value="hedefKitle" checked> Hedef kitle/niş konumlandırma (çift, ergen, travma vb. özel odak)</label>
+          <label><input type="checkbox" id="paramEkipBuyuklugu" value="ekipBuyuklugu" checked> Ekip büyüklüğü/kapasite (tek terapist mi, çok terapistli klinik mi)</label>
+          <label><input type="checkbox" id="paramDeneyimSuresi" value="deneyimSuresi" checked> Deneyim süresi/kuruluş yılı</label>
+          <label><input type="checkbox" id="paramSigortaKurumsal" value="sigortaKurumsal" checked> Sigorta/kurumsal anlaşmalar</label>
+          <label><input type="checkbox" id="paramUcretsizOnGorusme" value="ucretsizOnGorusme" checked> Ücretsiz ön görüşme/deneme seansı sunuyor mu</label>
+          <label><input type="checkbox" id="paramReferansVakaPaylasimi" value="referansVakaPaylasimi" checked> Referans/vaka paylaşımı derinliği</label>
+          <label><input type="checkbox" id="paramTopluluktEtkinlik" value="topluluktEtkinlik" checked> Atölye/webinar/topluluk etkinliği düzenliyor mu</label>
+          <label><input type="checkbox" id="paramFiyatSeffafligi" value="fiyatSeffafligi" checked> Fiyatı web sitesinde açıkça paylaşıyor mu (şeffaflık)</label>
+        </div>
+      </details>
       <div class="row">
         <textarea id="dalIstek" class="grow" placeholder="İsteğinizi yazın ya da mikrofonla dikte edin..."></textarea>
         <div class="mic-lang-toggle" id="dalMicLangToggle">
@@ -591,6 +611,13 @@
   }
   el('dalIcerikBtn').addEventListener('click', function () { setDal('icerikStrateji'); });
   el('dalAksiyonBtn').addEventListener('click', function () { setDal('aksiyonAnaliz'); });
+  function dalParametreOzetGuncelle() {
+    var toplam = document.querySelectorAll('#dalParametreler input[type="checkbox"]').length;
+    var secili = document.querySelectorAll('#dalParametreler input[type="checkbox"]:checked').length;
+    el('dalParametreOzet').textContent = 'Analiz parametreleri (' + secili + '/' + toplam + ' seçili)';
+  }
+  el('dalParametreler').addEventListener('change', dalParametreOzetGuncelle);
+  dalParametreOzetGuncelle();
   setDal('icerikStrateji');
   if (typeof navigator !== 'undefined' && navigator.share) { el('dalPaylasBtn').classList.remove('hidden'); }
 
@@ -601,7 +628,7 @@
     el('dalRaporAksiyonlar').classList.add('hidden');
     var rakipIds = Object.keys(rakipListeSecili);
     var parametreler = currentDal === 'aksiyonAnaliz'
-      ? ['paramSosyalMedya', 'paramFiyat', 'paramKonum'].filter(function (id) { return el(id).checked; }).map(function (id) { return el(id).value; })
+      ? Array.prototype.map.call(document.querySelectorAll('#dalParametreler input[type="checkbox"]:checked'), function (cb) { return cb.value; })
       : [];
     var path = currentDal === 'icerikStrateji' ? '/panel/rakip-analizi/icerik-strateji' : '/panel/rakip-analizi/aksiyon-analiz';
     var payload = currentDal === 'icerikStrateji'
