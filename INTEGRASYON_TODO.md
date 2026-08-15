@@ -1405,10 +1405,19 @@ yapabileceğimiz bir imkanımız var mı? Notion ı altyapıda ücretsiz kullana
 ücretsiz açık kaynak bir araç bulabilir miyiz?"
 
 **Üçü de tamamlandı (2026-08-15):**
-- Madde 1: `RakipTakipGecmis` sekmesi — (varlikId, periyotTuru) başına son 12 snapshot, rotasyonlu.
-  Henüz hiçbir route bunu YAZMIYOR/OKUMUYOR (sadece veri katmanı hazır) — karşılaştırma raporu +
-  grafik UI'ı (asıl "zaman-içi karşılaştırma" özelliği) hâlâ yapılmadı, sıradaki adım bu.
-- Madde 2: RakipTakip'in projeksiyon/hedef/realizasyon/fark sütunlarına CLIP wrapStrategy uygulandı.
+- Madde 1: `RakipTakipGecmis` sekmesi (son 12 snapshot, rotasyonlu) + dönem kapanınca Talk and Heal
+  ve seçilen rakip(ler) için Claude'un ürettiği parametre skorlarının (1-10, veri yoksa null)
+  otomatik kaydı + `POST /panel/rakip-analizi/rakip-takip/karsilastirma` (1'e1 / ortalama mod,
+  ortalama hesaplaması tarihe göre gruplanıyor, dizi index'ine güvenmiyor) + frontend'de Chart.js
+  ile çizgi/sütun grafik ("Otomatik Rakip Takibi" bölümünün altında). Aksiyon/Hedef Analizi
+  panelinden de bu bölüme link var. **Bilinen sınır:** Talk and Heal'in kendi niteliksel
+  parametreleri (sosyal medya aktifliği vb.) için henüz serbest metin girdisi toplanmıyor, sadece
+  randevu sayıları — çoğu parametre Talk and Heal tarafında dürüstçe "veri yok" dönebilir.
+- Madde 2: RakipTakip'in projeksiyon/hedef/realizasyon/fark sütunlarına CLIP wrapStrategy + satır
+  yüksekliği sabitlemesi uygulandı (CLIP tek başına yetmiyordu, ayrıca düzeltildi).
 - Madde 3: Notion AI'ın ücretsiz/programatik metin-sadeleştirme API'si olmadığı doğrulandı; bunun
   yerine ICERIK_STRATEJI_SYSTEM_PROMPT + AKSIYON_ANALIZ_SYSTEM_PROMPT'a sade/gündelik dil talimatı
   eklendi.
+
+**Henüz yapılmadı (Faz 3-4'ün geri kalanı, ayrı bir konu):** otomatik 5 yerel + 5 genel rakip
+sınıflandırması (bkz. yukarıki "Otomatik 10 rakip takibi" bölümü).
