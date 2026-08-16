@@ -331,6 +331,36 @@ export const KULLANIM_KATEGORILERI = {
 
 export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;
 
+// Limit Yükseltme (2026-08-16, kullanıcı isteği). Sadece Anthropic/Claude kategorileri (icerikStrateji,
+// aksiyonAnaliz) buraya dahil — bunların limiti gerçek bir $ kredi bakiyesine karşılık geliyor,
+// "yükleme yap → daha çok rapor hakkı" mantığı burada anlamlı. adresBulma/rakipArama BİLEREK dışarıda
+// bırakıldı: onların limiti Google'ın kendi faturalandırmasına karşı BİZİM koyduğumuz kendi güvenlik
+// sınırımız — karşılığında bir "kredi yükleme" işlemi yok, zaten çok cömert (10.000/5.000) ve
+// kullanımın çok altında (6/6). Anthropic'in webhook/programatik bakiye API'si olmadığı için
+// (2026-08-16'da araştırıldı, doğrulandı) bu akış tamamen manuel: Çiğdem sağlayıcıya gidip yükleme
+// yapar, ne kadar yüklediğini kendisi girer, biz USD karşılığını hesaplayıp (bkz. lib/currency.ts)
+// RAPOR_MALIYETI_USD'ye bölüp limite ekleriz.
+export const KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER = ['icerikStrateji', 'aksiyonAnaliz'] as const;
+
+// config.ts'deki KULLANIM_KATEGORILERI yorumunda hesaplanan "metin-ekli en kötü senaryo" rapor
+// maliyeti — limit yükseltme hesaplamasında da AYNI rakam kullanılıyor, iki yerde ayrı ayrı
+// tutulmuyor.
+export const RAPOR_MALIYETI_USD = 0.2;
+
+export const ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
+
+export const KULLANIM_LIMIT_TAB_NAME = 'KullanimLimitleri';
+
+export const KULLANIM_LIMIT_COLUMNS = ['kategori', 'limit', 'sonEklenenTutar', 'sonEklenenParaBirimi', 'guncellenmeUtc'] as const;
+
+export const KULLANIM_LIMIT_COLUMN_LABELS: Record<(typeof KULLANIM_LIMIT_COLUMNS)[number], string> = {
+	kategori: 'Kategori',
+	limit: 'Limit',
+	sonEklenenTutar: 'Son Eklenen Tutar',
+	sonEklenenParaBirimi: 'Son Eklenen Para Birimi',
+	guncellenmeUtc: 'Güncellenme (UTC)',
+};
+
 // Otomatik 10-rakip periyodik takip + OKR döngüsü (2026-08-15, Faz 1 — sadece veri modeli, henüz
 // hiçbir route/UI bunu kullanmıyor). Kullanıcı kararı: raporlar Sheet'i satır satır büyütmesin
 // (bkz. INTEGRASYON_TODO.md), o yüzden bu sekme klasik "her olayda append" değil, periyot türü

@@ -27,6 +27,7 @@ import {
 	handleIceAktar,
 } from './routes/rakipAnalizi';
 import { handleRakipTakipDurum, handleRakipTakipUret, handleRakipTakipAyar, handleRakipTakipKarsilastirma } from './routes/rakipTakip';
+import { handleKullanimLimitArttir } from './routes/kullanimLimit';
 import { runReminderSweep, runSessionNoteFallback, runRakipTakipSweep } from './scheduled';
 import { corsHeaders } from './lib/http';
 
@@ -100,6 +101,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handleRakipTakipAyar(request, env);
 			case 'POST /panel/rakip-analizi/rakip-takip/karsilastirma':
 				return (await requirePanelAuth(request, env)) ?? handleRakipTakipKarsilastirma(request, env);
+			case 'POST /panel/rakip-analizi/kullanim-limit-arttir':
+				return (await requirePanelAuth(request, env)) ?? handleKullanimLimitArttir(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}

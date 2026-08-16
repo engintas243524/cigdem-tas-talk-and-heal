@@ -3,9 +3,11 @@ import {
 	KULLANIM_KAYDI_COLUMNS,
 	KULLANIM_KAYDI_COLUMN_LABELS,
 	KULLANIM_KATEGORILERI,
+	KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER,
 	type KullanimKategori,
 } from '../config';
 import { columnLetter, sheetsFetch, sabitSatirYuksekligiUygula } from './sheets';
+import { ensureKullanimLimitTab, getGuncelLimit } from './kullanimLimitSheets';
 import type { Env } from '../types';
 
 type KullanimKaydiRow = Record<(typeof KULLANIM_KAYDI_COLUMNS)[number], string>;
@@ -93,6 +95,20 @@ export interface KullanimOzetKategori {
 	etiket: string;
 	kullanilan: number;
 	aylikLimit: number | null;
+	// true ise frontend "Limiti Yükselt" akışını gösterir (bkz. routes/kullanimLimit.ts) — sadece
+	// Anthropic/Claude kategorileri (icerikStrateji, aksiyonAnaliz), Google kategorilerinde yok.
+	arttirilabilir: boolean;
+}
+
+// Bir kategorinin O ANKİ (güncel) aylık limitini döner — arttırılabilir kategoriler için
+// KullanimLimitleri sekmesindeki (Limit Yükseltme ile güncellenebilen) değer, diğerleri için
+// config.ts'deki statik değer.
+async function efektifLimit(env: Env, kategori: KullanimKategori): Promise<number | null> {
+	if (!(KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori)) {
+		return KULLANIM_KATEGORILERI[kategori].aylikLimit;
+	}
+	await ensureKullanimLimitTab(env);
+	return getGuncelLimit(env, kategori);
 }
 
 // Bu ayki (UTC takvim ayı) kullanımı kategori başına sayar. Tüm satırları okuyup bellekte
@@ -122,7 +138,8 @@ export async function getKullanimOzet(env: Env): Promise<Record<KullanimKategori
 		ozet[kategori] = {
 			etiket: KULLANIM_KATEGORILERI[kategori].etiket,
 			kullanilan: sayimlar[kategori] ?? 0,
-			aylikLimit: KULLANIM_KATEGORILERI[kategori].aylikLimit,
+			aylikLimit: await efektifLimit(env, kategori),
+			arttirilabilir: (KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori),
 		};
 	}
 	return ozet;
@@ -131,7 +148,7 @@ export async function getKullanimOzet(env: Env): Promise<Record<KullanimKategori
 // Bir kategori bu ay için kotasını doldurmuş mu? aylikLimit=null olan bir kategori (şu an yok,
 // ama gelecekte eklenebilir) burada hiç sınırlanmaz.
 export async function kotaDolduMu(env: Env, kategori: KullanimKategori): Promise<boolean> {
-	const limit = KULLANIM_KATEGORILERI[kategori].aylikLimit;
+	const limit = await efektifLimit(env, kategori);
 	if (limit === null) return false;
 	const ozet = await getKullanimOzet(env);
 	return ozet[kategori].kullanilan >= limit;

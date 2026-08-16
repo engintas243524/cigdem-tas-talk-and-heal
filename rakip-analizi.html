@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=8">
+<link rel="stylesheet" href="panel.css?v=9">
 </head>
 <body>
 <div class="panel-wrap">
@@ -458,9 +458,91 @@
           bar.appendChild(doluluk);
           tile.appendChild(bar);
         }
+        if (k.arttirilabilir) tile.appendChild(kotaLimitArttirBlogu(kategori));
         container.appendChild(tile);
       });
     }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, sayaç kritik değil */ } });
+  }
+
+  // Limit Yükseltme (2026-08-16) — sadece backend'in arttirilabilir:true dediği kategoriler için
+  // (Anthropic/Claude, Görsel/Video Stratejisi + Aksiyon/Hedef Analizi). Anthropic'in bize "yükleme
+  // tamamlandı" bildirimi/webhook'u yok (araştırıldı) — Çiğdem sağlayıcı sayfasına gidip kendi
+  // yükler, ne kadar yüklediğini burada kendisi girer, backend USD karşılığını hesaplayıp limite
+  // ekler. ANTHROPIC_BILLING_URL burada backend'deki config.ts'deki değerle aynı, kamuya açık bir
+  // link olduğu için burada da sabit tutulması güvenlik sorunu değil.
+  var ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
+  var KOTA_PARA_BIRIMLERI = ['TRY', 'USD', 'EUR', 'GBP'];
+
+  function kotaLimitArttirBlogu(kategori) {
+    var wrap = document.createElement('div');
+    wrap.className = 'kota-limit-arttir';
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'kota-limit-toggle';
+    toggleBtn.textContent = 'Limiti Yükselt ▾';
+
+    var form = document.createElement('div');
+    form.className = 'kota-limit-form hidden';
+
+    var link = document.createElement('a');
+    link.href = ANTHROPIC_BILLING_URL;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.className = 'kota-limit-link';
+    link.textContent = 'Sağlayıcıya git (yükleme yap) →';
+
+    var row = document.createElement('div');
+    row.className = 'kota-limit-row';
+    var select = document.createElement('select');
+    KOTA_PARA_BIRIMLERI.concat(['DIGER']).forEach(function (kod) {
+      var opt = document.createElement('option');
+      opt.value = kod;
+      opt.textContent = kod === 'DIGER' ? 'Diğer…' : kod;
+      select.appendChild(opt);
+    });
+    var digerInput = document.createElement('input');
+    digerInput.type = 'text';
+    digerInput.placeholder = 'Kod (ör. CHF)';
+    digerInput.maxLength = 3;
+    digerInput.className = 'hidden';
+    select.addEventListener('change', function () { digerInput.classList.toggle('hidden', select.value !== 'DIGER'); });
+    var tutarInput = document.createElement('input');
+    tutarInput.type = 'number';
+    tutarInput.min = '0';
+    tutarInput.step = '0.01';
+    tutarInput.placeholder = 'Yüklenen tutar';
+    row.appendChild(select); row.appendChild(digerInput); row.appendChild(tutarInput);
+
+    var submitBtn = document.createElement('button');
+    submitBtn.type = 'button';
+    submitBtn.className = 'btn-secondary';
+    submitBtn.textContent = 'Limiti Güncelle';
+
+    var status = document.createElement('div');
+    status.className = 'status';
+
+    submitBtn.addEventListener('click', function () {
+      var paraBirimi = (select.value === 'DIGER' ? digerInput.value : select.value).trim().toUpperCase();
+      var tutar = Number(tutarInput.value);
+      if (!/^[A-Z]{3}$/.test(paraBirimi)) { setStatus(status, 'Geçerli bir 3 harfli para birimi kodu gir (ör. TRY, USD, EUR, GBP).', 'err'); return; }
+      if (!tutar || tutar <= 0) { setStatus(status, 'Geçerli bir tutar gir.', 'err'); return; }
+      submitBtn.disabled = true;
+      setStatus(status, 'Güncelleniyor…', '');
+      authFetch('/panel/rakip-analizi/kullanim-limit-arttir', {
+        method: 'POST', body: JSON.stringify({ kategori: kategori, tutar: tutar, paraBirimi: paraBirimi })
+      }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          if (!res.ok) { submitBtn.disabled = false; setStatus(status, res.data.error || 'Güncellenemedi.', 'err'); return; }
+          setStatus(status, 'Limit ' + res.data.yeniLimit + "'e yükseltildi (+" + res.data.eklenenRaporSayisi + ' rapor, ~$' + res.data.yaklasikUsd + ').', 'ok');
+          loadKullanimSayaci();
+        }).catch(function () { submitBtn.disabled = false; setStatus(status, 'Güncellenemedi, tekrar dene.', 'err'); });
+    });
+
+    form.appendChild(link); form.appendChild(row); form.appendChild(submitBtn); form.appendChild(status);
+    toggleBtn.addEventListener('click', function () { form.classList.toggle('hidden'); });
+    wrap.appendChild(toggleBtn); wrap.appendChild(form);
+    return wrap;
   }
 
   var RAKIP_TAKIP_ETIKETLER = { haftalik: 'Haftalık', aylik: 'Aylık', ucAylik: '3 Aylık', altiAylik: '6 Aylık', dokuzAylik: '9 Aylık', onikiAylik: '12 Aylık' };

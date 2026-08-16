@@ -1444,4 +1444,26 @@ Ekran görüntüsüyle birlikte gönderilen 3 maddelik istek:
   yapacakları linke gidiliebilsin ve kart bilgileri ile yükleme yapılıp limit güncellenerek
   /'tan sonraki limit otomatik olarak artsın."
 
-**Durum güncellemesi (aynı gün) yakında eklenecek.**
+**Durum güncellemesi (2026-08-16, üçü de tamamlandı):**
+- Madde 1 (görünmeyen değişiklikler): kök neden — önceki oturumda kod değiştirildi ama HİÇ deploy
+  edilmemişti (backend'e `wrangler deploy` yapılmamış, frontend'e `git push` yapılmamış). İkisi de
+  yapıldı, canlıda ekran görüntüsüyle doğrulandı.
+- Madde 2 (Sheet satır yüksekliği): CLIP+`updateDimensionProperties` çözümü sadece RakipTakip
+  sekmesine uygulanmıştı — RakipAnalizi, RakipTakipGecmis, KullanimKaydi sekmeleri hiç
+  düzeltilmemişti. Ortak bir yardımcıya (`lib/sheets.ts#sabitSatirYuksekligiUygula`) taşındı ve
+  4 sekmenin de `ensureXTab` fonksiyonuna eklendi — sabit satır sayısı yerine cömert bir tavan
+  (2000) kullanıyor çünkü bu sekmeler satır ekleyerek büyüyor. Kendini onaran (her `ensureXTab`
+  çağrısında yeniden uygulanıyor), zaten şişmiş satırlar bir sonraki panel açılışında küçülür.
+- Madde 3 (limit yükseltme): Anthropic'in yükleme-tamamlandı webhook'u/programatik bakiye API'si
+  olmadığı araştırıldı, doğrulandı — o yüzden akış yarı-otomatik: "Bu Ayki Kullanım" kutularından
+  sadece Anthropic kategorilerinde (Görsel/Video Stratejisi, Aksiyon/Hedef Analizi — Adres
+  Bulma/Rakip Arama bilerek dışarıda, onların limiti Google'a karşı bizim kendi güvenlik
+  sınırımız, karşılığında bir kredi yükleme yok) "Limiti Yükselt" açılır bölümü var: sağlayıcı
+  faturalandırma linkine gider, Çiğdem yüklediği tutarı istediği para biriminde (TRY/USD/EUR/GBP/
+  Diğer) girer, backend Frankfurter.app (anahtarsız, ücretsiz kur API) ile USD karşılığını
+  hesaplayıp RAPOR_MALIYETI_USD'ye (~$0.20/rapor, kötü-senaryo maliyeti) bölüp limite ekler ve
+  yeni `/`'tan sonraki sayı otomatik güncellenir. Yeni `KullanimLimitleri` sekmesi (2 sabit satır,
+  RakipTakip'teki no-growth desenle aynı) limiti kalıcı tutuyor.
+
+Testler: 238/238 geçti (6 yeni test `kullanimLimit.spec.ts` + satır yüksekliği testleri
+`rakipSheets.spec.ts`/`rakipTakipGecmisSheets.spec.ts`/`kullanimKaydi.spec.ts`'e eklendi).

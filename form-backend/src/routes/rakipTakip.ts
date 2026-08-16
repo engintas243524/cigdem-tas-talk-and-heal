@@ -22,11 +22,10 @@ import {
 	RAKIP_TAKIP_PERIYOT_TURLERI,
 	RAKIP_TAKIP_PERIYOT_GUN_SAYISI,
 	TALK_AND_HEAL_VARLIK_ID,
+	ANTHROPIC_BILLING_URL,
 	type RakipTakipPeriyotTuru,
 } from '../config';
 import type { Env, SheetRow } from '../types';
-
-const ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
 
 export function gecerliPeriyotTuru(x: string): x is RakipTakipPeriyotTuru {
 	return (RAKIP_TAKIP_PERIYOT_TURLERI as readonly string[]).includes(x);

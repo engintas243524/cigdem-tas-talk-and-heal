@@ -13,13 +13,13 @@ import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
 import { ensureKullanimKaydiTab, logKullanim, getKullanimOzet, kotaDolduMu } from '../lib/kullanimKaydi';
 import { belgedenMetinCikar, metinCikarWebLink } from '../lib/belgeCikar';
+import { ANTHROPIC_BILLING_URL } from '../config';
 import type { Env } from '../types';
 
 const NOTE_MAX_LENGTH = 5000;
 // İçe Aktar (Faz D1) tek seferde en fazla kaç kaynak belge/link kabul eder — hem prompt boyutunu
 // hem de kullanıcının yanlışlıkla onlarca dosya sürükleyip bırakmasını sınırlamak için.
 const ICE_AKTAR_MAX_ADET = 10;
-const ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
 const GOOGLE_QUOTA_URL = 'https://console.cloud.google.com/iam-admin/quotas';
 
 function newId(): string {
