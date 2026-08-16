@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=12">
+<link rel="stylesheet" href="panel.css?v=13">
 </head>
 <body>
 <div class="panel-wrap">
@@ -276,7 +276,12 @@
 
   // tumunuSecCallback verilirse ilk hücreye "tümünü seç/kaldır" onay kutusu koyar — Kayıtlı
   // Rakipler'de toplu silme/rapor üretme, Arama Sonuçları'nda toplu ekleme için kullanılıyor.
-  function rakipTabloBasligiCiz(listEl, tumunuSecCallback) {
+  // tumSecili: tablo her render'da (listeler/checkbox'lar dahil) baştan çiziliyor, o yüzden bu
+  // kutunun kendi checked durumunu HATIRLAMASI mümkün değil — çağıran taraf "şu an gerçekten
+  // hepsi seçili mi" diye hesaplayıp buraya vermeli, yoksa ilk tıklamadan sonra kutu görsel
+  // olarak boşalır (state hâlâ "hepsi seçili" olsa bile) ve ikinci tıklama tekrar "hepsini seç"
+  // gibi davranır — hiçbir zaman kaldıramazsın (kullanıcı tarafından bildirilen hata, 2026-08-16).
+  function rakipTabloBasligiCiz(listEl, tumSecili, tumunuSecCallback) {
     var head = document.createElement('div');
     head.className = 'rakip-row head';
     var ilkHucre = document.createElement('span');
@@ -284,6 +289,7 @@
       var tumunuSecKutu = document.createElement('input');
       tumunuSecKutu.type = 'checkbox';
       tumunuSecKutu.title = 'Tümünü seç';
+      tumunuSecKutu.checked = tumSecili;
       tumunuSecKutu.addEventListener('change', function () { tumunuSecCallback(tumunuSecKutu.checked); });
       ilkHucre.appendChild(tumunuSecKutu);
     }
@@ -304,44 +310,48 @@
     });
   }
 
-  // state.tam, sadece "şu an her şey görünüyor mu"dan değil, "hangi buton takımındayız"dan
-  // ayrı bir bayrak — yoksa "Daha Az"a bir kez basıp visible < total'a düşer düşmez buton seti
-  // "Daha Fazla/Tümünü Göster"e geri dönüyordu, art arda -3 ilerlemesi yapılamıyordu.
+  // Kullanıcı kararı (2026-08-16): sadece TEK yön anlamlıyken (en başta sadece "daha fazla"
+  // gösterilebilir, sonuna gelince sadece "daha az") buton normal (tam genişlik) boyutta;
+  // ARADA bir durumdaysak (hem ileri hem geri gidilebiliyorsa) iki buton TEK bir butonun ortadan
+  // ikiye bölünmüş hali gibi (boşluksuz, sadece dış köşeler yuvarlak — bkz. panel.css
+  // .sayfalama-cift) yan yana gösterilir. "Tümünü Göster"/"İlk N'e Dön" kısayolları kaldırıldı,
+  // sadece +adım/-adım kalıyor.
   function sayfalamaButonlariCiz(wrapEl, state, total, onChange) {
     wrapEl.innerHTML = '';
+    wrapEl.classList.remove('sayfalama-cift');
     if (total <= state.adim) return;
-    if (!state.tam) {
+
+    var dahaFazlaVar = state.visible < total;
+    var dahaAzVar = state.visible > state.adim;
+
+    if (dahaFazlaVar) {
       var dahaFazla = document.createElement('button');
       dahaFazla.type = 'button'; dahaFazla.className = 'btn-secondary';
       dahaFazla.textContent = 'Daha Fazla (+' + Math.min(state.adim, total - state.visible) + ')';
       dahaFazla.addEventListener('click', function () {
         state.visible = Math.min(total, state.visible + state.adim);
-        if (state.visible >= total) state.tam = true;
         onChange();
       });
-      var tumu = document.createElement('button');
-      tumu.type = 'button'; tumu.className = 'btn-secondary';
-      tumu.textContent = 'Tümünü Göster (' + total + ')';
-      tumu.addEventListener('click', function () { state.visible = total; state.tam = true; onChange(); });
-      wrapEl.appendChild(dahaFazla); wrapEl.appendChild(tumu);
-    } else {
+      wrapEl.appendChild(dahaFazla);
+    }
+    if (dahaAzVar) {
       var dahaAz = document.createElement('button');
       dahaAz.type = 'button'; dahaAz.className = 'btn-secondary';
       dahaAz.textContent = 'Daha Az (-' + state.adim + ')';
-      dahaAz.addEventListener('click', function () { state.visible = Math.max(state.adim, state.visible - state.adim); onChange(); });
-      var ilkN = document.createElement('button');
-      ilkN.type = 'button'; ilkN.className = 'btn-secondary';
-      ilkN.textContent = 'İlk ' + state.adim + '’e Dön';
-      ilkN.addEventListener('click', function () { state.visible = state.adim; state.tam = false; onChange(); });
-      wrapEl.appendChild(dahaAz); wrapEl.appendChild(ilkN);
+      dahaAz.addEventListener('click', function () {
+        state.visible = Math.max(state.adim, state.visible - state.adim);
+        onChange();
+      });
+      wrapEl.appendChild(dahaAz);
     }
+    if (dahaFazlaVar && dahaAzVar) wrapEl.classList.add('sayfalama-cift');
   }
 
   // Şu ana kadar eklenen (manuel veya haritadan) rakiplerin listesi — bunlar sadece Google
   // Sheet'in RakipAnalizi sekmesinde tutuluyordu, uygulamada görünür bir yer yoktu ("Eklendi"
   // yazıyor ama nereye eklendiği belli değildi).
   var rakipListeCache = [];
-  var rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
+  var rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
   var rakipListeSecili = {}; // id -> true, seçili (silinecek) rakipler
 
   // rakipListeSecili tek bir seçim durumu — hem "Seçilenleri Sil" hem de aşağıdaki rapor
@@ -366,7 +376,8 @@
     rakipSecimGuncellendi();
     if (!rakipler.length) { toggleWrap.innerHTML = ''; return; }
 
-    rakipTabloBasligiCiz(list, function (checked) {
+    var tumSecili = rakipler.length > 0 && rakipler.every(function (r) { return !!rakipListeSecili[r.id]; });
+    rakipTabloBasligiCiz(list, tumSecili, function (checked) {
       rakipler.forEach(function (r) { if (checked) { rakipListeSecili[r.id] = true; } else { delete rakipListeSecili[r.id]; } });
       renderRakipListe();
     });
@@ -423,7 +434,7 @@
   function loadRakipListe() {
     authFetch('/panel/rakip-analizi/rakip-liste').then(function (r) { return r.json(); }).then(function (data) {
       rakipListeCache = data.rakipler || [];
-      rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
+      rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
       rakipListeSecili = {};
       renderRakipListe();
     }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, liste yükleme kritik değil */ } });
@@ -768,7 +779,7 @@
   // rakipAramaBaglam, "Ekle"ye basıldığında hangi aramanın sonucu olduğunu (aramaAdres/Sorgu/
   // Radius) kaydetmek ve "Nasıl Bulundu" hücresini doldurmak için son aramanın bağlamını tutar.
   var rakipAramaSonuclariCache = [];
-  var rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
+  var rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
   var rakipAramaBaglam = null;
   var rakipAramaSecili = {}; // dizideki index -> true, "Seçilenleri Ekle" için
 
@@ -804,7 +815,8 @@
     updateRakipSonuclarTopluBtn();
     if (!places.length) { toggleWrap.innerHTML = ''; return; }
 
-    rakipTabloBasligiCiz(list, function (checked) {
+    var tumSecili = places.length > 0 && places.every(function (p, i) { return !!rakipAramaSecili[i]; });
+    rakipTabloBasligiCiz(list, tumSecili, function (checked) {
       places.forEach(function (p, i) { if (checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; } });
       renderAramaSonuclari();
     });
@@ -877,7 +889,7 @@
       var places = res.data.places || [];
       rakipAramaBaglam = { adres: adres, sorgu: sorgu, radius: radius, zaman: new Date().toLocaleString('tr-TR') };
       rakipAramaSonuclariCache = places;
-      rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM, tam: false };
+      rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
       rakipAramaSecili = {};
       renderAramaSonuclari();
       if (!places.length) { setStatus(el('rakipAraStatus'), 'Bu konum/yarıçapta sonuç bulunamadı.', ''); return; }
