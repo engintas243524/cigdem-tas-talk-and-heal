@@ -1608,3 +1608,41 @@ döndüğü için bu regresyon teste hiç yakalanmamıştı, şimdi yakalanıyor
 
 (Image #50: "Bu Ayki Kullanım" başlıklı turuncu kutu, alt kısmında hiç içerik/sayı görünmüyor —
 boş kalmış görünüyor. Kullanıcı mesajı henüz işlenmedi, sıradaki adım araştırma.)
+
+## Kullanıcı bildirimi — "Grafik Verisi" bloğunda 20 parametre seçimi (2026-08-16, sıraya alındı, birebir kayıt)
+
+Not: "Bu Ayki Kullanım" boş görünme sorunu ve yukarıdaki 4 maddelik istek zaten bu oturumda işlendi
+(buton yeniden adlandırma/ekleme, karşılaştırma dosya yükleme, kod dosyası desteği, ortak "Grafik
+Verisi" özelliği + icerikStrateji parametre zenginleştirmesi — hepsi commit + deploy + push edildi).
+Aşağıdaki, kullanıcının "Grafik Verisi" bloğunun 20-parametre kısmıyla ilgili SONRADAN gelen bir
+düzeltme/netleştirme — henüz UYGULANMADI, compact sonrası sıradaki iş bu.
+
+Birinci mesaj (birebir):
+> bu arada 20 parametre için hepsi birden dememiştim, istenirse 20 parametrenin içinde 1 tane ,
+> 2,3,4,5,....,20 tanesi seçilerek seçilen adette parametre ile rapor oluşturulabilsin istemiştim
+> tıpkı Aksiyon/Hedef Analizi ndeki gibi ve ilaveten dediğim gibi Randevu trendi ve RakipTakip
+> parametre geçmişi de yanında olsun ozaman şöyle olsun seçilebilir dropdown lu başında yine onay
+> tik kutusu ile ama 20 parametreden istenenlerin seçilebildiği seçim üst satırda onun altında da
+> Randevu trendi Rakip ve Takip parametre geçmişi onay/tikli olarak alt satırda yer alsın
+
+İkinci mesaj (birebir, aynı konunun devamı):
+> Aksiyon/Hedef Analizi ndeki Grafik verisi(buradaki parametreleri de yukarıda istediğim şekilde
+> altlı üstlü ve 20 parametrenin çoktan seçimli dropdown lu formda olsun) bir buton gibi olsun ve
+> tıkladndığında yine aynı şekilde altta seçimleri görüntülensin.
+
+Benim şu ana kadarki analizim (compact sonrası doğrulanıp uygulanacak):
+- Bu isteğin ÇOĞU aslında zaten backend'de hazır: `handleAksiyonAnaliz` içindeki `parametre20`
+  hesaplaması zaten frontend'in gönderdiği `parametreler` alanını kullanıyor (mevcut
+  `#dalParametreler` 20-checkbox'lık seçimi) — yani Aksiyon/Hedef Analizi'nde "20 parametreden
+  istenen kadarı" backend'de ZATEN çalışıyor, sadece UI'da net görünmüyor (ayrı bir yerde duruyor).
+  `handleRakipTakipKarsilastirma` da zaten `body.parametreler` kabul edip filtreliyor (var olan kod,
+  `ANALIZ_PARAMETRE_ACIKLAMALARI`'nin filtrelenmiş alt kümesi) — ama frontend'de Karşılaştırma
+  tarafında bu seçimi yapacak bir checkbox listesi HİÇ YOK, her zaman tüm 20 parametre gönderiliyor.
+- Yapılması gereken: (1) Karşılaştırma'ya `#dalParametreler` ile birebir aynı 20-checkbox'lık YENİ
+  bir `<details>` seçici eklenip karşılaştırma isteğine `parametreler` alanı olarak bağlanmalı
+  (şu an hiç gönderilmiyor). (2) Her iki sekmede de "Grafik Verisi" bloğunun İÇİNDE, üst satırda
+  "20 parametre" checkbox'ının yanına/altına bu parametre seçici (kendi `<details>`/buton — tıklanınca
+  altında seçimler açılan, aynı davranış deseni) yerleştirilmeli; alt satırda "Randevu trendi" ve
+  "RakipTakip parametre geçmişi" checkbox'ları yer almalı. Aksiyon/Hedef Analizi'nde muhtemelen
+  mevcut `#dalParametreler`'i AYNEN bu bloğun içine taşımak (kopyalamadan, tek bir seçim state'i)
+  en temiz çözüm — iki ayrı 20-checkbox listesi aynı sayfada olmasın.
