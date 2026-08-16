@@ -63,6 +63,9 @@
       <div class="actions" id="rakipSonuclarToggleWrap"></div>
       <div class="sayfalama-manuel" id="rakipSonuclarManuelSayfalama"></div>
       <div class="actions">
+        <button class="btn-secondary hidden" id="rakipSonuclarTopluSilBtn" type="button">Seçilenleri Sil</button>
+      </div>
+      <div class="actions">
         <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
       </div>
       <!-- Google Maps JS API'nin harita render kısmı (google.maps.Map + Marker) hiç yapılmadı —
@@ -1568,9 +1571,12 @@
 
   function updateRakipSonuclarTopluBtn() {
     var count = Object.keys(rakipAramaSecili).length;
-    var btn = el('rakipSonuclarTopluEkleBtn');
-    btn.classList.toggle('hidden', count === 0);
-    btn.textContent = 'Seçilenleri Ekle (' + count + ')';
+    var ekleBtn = el('rakipSonuclarTopluEkleBtn');
+    ekleBtn.classList.toggle('hidden', count === 0);
+    ekleBtn.textContent = 'Seçilenleri Ekle (' + count + ')';
+    var silBtn = el('rakipSonuclarTopluSilBtn');
+    silBtn.classList.toggle('hidden', count === 0);
+    silBtn.textContent = 'Seçilenleri Sil (' + count + ')';
   }
 
   function renderAramaSonuclari() {
@@ -1619,6 +1625,19 @@
     sayfalamaButonlariCiz(toggleWrap, rakipAramaState, places.length, renderAramaSonuclari);
     sayfalamaManuelKontrolCiz(manuelSayfalama, rakipAramaState, places.length, renderAramaSonuclari);
   }
+
+  // "Seçilenleri Sil" (2026-08-17, kullanıcı isteği) — Kayıtlı Rakipler'e EKLEMEDEN, sadece bu
+  // arama sonuçları listesinden istenmeyen satırları çıkarıp listeyi temizlemek için. Backend'e
+  // hiçbir istek gitmiyor (henüz kaydedilmemiş, sadece ekrandaki geçici arama sonucu), o yüzden
+  // sil işlemi anında/senkron — indeksleri büyükten küçüğe sırayla splice ederek kaydırma hatasını
+  // önlüyoruz.
+  el('rakipSonuclarTopluSilBtn').addEventListener('click', function () {
+    var indeksler = Object.keys(rakipAramaSecili).map(Number).sort(function (a, b) { return b - a; });
+    indeksler.forEach(function (i) { rakipAramaSonuclariCache.splice(i, 1); });
+    rakipAramaSecili = {};
+    rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
+    renderAramaSonuclari();
+  });
 
   el('rakipSonuclarTopluEkleBtn').addEventListener('click', function () {
     var btn = el('rakipSonuclarTopluEkleBtn');

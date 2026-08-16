@@ -1705,3 +1705,32 @@ Yapılacaklar (bu sıraya alınan istekten çıkarılan somut adımlar):
 6. YouTube Data API v3'ün maliyetini (varsa) her iki tarafa da ekle.
 7. Bulguları hem Talk and Heal hem Sparrow projesinin ilgili dosyalarına not et.
 8. Talk and Heal için Çiğdem'in anlayacağı, kalem kalem aylık/yıllık gider tablosu oluştur.
+
+**Durum (2026-08-17): TAMAMLANDI.** Web arama (`web_search_20250305`, `max_uses:4`) `icerikStrateji`'ye
+eklendi, 4 canlı API çağrısıyla gerçek maliyet ölçüldü (~$0.15-0.19/rapor). `MALIYET_ANALIZI_GORSEL_VIDEO_STRATEJISI.md`
++ `CIGDEM_AYLIK_YILLIK_GIDERLER.md` yazıldı, Sparrow tarafına `SPARROW_API_MALIYET_MARJ_GORSEL_VIDEO.md`
+eklendi. Commit `2f193e1`, push edildi, Worker deploy edildi (Version ID `bdc722ee-eb17-4d64-afa1-d7f12e972386`).
+
+## Kullanıcı bildirimi — Rapor kalitesi sorusu + Tam Kapsamlı Gider/Marj Tablosu + Rakip Arama UI Düzeltmesi (2026-08-17, sıraya alındı, birebir kayıt)
+
+Kullanıcının mesajı (birebir, 3 ayrı istek):
+
+> - şimdi bana küretif aramadan çok daha etkin raporlar üretebileceğimizi söyleyebilir misin?
+> - şimdi bana talk and heal ın şu ana kadar kullandığı araçların, hosting,domain ve gider
+>   kaleminde yeer alabilecek ne varsa hepsinin talk and heal a aylık ve yıllık giderlerini kalem
+>   kalem bir tabloda yaz, ayrıca talk and heal iin bundan sonrası için düşündüğümüz(video edit,
+>   otomatik sosyal medya paylaşımı, linktree benzeeri bizim kurguladığımız yapı,Stripe komisyonu,
+>   WhatsApp mesaj ücreti, vergi vs.) herşeyin bu aylık ve yıllık maliyetlere etkisini kalem kalem
+>   yaz,aylık ve yıllık brüt ve net marjları ve en sonunda aylık ve yıllık toplam maliyetleri ver.
+> - Konum ile rakip aramada rakiplerin solunda ekle butonu zaten var. Onlara tıklandığında aşağıdaki
+>   seçilen rakiplere ekleniyor. Ama en soldaki onay tik kutusu seçildiğinde de altta seçilenleri
+>   ekle (seçilen rakip sayısı) sadece görünüyor. Bu arada seçilenleri ekle butonu üstünde listeyi
+>   temizlemek için seçilenleri sil (seçilen rakip sayısı) butonu da olmalı ki istendiğinde
+>   istenilen adet kadar rakip de listeden çıkarılsın ve liste temizlenebilsin.
+
+Notlar/kısıtlar (bu isteğe cevap verirken dikkat edilmesi gerekenler): 2. istekteki "vergi" ve
+gelir-bağımlı "net marj" hesabı için gerçek rakam yok (Çiğdem'in vergi durumu/gerçek seans ücreti
+belli değil) — uydurma rakam KONULMAYACAK, ilgili satırlar "TBD/muhasebeciye sorulmalı" olarak
+işaretlenecek. "Video edit/otomatik sosyal medya/linktree" henüz hiçbir araç/mimari kararı
+verilmemiş planlanan özellikler — somut maliyet yerine Sparrow'un kendi altyapısıyla (self-host,
+~$0 marjinal) yapılacağı varsayımı NOT edilecek, kesinleşmiş bir rakam gibi sunulmayacak.
