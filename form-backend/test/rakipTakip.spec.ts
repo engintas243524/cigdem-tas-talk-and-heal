@@ -388,13 +388,17 @@ describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
 		});
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as {
-			rakipEtiketi: string;
-			parametreSonuclari: { parametre: string; talkAndHeal: { deger: number | null }[]; rakip: { deger: number | null }[] }[];
+			grafikVerileri: {
+				rakipTakipGecmisi: {
+					rakipEtiketi: string;
+					parametreSonuclari: { parametre: string; talkAndHeal: { deger: number | null }[]; rakip: { deger: number | null }[] }[];
+				};
+			};
 		};
-		expect(data.rakipEtiketi).toBe('Rakip A');
-		expect(data.parametreSonuclari).toHaveLength(1);
-		expect(data.parametreSonuclari[0].talkAndHeal[0].deger).toBe(9);
-		expect(data.parametreSonuclari[0].rakip[0].deger).toBe(3);
+		expect(data.grafikVerileri.rakipTakipGecmisi.rakipEtiketi).toBe('Rakip A');
+		expect(data.grafikVerileri.rakipTakipGecmisi.parametreSonuclari).toHaveLength(1);
+		expect(data.grafikVerileri.rakipTakipGecmisi.parametreSonuclari[0].talkAndHeal[0].deger).toBe(9);
+		expect(data.grafikVerileri.rakipTakipGecmisi.parametreSonuclari[0].rakip[0].deger).toBe(3);
 		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(true);
 	});
 
@@ -427,12 +431,11 @@ describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
 		});
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as {
-			rakipEtiketi: string;
-			parametreSonuclari: { rakip: { deger: number | null }[] }[];
+			grafikVerileri: { rakipTakipGecmisi: { rakipEtiketi: string; parametreSonuclari: { rakip: { deger: number | null }[] }[] } };
 		};
-		expect(data.rakipEtiketi).toBe('2 rakip ortalaması');
-		expect(data.parametreSonuclari[0].rakip).toHaveLength(1); // aynı dönem → tek tarih
-		expect(data.parametreSonuclari[0].rakip[0].deger).toBe(6); // (4+8)/2
+		expect(data.grafikVerileri.rakipTakipGecmisi.rakipEtiketi).toBe('2 rakip ortalaması');
+		expect(data.grafikVerileri.rakipTakipGecmisi.parametreSonuclari[0].rakip).toHaveLength(1); // aynı dönem → tek tarih
+		expect(data.grafikVerileri.rakipTakipGecmisi.parametreSonuclari[0].rakip[0].deger).toBe(6); // (4+8)/2
 	});
 
 	it('requires panel auth', async () => {

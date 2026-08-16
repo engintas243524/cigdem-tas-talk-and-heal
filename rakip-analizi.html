@@ -151,6 +151,40 @@
           <label><input type="checkbox" id="paramFiyatSeffafligi" value="fiyatSeffafligi" checked> Fiyatı web sitesinde açıkça paylaşıyor mu (şeffaflık)</label>
         </div>
       </details>
+      <!-- "Grafik Verisi" özelliği (2026-08-16, kullanıcı isteği) — sadece Aksiyon/Hedef Analizi'nde
+           gösterilir (icerikStrateji rakip karşılaştırması yapmıyor, bkz. yukarıdaki #dalParametreler
+           notu — aynı gerekçe grafiğe de uygulanıyor). Çoklu seçim: üçü de aynı anda işaretlenebilir,
+           rapor PDF'i her seçili kaynaktan ayrı bir grafik sayfası içerir. -->
+      <details id="dalGrafikVerisi" class="param-dropdown hidden">
+        <summary id="dalGrafikOzet">Grafik Verisi</summary>
+        <div class="param-dropdown-list">
+          <label><input type="checkbox" id="dalGrafikParametre20" value="parametre20"> Şu anki 20 parametre karşılaştırması (anlık)</label>
+          <label><input type="checkbox" id="dalGrafikRandevuTrendi" value="randevuTrendi"> Randevu trendi</label>
+          <label><input type="checkbox" id="dalGrafikRakipTakipGecmisi" value="rakipTakipGecmisi"> RakipTakip parametre geçmişi</label>
+        </div>
+        <div class="row">
+          <select id="dalGrafikPeriyot" class="grow">
+            <option value="haftalik">Haftalık</option>
+            <option value="aylik" selected>Aylık</option>
+            <option value="ucAylik">3 Aylık</option>
+            <option value="altiAylik">6 Aylık</option>
+            <option value="dokuzAylik">9 Aylık</option>
+            <option value="onikiAylik">12 Aylık</option>
+            <option value="ikiYillik">2 Yıllık</option>
+            <option value="ucYillik">3 Yıllık</option>
+            <option value="dortYillik">4 Yıllık</option>
+            <option value="besYillik">5 Yıllık</option>
+          </select>
+          <select id="dalGrafikMod" class="grow">
+            <option value="1e1">Bir rakiple birebir</option>
+            <option value="ortalama">Birden fazla rakibin ortalaması</option>
+          </select>
+          <select id="dalGrafikTuru" class="grow">
+            <option value="line">Çizgi grafik</option>
+            <option value="bar">Sütun grafik</option>
+          </select>
+        </div>
+      </details>
       <div class="row">
         <textarea id="dalIstek" class="grow" placeholder="İsteğinizi yazın ya da mikrofonla dikte edin..."></textarea>
         <div class="mic-lang-toggle" id="dalMicLangToggle">
@@ -168,6 +202,7 @@
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
       <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
+      <div id="dalGrafikler"></div>
       <div class="actions hidden" id="dalRaporAksiyonlar">
         <button class="btn-secondary" id="dalIndirBtn" type="button">İndir (PDF)</button>
         <button class="btn-secondary" id="dalWhatsappBtn" type="button">WhatsApp'ta Paylaş</button>
@@ -231,9 +266,17 @@
       <!-- Zaman İçi Karşılaştırma Raporu: RakipTakipGecmis'teki (son 12 periyot, rotasyonlu)
            geçmişten Talk and Heal ile seçilen rakib(ler)i grafikle karşılaştırır. En az bir
            kapanmış dönem gerekir (yukarıdaki "Bu periyodun raporunu üret" ile). Parametre seçimi
-           şimdilik yok — tüm 20 parametre için, veri olanlar gösteriliyor. -->
+           şimdilik yok — tüm 20 parametre için, veri olanlar gösteriliyor.
+           "Grafik Verisi" özelliği (2026-08-16, kullanıcı isteği) — çoklu seçim, önceden burada
+           SADECE RakipTakip parametre geçmişi vardı, o yüzden o checkbox varsayılan işaretli
+           (eski davranışı koruyor), diğer ikisi opt-in. -->
       <h4 style="margin:1.2rem 0 0.4rem;">Zaman İçi Karşılaştırma Raporu</h4>
       <p class="muted">Kayıtlı Rakipler'den seçtiğin rakip(ler) kullanılır — birebir modda tam olarak 1, ortalama modda istediğin kadar.</p>
+      <div class="param-dropdown-list" style="margin-bottom:0.6rem;">
+        <label><input type="checkbox" id="karsilastirmaGrafikParametre20" value="parametre20"> Şu anki 20 parametre karşılaştırması (anlık)</label>
+        <label><input type="checkbox" id="karsilastirmaGrafikRandevuTrendi" value="randevuTrendi"> Randevu trendi</label>
+        <label><input type="checkbox" id="karsilastirmaGrafikRakipTakipGecmisi" value="rakipTakipGecmisi" checked> RakipTakip parametre geçmişi</label>
+      </div>
       <div class="row">
         <select id="karsilastirmaPeriyot" class="grow">
           <option value="haftalik">Haftalık</option>
@@ -242,6 +285,10 @@
           <option value="altiAylik">6 Aylık</option>
           <option value="dokuzAylik">9 Aylık</option>
           <option value="onikiAylik">12 Aylık</option>
+          <option value="ikiYillik">2 Yıllık</option>
+          <option value="ucYillik">3 Yıllık</option>
+          <option value="dortYillik">4 Yıllık</option>
+          <option value="besYillik">5 Yıllık</option>
         </select>
         <select id="karsilastirmaMod" class="grow">
           <option value="1e1">Bir rakiple birebir</option>
@@ -451,6 +498,104 @@
 
       doc.save(dosyaAdi);
     });
+  }
+
+  var GRAFIK_RENKLER = ['#7C9C4A', '#C97452', '#5B7FA6', '#B08BBB', '#D4A94B'];
+
+  // "Grafik Verisi" özelliği (2026-08-16, kullanıcı isteği) — backend'in grafikVerileri yanıtını
+  // (lib/grafikVerisi.ts'deki 3 kaynağın sonucu) ekrana Chart.js ile çizer VE raporPdfOlustur'un
+  // grafikler parametresine geçirilecek {canvas, baslik} listesini döner. Hem Aksiyon/Hedef
+  // Analizi hem Karşılaştırma AYNI bu fonksiyonu kullanır (DRY) — backend'deki paylaşılan
+  // lib/grafikVerisi.ts fonksiyonlarıyla birebir aynı gerekçe.
+  function grafikVerileriRender(container, grafikVerileri, grafikTuru, aktifChartlar) {
+    var canvasBilgileri = [];
+
+    function yeniCanvas(baslikMetni) {
+      var baslik = document.createElement('p');
+      baslik.innerHTML = '<strong>' + baslikMetni + '</strong>';
+      container.appendChild(baslik);
+      var canvasWrap = document.createElement('div');
+      canvasWrap.style.marginBottom = '1rem';
+      var canvas = document.createElement('canvas');
+      canvasWrap.appendChild(canvas);
+      container.appendChild(canvasWrap);
+      return canvas;
+    }
+
+    if (grafikVerileri && grafikVerileri.parametre20 && grafikVerileri.parametre20.length) {
+      var baslikMetni = 'Şu anki 20 parametre karşılaştırması';
+      var canvas = yeniCanvas(baslikMetni);
+      var entities = grafikVerileri.parametre20;
+      var paramKeys = entities.length ? Object.keys(entities[0].skorlar) : [];
+      var datasets = entities.map(function (e, i) {
+        return {
+          label: e.varlikAdi,
+          data: paramKeys.map(function (k) { return e.skorlar[k]; }),
+          backgroundColor: GRAFIK_RENKLER[i % GRAFIK_RENKLER.length],
+        };
+      });
+      var chart = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels: paramKeys, datasets: datasets },
+        options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { position: 'bottom' } } },
+      });
+      aktifChartlar.push(chart);
+      canvasBilgileri.push({ canvas: canvas, baslik: baslikMetni });
+    }
+
+    if (grafikVerileri && grafikVerileri.randevuTrendi && grafikVerileri.randevuTrendi.length) {
+      var baslikMetni = 'Randevu Trendi';
+      var canvas = yeniCanvas(baslikMetni);
+      var noktalar = grafikVerileri.randevuTrendi;
+      var chart = new Chart(canvas.getContext('2d'), {
+        type: grafikTuru,
+        data: {
+          labels: noktalar.map(function (n) { return n.tarih.slice(0, 10); }),
+          datasets: [
+            { label: 'Aktif', data: noktalar.map(function (n) { return n.aktif; }), borderColor: '#7C9C4A', backgroundColor: '#7C9C4A' },
+            { label: 'İptal', data: noktalar.map(function (n) { return n.iptal; }), borderColor: '#C97452', backgroundColor: '#C97452' },
+          ],
+        },
+        options: { plugins: { legend: { position: 'bottom' } } },
+      });
+      aktifChartlar.push(chart);
+      canvasBilgileri.push({ canvas: canvas, baslik: baslikMetni });
+    }
+
+    if (grafikVerileri && grafikVerileri.rakipTakipGecmisi) {
+      var rakipEtiketi = grafikVerileri.rakipTakipGecmisi.rakipEtiketi;
+      grafikVerileri.rakipTakipGecmisi.parametreSonuclari.forEach(function (p) {
+        var veriVar = p.talkAndHeal.some(function (d) { return d.deger !== null; }) || p.rakip.some(function (d) { return d.deger !== null; });
+        if (!veriVar) return;
+        var canvas = yeniCanvas(p.aciklama);
+        var etiketler = Array.prototype.slice.call(p.talkAndHeal).concat(p.rakip).map(function (d) { return d.tarih; });
+        etiketler = etiketler.filter(function (t, i) { return etiketler.indexOf(t) === i; }).sort();
+        function seriyeGoreDegerler(seri) {
+          var map = {};
+          seri.forEach(function (d) { map[d.tarih] = d.deger; });
+          return etiketler.map(function (t) { return Object.prototype.hasOwnProperty.call(map, t) ? map[t] : null; });
+        }
+        var chart = new Chart(canvas.getContext('2d'), {
+          type: grafikTuru,
+          data: {
+            labels: etiketler.map(function (t) { return t.slice(0, 10); }),
+            datasets: [
+              { label: 'Talk and Heal', data: seriyeGoreDegerler(p.talkAndHeal), borderColor: '#7C9C4A', backgroundColor: '#7C9C4A', spanGaps: true },
+              { label: rakipEtiketi, data: seriyeGoreDegerler(p.rakip), borderColor: '#C97452', backgroundColor: '#C97452', spanGaps: true },
+            ],
+          },
+          options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { position: 'bottom' } } },
+        });
+        aktifChartlar.push(chart);
+        canvasBilgileri.push({ canvas: canvas, baslik: p.aciklama });
+      });
+    }
+
+    if (!canvasBilgileri.length) {
+      container.textContent = 'Seçilen grafik kaynağı/kaynakları için henüz yeterli veri yok.';
+    }
+
+    return canvasBilgileri;
   }
 
   // Kayıtlı Rakipler ve Arama Sonuçları tabloları birebir aynı sütunlara sahip (İsim/Adres/
@@ -1078,54 +1223,25 @@
     var hazirIceAktarilanlar = iceAktarilanlar.filter(function (x) { return x.durum === 'hazir'; });
     var kaynakBelgeler = hazirIceAktarilanlar.filter(function (x) { return !x.pdfBase64; }).map(function (x) { return x.metin; });
     var kaynakPdfler = hazirIceAktarilanlar.filter(function (x) { return x.pdfBase64; }).map(function (x) { return x.pdfBase64; });
+    var grafikKaynaklari = Array.prototype.map.call(
+      document.querySelectorAll('#karsilastirmaGrafikParametre20, #karsilastirmaGrafikRandevuTrendi, #karsilastirmaGrafikRakipTakipGecmisi'),
+      function (cb) { return cb; }
+    ).filter(function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
     authFetch('/panel/rakip-analizi/rakip-takip/karsilastirma', {
       method: 'POST',
-      body: JSON.stringify({ periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler }),
+      body: JSON.stringify({
+        periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler,
+        grafikKaynaklari: grafikKaynaklari,
+      }),
     })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) { setStatusLimit(el('karsilastirmaStatus'), res.data.error || 'Üretilemedi.', res.data.limitUrl); return; }
         setStatus(el('karsilastirmaStatus'), '', '');
         el('karsilastirmaNarratif').textContent = res.data.narratif || '';
-        var canvasBilgileri = [];
-        (res.data.parametreSonuclari || []).forEach(function (p) {
-          var veriVar = p.talkAndHeal.some(function (d) { return d.deger !== null; }) || p.rakip.some(function (d) { return d.deger !== null; });
-          if (!veriVar) return;
-          var baslik = document.createElement('p');
-          baslik.innerHTML = '<strong>' + p.aciklama + '</strong>';
-          el('karsilastirmaGrafikler').appendChild(baslik);
-          var canvasWrap = document.createElement('div');
-          canvasWrap.style.marginBottom = '1rem';
-          var canvas = document.createElement('canvas');
-          canvasWrap.appendChild(canvas);
-          el('karsilastirmaGrafikler').appendChild(canvasWrap);
-          var etiketler = Array.prototype.slice.call(p.talkAndHeal).concat(p.rakip).map(function (d) { return d.tarih; });
-          etiketler = etiketler.filter(function (t, i) { return etiketler.indexOf(t) === i; }).sort();
-          function seriyeGoreDegerler(seri) {
-            var map = {};
-            seri.forEach(function (d) { map[d.tarih] = d.deger; });
-            return etiketler.map(function (t) { return Object.prototype.hasOwnProperty.call(map, t) ? map[t] : null; });
-          }
-          var chart = new Chart(canvas.getContext('2d'), {
-            type: grafikTuru,
-            data: {
-              labels: etiketler.map(function (t) { return t.slice(0, 10); }),
-              datasets: [
-                { label: 'Talk and Heal', data: seriyeGoreDegerler(p.talkAndHeal), borderColor: '#7C9C4A', backgroundColor: '#7C9C4A', spanGaps: true },
-                { label: res.data.rakipEtiketi, data: seriyeGoreDegerler(p.rakip), borderColor: '#C97452', backgroundColor: '#C97452', spanGaps: true },
-              ],
-            },
-            options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { position: 'bottom' } } },
-          });
-          karsilastirmaChartlar.push(chart);
-          canvasBilgileri.push({ canvas: canvas, baslik: p.aciklama });
-        });
-        if (!el('karsilastirmaGrafikler').children.length) {
-          el('karsilastirmaGrafikler').textContent = 'Hiçbir parametre için henüz yeterli veri yok.';
-        }
+        var canvasBilgileri = grafikVerileriRender(el('karsilastirmaGrafikler'), res.data.grafikVerileri, grafikTuru, karsilastirmaChartlar);
         sonKarsilastirmaVerisi = {
           periyotTuru: periyotTuru,
-          rakipEtiketi: res.data.rakipEtiketi,
           narratif: res.data.narratif || '',
           canvasBilgileri: canvasBilgileri,
         };
@@ -1135,7 +1251,7 @@
 
   el('karsilastirmaIndirBtn').addEventListener('click', function () {
     if (!sonKarsilastirmaVerisi) return;
-    var altBaslik = 'Talk and Heal vs ' + sonKarsilastirmaVerisi.rakipEtiketi + ' — ' + new Date().toLocaleDateString('tr-TR');
+    var altBaslik = new Date().toLocaleDateString('tr-TR');
     var dosyaAdi = 'karsilastirma-' + sonKarsilastirmaVerisi.periyotTuru + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
     raporPdfOlustur(dosyaAdi, 'Zaman İçi Karşılaştırma Raporu', altBaslik, sonKarsilastirmaVerisi.narratif, sonKarsilastirmaVerisi.canvasBilgileri);
   });
@@ -1513,6 +1629,8 @@
 
   var currentDal = 'icerikStrateji';
   var sonRaporMetni = '';
+  var dalChartlar = [];
+  var dalGrafikCanvasBilgileri = [];
   function setDal(dal) {
     currentDal = dal;
     el('dalBaslik').textContent = dal === 'icerikStrateji' ? 'Görsel/Video Stratejisi İsteği' : 'Aksiyon/Hedef Analizi İsteği';
@@ -1523,6 +1641,7 @@
     // Bu 3 parametre (sosyal medya/fiyat/konum) doğrudan rakip karşılaştırması içindir — sadece
     // Aksiyon/Hedef Analizi'nde anlamlı, Görsel/Video Stratejisi küratif olduğu için gösterilmez.
     el('dalParametreler').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
+    el('dalGrafikVerisi').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
     // Zaman içi karşılaştırma raporu ayrı bir periyot-bazlı akış (Otomatik Rakip Takibi bölümü) —
     // burada tekrar inşa etmek yerine sadece Aksiyon/Hedef Analizi'ndeyken oraya bir link gösterir
     // (kullanıcı isteği: "bu rapor türü Rapor üret butonuyla ürettiğim raporda da olsun").
@@ -1670,6 +1789,10 @@
     if (!istek) { setStatus(el('dalStatus'), 'İstek metni gerekli.', 'err'); return; }
     setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
     el('dalRaporAksiyonlar').classList.add('hidden');
+    el('dalGrafikler').innerHTML = '';
+    dalChartlar.forEach(function (c) { c.destroy(); });
+    dalChartlar = [];
+    dalGrafikCanvasBilgileri = [];
     var rakipIds = Object.keys(rakipListeSecili);
     var parametreler = currentDal === 'aksiyonAnaliz'
       ? Array.prototype.map.call(document.querySelectorAll('#dalParametreler input[type="checkbox"]:checked'), function (cb) { return cb.value; })
@@ -1678,9 +1801,17 @@
     var hazirIceAktarilanlar = iceAktarilanlar.filter(function (x) { return x.durum === 'hazir'; });
     var kaynakBelgeler = hazirIceAktarilanlar.filter(function (x) { return !x.pdfBase64; }).map(function (x) { return x.metin; });
     var kaynakPdfler = hazirIceAktarilanlar.filter(function (x) { return x.pdfBase64; }).map(function (x) { return x.pdfBase64; });
-    var payload = currentDal === 'icerikStrateji'
-      ? { istek: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler }
-      : { yorum: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler };
+    var payload;
+    var grafikKaynaklariSecili = [];
+    if (currentDal === 'icerikStrateji') {
+      payload = { istek: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler };
+    } else {
+      grafikKaynaklariSecili = Array.prototype.map.call(document.querySelectorAll('#dalGrafikVerisi input[type="checkbox"]:checked'), function (cb) { return cb.value; });
+      payload = {
+        yorum: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler,
+        grafikKaynaklari: grafikKaynaklariSecili, grafikPeriyotTuru: el('dalGrafikPeriyot').value, grafikMod: el('dalGrafikMod').value,
+      };
+    }
     authFetch(path, { method: 'POST', body: JSON.stringify(payload) }).then(function (r) {
       return r.json().then(function (data) { return { ok: r.ok, data: data }; });
     }).then(function (res) {
@@ -1689,6 +1820,9 @@
       setStatus(el('dalStatus'), '', '');
       sonRaporMetni = res.data.rapor;
       el('dalRapor').textContent = sonRaporMetni;
+      if (grafikKaynaklariSecili.length) {
+        dalGrafikCanvasBilgileri = grafikVerileriRender(el('dalGrafikler'), res.data.grafikVerileri, el('dalGrafikTuru').value, dalChartlar);
+      }
       el('dalRaporAksiyonlar').classList.remove('hidden');
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('dalStatus'), 'Rapor şu an üretilemedi, lütfen tekrar dene.', 'err'); });
   });
@@ -1702,7 +1836,7 @@
   el('dalIndirBtn').addEventListener('click', function () {
     if (!sonRaporMetni) return;
     var baslik = currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu';
-    raporPdfOlustur(raporDosyaAdi(), baslik, new Date().toLocaleDateString('tr-TR'), sonRaporMetni, []);
+    raporPdfOlustur(raporDosyaAdi(), baslik, new Date().toLocaleDateString('tr-TR'), sonRaporMetni, dalGrafikCanvasBilgileri);
   });
 
   el('dalWhatsappBtn').addEventListener('click', function () {

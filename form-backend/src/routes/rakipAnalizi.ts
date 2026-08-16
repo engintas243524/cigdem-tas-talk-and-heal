@@ -16,7 +16,15 @@ import { errorResponse, json } from '../lib/http';
 import { ensureKullanimKaydiTab, logKullanim, getKullanimOzet, kotaDolduMu } from '../lib/kullanimKaydi';
 import { belgedenMetinCikar, metinCikarWebLink } from '../lib/belgeCikar';
 import { appendRaporKaydi } from '../lib/raporlarSheets';
-import { ANTHROPIC_BILLING_URL } from '../config';
+import {
+	anlikParametreSkorlariGetir,
+	randevuTrendiHesapla,
+	rakipTakipGecmisiGetir,
+	gecerliPeriyotTuru,
+	gecerliGrafikPeriyotTuru,
+	gecerliGrafikKaynaklari,
+} from '../lib/grafikVerisi';
+import { GRAFIK_PERIYOT_GUN_SAYISI, ANTHROPIC_BILLING_URL } from '../config';
 import type { Env } from '../types';
 
 // Rapor PDF şablonu (rakip-analizi.html#raporPdfOlustur, 2026-08-16) bu yapıyı güvenle parse
@@ -362,7 +370,26 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	await ensureRakipAnaliziTab(env);
 	const rakipler = await getAllRakipAnalizRows(env);
 	const rakipOzet = rakipOzetOlustur(rakipler, rakipIds, parametreler);
-	const userPrompt = `Toplanan rakip verisi:\n${rakipOzet}\n\nÇiğdem'in isteği: ${istek}` + iceAktarPromptEki(kaynakBelgeler);
+
+	// Birincil kaynak parametre yapılandırması (2026-08-16, kullanıcı isteği) — ham not metnine EK
+	// olarak, rakip(ler) seçiliyse RakipTakip'te kullanılan AYNI 1-10 skorlama mekanizmasıyla
+	// yapılandırılmış sayısal sinyal üretilip prompta eklenir. Talk and Heal hiç skorlanmıyor
+	// (bkz. anlikParametreSkorlariGetir'in talkAndHealBaglam=null dalı) — bu dal rakip-rakip
+	// karşılaştırma yapmıyor. Rakip seçilmemişse (rakipIds boş) atlanır, skorlanacak bir şey yok.
+	let parametreSkorlariEki = '';
+	if (rakipIds.length) {
+		const seciliRakipler = rakipler.filter(({ row }) => rakipIds.includes(row.id));
+		const odaklanilacakParametreler = (parametreler.length ? parametreler : Object.keys(ANALIZ_PARAMETRE_ACIKLAMALARI)).filter(
+			(p) => p in ANALIZ_PARAMETRE_ACIKLAMALARI,
+		);
+		if (seciliRakipler.length && odaklanilacakParametreler.length) {
+			const skorlar = await anlikParametreSkorlariGetir(env, null, seciliRakipler, odaklanilacakParametreler);
+			parametreSkorlariEki = `\n\nYapılandırılmış parametre skorları (1-10, veri yoksa null):\n${JSON.stringify(skorlar)}`;
+		}
+	}
+
+	const userPrompt =
+		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}\n\nÇiğdem'in isteği: ${istek}` + iceAktarPromptEki(kaynakBelgeler);
 
 	let rapor: string;
 	try {
@@ -414,7 +441,16 @@ anlayacağı, kısa cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses
 // yorumu birlikte Claude'a gönderilir.
 export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<Response> {
-	let body: { yorum?: unknown; rakipIds?: unknown; parametreler?: unknown; kaynakBelgeler?: unknown; kaynakPdfler?: unknown };
+	let body: {
+		yorum?: unknown;
+		rakipIds?: unknown;
+		parametreler?: unknown;
+		kaynakBelgeler?: unknown;
+		kaynakPdfler?: unknown;
+		grafikKaynaklari?: unknown;
+		grafikPeriyotTuru?: unknown;
+		grafikMod?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -427,6 +463,12 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const parametreler = Array.isArray(body.parametreler) ? body.parametreler.map((x) => String(x)) : [];
 	const kaynakBelgeler = Array.isArray(body.kaynakBelgeler) ? body.kaynakBelgeler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 	const kaynakPdfler = Array.isArray(body.kaynakPdfler) ? body.kaynakPdfler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
+	// "Grafik Verisi" özelliği (2026-08-16, kullanıcı isteği) — Aksiyon/Hedef Analizi'nde önceden
+	// hiç grafik yoktu, varsayılan boş (opt-in): grafikKaynaklari gönderilmezse hiç grafik üretilmez.
+	const grafikKaynaklari = gecerliGrafikKaynaklari(body.grafikKaynaklari, []);
+	const grafikPeriyotTuruRaw = String(body.grafikPeriyotTuru ?? 'aylik');
+	const grafikPeriyotTuru = gecerliGrafikPeriyotTuru(grafikPeriyotTuruRaw) ? grafikPeriyotTuruRaw : 'aylik';
+	const grafikMod = body.grafikMod === 'ortalama' ? 'ortalama' : '1e1';
 
 	await ensureKullanimKaydiTab(env);
 	if (await kotaDolduMu(env, 'aksiyonAnaliz')) {
@@ -441,7 +483,8 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const sayisalOzet = `Toplam randevu: ${bookingRows.length}, aktif: ${aktifRandevu}, iptal: ${iptalRandevu}`;
 
 	await ensureRakipAnaliziTab(env);
-	const rakipOzet = rakipIds.length ? rakipOzetOlustur(await getAllRakipAnalizRows(env), rakipIds, parametreler) : null;
+	const rakipRows = await getAllRakipAnalizRows(env);
+	const rakipOzet = rakipIds.length ? rakipOzetOlustur(rakipRows, rakipIds, parametreler) : null;
 	const userPrompt =
 		`Sayısal özet: ${sayisalOzet}` +
 		(rakipOzet ? `\n\nSeçilen rakip verisi:\n${rakipOzet}` : '') +
@@ -465,6 +508,44 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	}
 	await logKullanim(env, 'aksiyonAnaliz', yorum.slice(0, 200));
 
+	// "Grafik Verisi" hesaplama — bkz. handleRakipTakipKarsilastirma'daki AYNI desen/yorumlar
+	// (lib/grafikVerisi.ts'deki paylaşılan fonksiyonlar). Rapor metni zaten üretildi/kullanıcıya
+	// dönecek — grafik hesaplaması başarısız olsa bile rapor metni etkilenmesin diye try/catch.
+	const grafikVerileri: {
+		parametre20?: Awaited<ReturnType<typeof anlikParametreSkorlariGetir>>;
+		randevuTrendi?: ReturnType<typeof randevuTrendiHesapla>;
+		rakipTakipGecmisi?: NonNullable<Awaited<ReturnType<typeof rakipTakipGecmisiGetir>>>;
+	} = {};
+	if (grafikKaynaklari.length) {
+		try {
+			const seciliRakipler = rakipRows.filter(({ row }) => rakipIds.includes(row.id));
+			if (grafikKaynaklari.includes('parametre20') && seciliRakipler.length) {
+				grafikVerileri.parametre20 = await anlikParametreSkorlariGetir(
+					env,
+					sayisalOzet,
+					seciliRakipler,
+					parametreler.length ? parametreler : Object.keys(ANALIZ_PARAMETRE_ACIKLAMALARI),
+				);
+			}
+			if (grafikKaynaklari.includes('randevuTrendi')) {
+				grafikVerileri.randevuTrendi = randevuTrendiHesapla(bookingRows, GRAFIK_PERIYOT_GUN_SAYISI[grafikPeriyotTuru]);
+			}
+			if (grafikKaynaklari.includes('rakipTakipGecmisi') && seciliRakipler.length && gecerliPeriyotTuru(grafikPeriyotTuru)) {
+				const sonuc = await rakipTakipGecmisiGetir(
+					env,
+					grafikPeriyotTuru,
+					grafikMod,
+					seciliRakipler,
+					parametreler.length ? parametreler : Object.keys(ANALIZ_PARAMETRE_ACIKLAMALARI),
+					ANALIZ_PARAMETRE_ACIKLAMALARI,
+				);
+				if (sonuc) grafikVerileri.rakipTakipGecmisi = sonuc;
+			}
+		} catch (err) {
+			console.error('Grafik verisi hesaplanamadı (aksiyonAnaliz)', err);
+		}
+	}
+
 	// Kullanıcı kararı (2026-08-15) — bkz. handleIcerikStrateji'deki aynı not: raporlar artık
 	// RakipAnalizi sekmesine satır olarak eklenmiyor, sayfanın sonsuza kadar büyümesine sebep
 	// oluyordu. Ham metin "Raporlar" arşiv sekmesine gidiyor — bkz. handleIcerikStrateji'deki aynı
@@ -474,7 +555,7 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	} catch (err) {
 		console.error('Rapor arşive kaydedilemedi (aksiyonAnaliz)', err);
 	}
-	return json({ rapor }, request);
+	return json({ rapor, grafikVerileri }, request);
 }
 
 // POST /panel/rakip-analizi/ice-aktar { tur: 'dosya' | 'link', dosyaAdi?, uzanti?, veri?(base64),

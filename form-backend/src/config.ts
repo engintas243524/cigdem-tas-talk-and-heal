@@ -445,6 +445,41 @@ export const RAKIP_TAKIP_PERIYOT_GUN_SAYISI: Record<RakipTakipPeriyotTuru, numbe
 	onikiAylik: 365,
 };
 
+// "Grafik Verisi" özelliği (2026-08-16, kullanıcı isteği) — Aksiyon/Hedef Analizi ve Karşılaştırma
+// raporlarında ortak kullanılan periyot seçenekleri. RakipTakip'in kendi state machine'inin
+// periyotTuru'suyla (RAKIP_TAKIP_PERIYOT_TURLERI) KASITLI OLARAK ayrı tutuluyor — biri döngü
+// durumu taşıyor (Sheet'te bir satırı temsil ediyor), diğeri sadece bir grafik/rapor sorgusunun
+// gösterge parametresi, hiçbir kalıcı duruma bağlı değil. İlk 6 değer RAKIP_TAKIP_PERIYOT_GUN_SAYISI
+// ile aynı (bilerek — RakipTakipGecmis verisi sadece bu 6 türde üretiliyor), son 4'ü (yıllık) sadece
+// randevu trendi grafiği için.
+export const GRAFIK_PERIYOT_TURLERI = [
+	'haftalik',
+	'aylik',
+	'ucAylik',
+	'altiAylik',
+	'dokuzAylik',
+	'onikiAylik',
+	'ikiYillik',
+	'ucYillik',
+	'dortYillik',
+	'besYillik',
+] as const;
+
+export type GrafikPeriyotTuru = (typeof GRAFIK_PERIYOT_TURLERI)[number];
+
+export const GRAFIK_PERIYOT_GUN_SAYISI: Record<GrafikPeriyotTuru, number> = {
+	haftalik: 7,
+	aylik: 30,
+	ucAylik: 90,
+	altiAylik: 180,
+	dokuzAylik: 270,
+	onikiAylik: 365,
+	ikiYillik: 730,
+	ucYillik: 1095,
+	dortYillik: 1460,
+	besYillik: 1825,
+};
+
 // Otomatik Rakip Takibi'nin başlat/durdur anahtarı (2026-08-15) — kullanıcı kararı: "sürekli analiz
 // sağlayıcı tarafında ciddi fatura yaratabilir", o yüzden cron sweep varsayılan KAPALI ve sadece bu
 // anahtar açıkken çalışır (bkz. scheduled.ts runRakipTakipSweep). Tek satırlık, sabit — RakipTakip
