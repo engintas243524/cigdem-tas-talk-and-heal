@@ -1646,3 +1646,62 @@ Benim şu ana kadarki analizim (compact sonrası doğrulanıp uygulanacak):
   "RakipTakip parametre geçmişi" checkbox'ları yer almalı. Aksiyon/Hedef Analizi'nde muhtemelen
   mevcut `#dalParametreler`'i AYNEN bu bloğun içine taşımak (kopyalamadan, tek bir seçim state'i)
   en temiz çözüm — iki ayrı 20-checkbox listesi aynı sayfada olmasın.
+
+**Durum (2026-08-16): TAMAMLANDI.** Yukarıdaki analiz doğrulandı ve uygulandı — `panel.css`'deki
+`.param-dropdown` stili class'a özel yapıldı (kök sebep: ID'ye özel olduğu için `#dalGrafikVerisi`
+buton gibi görünmüyordu), `#dalParametreler` `#dalGrafikVerisi`'nin içine taşındı, Karşılaştırma'ya
+yeni `#karsilastirmaParametreler` 20-checkbox'lık seçici eklendi ve isteğe `parametreler` alanı
+olarak bağlandı. Commit `e18f258`, push edildi, canlıda doğrulandı.
+
+## Kullanıcı bildirimi — Görsel/Video Stratejisi'nin güncel trend verisiyle beslenmesi (2026-08-16, sıraya alındı, birebir kayıt)
+
+Kullanıcının mesajı (birebir):
+> Görsel/Video Stratejisi ile alakalı küratif değerlendirmenin gerçekten doğru ve kullanıcıyı
+> güncel trendler açısından hedefe/sonuç almaya yönelik tavsiyeler ve yol haritası çıkarabileceğine
+> emin miyiz? Neye, hangi parametreye(lere) göre küratif bir değerlendirme yapacak. Eğer internetten
+> bulduğu bilgilerle kullanıcıyı yönlendirecese, bütün web arama/tarama araçlarının ortalama veri ile
+> çıktı ürettiğini sen de ben de çok iyi biliyoruz. Bu konuda güçlü bir Görsel/Video Stratejisi
+> raporu üretilmesi için ciddi bir araştırma yapıp, gerekirse bu konuda gerçekten kullanıcının
+> sektör, branş ve mesleğine uygun trend görsel ve video üretimi için rakipleri takip etmeye gerek
+> kalmayacak şekilde bir rapor alabilmesi için çok ciddi çalışmamız lazım, hatta bu raporu üretirken
+> kullanılan verilerin güncellenmesi yani dinamik olması gerekli. çünkü yapay zeka araçları ve onları
+> kullanan insanlar sürekli güncel ve yeni üretimler ile ilgili trendleri değiştiriyorlar ve
+> müşterilerin algısı ve ilgisi de o yöne kayıyor, bunları düşünerek Görsel/Video Stratejisi
+> raporlarının üretimi için tekrar bir araç, ücretsiz otomasyon şablonları(n8n, make, zapier),
+> github kütüpanelerinden açk kaynak ücretsiz skill, plugin, vs. ne varsa araştırıp bu tarafa ciddi
+> önem vermeliyiz, çünkü görsel ve video paylaşımlar işletmeler hakkında yazılanlardan çok daha hızlı
+> bir şekilde algılarının bükülmesine ve müşteri trafiğine neden oluyorlar. Bu konuyu umarım nekadar
+> önemsediğimi anlatabilmişimdir. Sen de nesnel bir değerlendirme yapıp fikrini söyle ve gerekeni
+> yapmaya başlayalım
+
+Kullanıcı ek kararı (AskUserQuestion, kapsam sorusu): bu özellik sadece Çiğdem için değil, ileride
+Sparrow/ajans üzerinden farklı sektör/branş/meslekten başka müşterilere de satılabilecek şekilde
+tasarlanmalı ("İleride resatilabilir özellik olarak tasarla" seçildi).
+
+Araştırma sonucu (2 arka plan ajanı, tam kıyaslama yapıldı) + kullanıcının onayladığı yön: Seçenek 1
+(Claude API native web search tool, `web_search_20260209`, Sonnet 5'te GA) omurga olacak — sıfır ek
+altyapı, sektör-bağımsız. YouTube Data API v3'ün resmi `mostPopular` uç noktası ($0, resmi kota
+dahilinde) tamamlayıcı olarak eklenecek. n8n/Make/Zapier (Apify'a bağımlı, "ücretsiz" iddiası
+yanıltıcı) ve GitHub'daki açık kaynak MCP sunucuları (hepsi ya ücretli API'ye sarılı ya arşivlenmiş)
+ELENDİ — üretime uygun değiller.
+
+Kullanıcının sıraya aldığı istekler (birebir, takip listesi):
+> Evet, Seçenek 1'i şimdi ekle, ama web search için her müşterinin claude tarafında faturasının
+> nekadar olacağını hangi baremlerde arama sayısının nekadar ücretlendimeyle müşteriye sunulması
+> gerektiğini hesaplayıp hem talk and heal tarafında hem de sparrow tarafında maliyet analizi ile
+> marj değerlerini bulalım ve hem talk and heal tarafında hem de sparrow tarafında gerekli yerlere
+> not edelim . Tabi bunlara Youtube API entegraasyonundan kaynaklanacak bir maliyet varsa hem talk
+> and hela hem sparrow tarafına bu maliyeti de ekleyelim, Sonrasında talk and heal için aylık ve
+> yıllık giderler konusunda kalem kalem bir tablo yapalım ama bu tabloyu çiğdem in okuyup anlayacağı
+> şekilde yapalım
+
+Yapılacaklar (bu sıraya alınan istekten çıkarılan somut adımlar):
+1. `icerikStrateji` (Görsel/Video Stratejisi) çağrısına `web_search_20260209` tool'unu ekle,
+   yanıt-birleştirme bug'ını düzelt (şu an sadece ilk text bloğunu alıyor).
+2. Gerçek bir rapor üretip kaç arama yapıldığını/gerçek maliyeti ölçerek doğrula (tahminle yetinme).
+3. Güncel Sonnet 5 + web search fiyatlandırmasını resmi kaynaktan doğrula.
+4. Talk and Heal için: bu özelliğin Çiğdem'e (bize) aylık gerçek maliyetini hesapla.
+5. Sparrow için: müşteriye sunulacak arama sayısı baremleri + fiyatlandırma + marj analizi.
+6. YouTube Data API v3'ün maliyetini (varsa) her iki tarafa da ekle.
+7. Bulguları hem Talk and Heal hem Sparrow projesinin ilgili dosyalarına not et.
+8. Talk and Heal için Çiğdem'in anlayacağı, kalem kalem aylık/yıllık gider tablosu oluştur.

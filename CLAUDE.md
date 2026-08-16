@@ -152,6 +152,12 @@ even though the developer/user are in Turkey.
 - `AI_DESTEKLI_WEB_GELISTIRME_REHBERI.md` — the 10-stage development framework this whole project
   follows; `INTEGRASYON_TODO.md`'s phases map onto stage 5 (backend), with stages 6/10 to be
   updated once new endpoints exist.
+- `MALIYET_ANALIZI_GORSEL_VIDEO_STRATEJISI.md` (2026-08-16) — real, measured (not estimated) cost
+  of the `icerikStrateji` web search feature (4 live API calls), the reasoning for picking
+  `web_search_20250305` over the newer dynamic-filtering version, and the budget-margin risk this
+  creates against the existing $5/month Anthropic cap in `config.ts`'s `KULLANIM_KATEGORILERI`.
+- `CIGDEM_AYLIK_YILLIK_GIDERLER.md` (2026-08-16) — the same cost data, reformatted as a simple
+  itemized monthly/annual table for Çiğdem (non-technical reader) to review.
 
 ## Mimari Yaklaşım Notu (2026-08-09 analizi — herhangi bir yeni aşama/entegrasyona geçmeden önce oku)
 

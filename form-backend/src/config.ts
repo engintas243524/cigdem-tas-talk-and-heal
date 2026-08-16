@@ -302,15 +302,18 @@ export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[
 // - adresBulma/rakipArama (Google Places/Geocoding): Google ücretsiz kotayı aşınca engellemiyor,
 //   sessizce faturalandırmaya başlıyor — limit BİZİM kendi güvenlik sınırımız.
 // - icerikStrateji/aksiyonAnaliz (Anthropic/Claude rapor üretimi): bu projenin Anthropic API
-//   key'ine ayrılan aylık bütçe $5 (kullanıcı teyidi, 2026-08-16). Rapor başına maliyet ek
-//   kaynak/PDF yokken ~$0.03-0.05, İçe Aktar ile eklenen metin kaynaklarının üst sınırında
-//   (10 belge × 20.000 karakter) ~$0.15-0.17'ye çıkıyor (Sonnet 5: $2/M girdi, $10/M çıktı,
-//   4096 token çıktı varsayımıyla) — PDF ekleri bunun da üstüne çıkabilir (sayfa sayısı
-//   sınırlanmadığı için üst sınırı yok), o yüzden limit metin-ekli en kötü senaryo baz alınarak
-//   ($0.20/rapor) hesaplandı: $5 / $0.20 ≈ 25 rapor, iki kategori arasında ~yarı yarıya
-//   paylaştırıldı. Anthropic'in kendi bakiyesi (InsufficientCreditError) zaten son çare olarak
-//   duruyor, bu limit ondan ÖNCE devreye giren ek bir güvenlik katmanı. Kullanım artarsa ya da
-//   bütçe değişirse bu iki sayı elle güncellenmeli — otomatik/dinamik hesaplama yok.
+//   key'ine ayrılan aylık bütçe $5 (kullanıcı teyidi, 2026-08-16). aksiyonAnaliz rapor başına
+//   maliyet ek kaynak/PDF yokken ~$0.03-0.05, İçe Aktar ile eklenen metin kaynaklarının üst
+//   sınırında (10 belge × 20.000 karakter) ~$0.15-0.17'ye çıkıyor (Sonnet 5: $2/M girdi, $10/M
+//   çıktı). icerikStrateji'ye 2026-08-16'da web_search_20250305 eklendi (bkz. lib/claude.ts) —
+//   gerçek API çağrılarıyla ölçüldü (4 test, max_uses:4): rapor başına ortalama ~$0.15-0.16,
+//   gözlenen en yüksek ~$0.19 (2-3 arama tipik); PDF eki de eklenirse toplam daha da yükselir.
+//   Detaylı hesap: `MALIYET_ANALIZI_GORSEL_VIDEO_STRATEJISI.md`. Limit metin-ekli+arama en kötü
+//   senaryo baz alınarak ($0.35/rapor tahmini) hesaplandı: $5 / $0.35 ≈ 14 rapor, iki kategori
+//   arasında ~yarı yarıya paylaştırıldı (icerikStrateji biraz daha pahalı olduğu için 12/13 —
+//   tam eşit değil, kasıtlı). Anthropic'in kendi bakiyesi (InsufficientCreditError) zaten son
+//   çare olarak duruyor, bu limit ondan ÖNCE devreye giren ek bir güvenlik katmanı. Kullanım
+//   artarsa ya da bütçe değişirse bu iki sayı elle güncellenmeli — otomatik/dinamik hesaplama yok.
 export const KULLANIM_KAYDI_TAB_NAME = 'KullanimKaydi';
 
 export const KULLANIM_KAYDI_COLUMNS = ['id', 'tarihUtc', 'kategori', 'detay'] as const;

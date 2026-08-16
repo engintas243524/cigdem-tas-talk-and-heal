@@ -284,7 +284,14 @@ kopyalamadan, sadece stratejilerinden (hangi platformda, ne sıklıkla, hangi fo
 etkileşim alıyor) ilham alarak Talk and Heal için ORİJİNAL, telifsiz-stok veya AI-üretilmiş içerik
 önerileri sun. Türkçe yaz, somut ve uygulanabilir öneriler ver. Sade, gündelik bir dil kullan —
 pazarlama/iş jargonu, uzun karmaşık cümleler ve süslü terimlerden kaçın; hiç bu alanda uzman
-olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
+olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.
+Elinde bir web arama aracı var — bu raporu SADECE eğitim verindeki (eski/statik) genel bilgiyle değil,
+GÜNCEL bilgiyle destekle: terapi/danışmanlık/ruh sağlığı sektöründe son birkaç aydaki (bugünün
+tarihine göre) görsel/video içerik trendlerini (ör. hangi format/platform öne çıkıyor, hangi içerik
+türü daha çok etkileşim alıyor) araştırmak için 2-4 hedefli arama yap. Aramaları verimli kullan
+(aynı şeyi tekrar tekrar arama), bulduğun somut/güncel bilgiyi öneriler içinde açıkça belirt (ör.
+"son aylarda X formatı öne çıkıyor" gibi). Hiçbir güncel sonuç bulamazsan bunu belirtip genel
+bilginle devam et, ama önce mutlaka aramayı dene.${RAPOR_YAPISI_TALIMATI}`;
 
 export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
@@ -393,7 +400,7 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 
 	let rapor: string;
 	try {
-		rapor = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, userPrompt, kaynakPdfler);
+		rapor = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, userPrompt, kaynakPdfler, true);
 	} catch (err) {
 		if (err instanceof InsufficientCreditError) {
 			return json(

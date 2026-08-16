@@ -195,7 +195,7 @@ export async function rakipTakipAdimUygula(
 	} else {
 		try {
 			const icerikPrompt = `Periyot türü: ${periyotTuru}\n\nToplanan rakip verisi:\n${rakipOzet}\n\nBu periyot için küratif içerik/güncel trend önerisi üret.`;
-			icerikRaporu = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, icerikPrompt);
+			icerikRaporu = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, icerikPrompt, [], true);
 			await logKullanim(env, 'icerikStrateji', `RakipTakip ${periyotTuru}: ${asama}`);
 		} catch (err) {
 			icerikRaporu =
