@@ -93,7 +93,12 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 /* Kullanım Sayacı (rakip-analizi.html) */
 /* Sabit 2 sütun: Adres Bulma/Rakip Arama üst satır, Görsel-Video Stratejisi/Aksiyon-Hedef Analizi
    alt satır — auto-fit ile geniş ekranda 4'ü tek satıra sığıyordu, bu düzeni bozuyordu. */
-.kota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+/* align-items:start — CSS Grid varsayılanı (stretch) aynı satırdaki her kutuyu en uzun kutunun
+   boyuna zorluyor; "Limiti Yükselt" formu bir kutuyu açınca yanındaki (ve satır aynı olduğu için
+   üstteki Adres Bulma/Rakip Arama çifti de dahil, hepsi tek grid) kutu da gereksiz yere
+   büyüyordu (kullanıcı geri bildirimi, 2026-08-16). start ile her kutu SADECE kendi içeriği
+   kadar yer kaplar, satırın en yükseğine göre esnetilmez. */
+.kota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; align-items: start; }
 .kota-tile { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.6rem 0.75rem; }
 .kota-baslik { font-size: 0.78rem; color: var(--taupe); margin-bottom: 0.25rem; }
 .kota-deger { font-size: 1.05rem; font-weight: 600; }
