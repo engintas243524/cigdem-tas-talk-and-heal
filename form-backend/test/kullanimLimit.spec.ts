@@ -62,7 +62,12 @@ function stubApis(fxRateUsd: number = 0.03) {
 			return new Response(JSON.stringify({ values }), { status: 200 });
 		}
 		if (url.includes('api.frankfurter.app')) {
+			// Gerçek Frankfurter API'si negatif amount'u 422 "invalid amount" ile reddediyor
+			// (2026-08-16'da keşfedildi — usdKarsiligi çağıranın mutlak değer göndermesi gerekiyor,
+			// bkz. lib/currency.ts). Bu stub aynı davranışı taklit ediyor ki mock her zaman 200 dönüp
+			// bu regresyonu tekrar gizlemesin.
 			const amount = Number(new URL(url).searchParams.get('amount'));
+			if (amount < 0) return new Response(JSON.stringify({ message: 'invalid amount' }), { status: 422 });
 			return new Response(JSON.stringify({ rates: { USD: amount * fxRateUsd } }), { status: 200 });
 		}
 		throw new Error(`Unexpected fetch in test: ${method} ${url}`);

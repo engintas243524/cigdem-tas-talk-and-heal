@@ -8,11 +8,16 @@ export async function usdKarsiligi(tutar: number, paraBirimi: string): Promise<n
 	const kod = paraBirimi.trim().toUpperCase();
 	if (kod === 'USD') return tutar;
 
-	const url = `https://api.frankfurter.app/latest?amount=${encodeURIComponent(tutar)}&from=${encodeURIComponent(kod)}&to=USD`;
+	// Frankfurter negatif amount'u 422 "invalid amount" ile reddediyor (2026-08-16'da eksi tutarla
+	// düzeltme denemesinde keşfedildi — bkz. hata günlüğü). Kur dönüşümü doğrusal/orantılı olduğu
+	// için mutlak değerle sorgulayıp işareti sonradan geri uyguluyoruz — sonuç matematiksel olarak
+	// tıpatıp aynı, API'nin işaret kısıtlamasını es geçiyoruz.
+	const mutlakTutar = Math.abs(tutar);
+	const url = `https://api.frankfurter.app/latest?amount=${encodeURIComponent(mutlakTutar)}&from=${encodeURIComponent(kod)}&to=USD`;
 	const response = await fetch(url);
 	if (!response.ok) throw new Error(`Kur bilgisi alınamadı (${kod} → USD): ${response.status}`);
 	const data = (await response.json()) as { rates?: Record<string, number> };
 	const usd = data.rates?.USD;
 	if (typeof usd !== 'number' || !Number.isFinite(usd)) throw new Error(`Kur bilgisi alınamadı (${kod} → USD): geçersiz yanıt`);
-	return usd;
+	return tutar < 0 ? -usd : usd;
 }

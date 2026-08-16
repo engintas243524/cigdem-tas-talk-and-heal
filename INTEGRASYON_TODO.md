@@ -1575,3 +1575,19 @@ fonksiyon çalışmıştı (limit 0/43'e çıktı), yani -300 ile fark neyse ond
 tutar Frankfurter'e sorgu parametresi olarak yanlış gönderiliyor) kaynaklanıyor olabilir. Sonraki
 oturumda: `usdKarsiligi` çağrısına giden gerçek istek/yanıtı ve `handleKullanimLimitArttir`'in
 eksi-tutar dalındaki `usdKarsiligi(tutar, paraBirimi)` çağrısını incelemekle başlanmalı.
+
+**Durum güncellemesi (2026-08-16, çözüldü):** Gerçek sebep TRY'yle veya işaretle ilgili değildi —
+`curl` ile canlı Frankfurter uç noktası test edildi, `api.frankfurter.app` artık `api.frankfurter.dev`'e
+301 redirect atıyor (domain taşınmış) ve yeni backend **negatif `amount` parametresini `422 invalid
+amount` ile reddediyor** (pozitif 300 TRY sorgusu 200 dönüyor, aynı istek -300 ile 422 dönüyor —
+node üzerinden native `fetch` ile doğrulandı, `redirected: true`). `handleKullanimLimitArttir`'deki
+try/catch bu 422'yi yakalayıp 502 "Kur bilgisi şu an alınamadı..." mesajına çeviriyordu.
+
+Düzeltme: `form-backend/src/lib/currency.ts#usdKarsiligi` artık API'ye her zaman `Math.abs(tutar)`
+gönderiyor (kur dönüşümü doğrusal olduğu için matematiksel olarak eşdeğer) ve orijinal `tutar`
+negatifse sonucu kendi tarafımızda negatife çeviriyor — API'nin işaret kısıtlamasını es geçiyor.
+`test/kullanimLimit.spec.ts`'deki Frankfurter stub'ı da gerçek davranışı yansıtacak şekilde
+güncellendi (negatif `amount` artık mock'ta da 422 döndürüyor) — önceki mock her zaman 200
+döndüğü için bu regresyon teste hiç yakalanmamıştı, şimdi yakalanıyor. `npx tsc --noEmit`,
+`npx prettier --check`, `npm test` (263/263) hepsi geçti. Hata günlüğüne (BE-67,
+`05-Backend-Entegrasyon`) da işlenecek.
