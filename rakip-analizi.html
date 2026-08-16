@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=11">
+<link rel="stylesheet" href="panel.css?v=12">
 </head>
 <body>
 <div class="panel-wrap">
@@ -544,6 +544,17 @@
     wrap.appendChild(toggleBtn); wrap.appendChild(form);
     return wrap;
   }
+
+  // Sayfanın herhangi bir yerine tıklanınca açık kalan Limiti Yükselt formlarını kapatır — tıklama
+  // formun/togglein kendi içindeyse dokunmaz (kullanıcı isteği, 2026-08-16). Tek seferlik, global
+  // bir dinleyici (loadKullanimSayaci() her çağrıldığında tile'lar yeniden oluşturuluyor, dinleyici
+  // orada eklenirse her yenilemede bir tane daha birikirdi).
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('.kota-limit-form:not(.hidden)').forEach(function (form) {
+      var wrap = form.closest('.kota-limit-arttir');
+      if (wrap && !wrap.contains(e.target)) form.classList.add('hidden');
+    });
+  });
 
   var RAKIP_TAKIP_ETIKETLER = { haftalik: 'Haftalık', aylik: 'Aylık', ucAylik: '3 Aylık', altiAylik: '6 Aylık', dokuzAylik: '9 Aylık', onikiAylik: '12 Aylık' };
   var RAKIP_TAKIP_ASAMA_ETIKETLER = { yeniDonem: 'Yeni dönem başlatıldı', kapatildi: 'Dönem kapatıldı, fark analiz edildi', ilerletildi: 'Yeni döneme ilerlendi' };

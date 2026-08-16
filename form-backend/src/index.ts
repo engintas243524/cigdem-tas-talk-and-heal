@@ -28,7 +28,7 @@ import {
 } from './routes/rakipAnalizi';
 import { handleRakipTakipDurum, handleRakipTakipUret, handleRakipTakipAyar, handleRakipTakipKarsilastirma } from './routes/rakipTakip';
 import { handleKullanimLimitArttir } from './routes/kullanimLimit';
-import { runReminderSweep, runSessionNoteFallback, runRakipTakipSweep } from './scheduled';
+import { runReminderSweep, runSessionNoteFallback, runRakipTakipSweep, runGiderTakipAylikOzetSweep } from './scheduled';
 import { corsHeaders } from './lib/http';
 
 // Routes are added here as their build session lands (see plan doc, Phase 2 build order).
@@ -112,5 +112,6 @@ export default {
 		await runReminderSweep(env);
 		await runSessionNoteFallback(env);
 		await runRakipTakipSweep(env);
+		await runGiderTakipAylikOzetSweep(env);
 	},
 } satisfies ExportedHandler<Env>;

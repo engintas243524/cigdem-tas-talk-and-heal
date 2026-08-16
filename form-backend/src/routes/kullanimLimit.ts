@@ -1,5 +1,6 @@
 import { errorResponse, json } from '../lib/http';
 import { ensureKullanimLimitTab, getGuncelLimit, updateKullanimLimit } from '../lib/kullanimLimitSheets';
+import { ensureGiderTakipTab, appendHarcamaKaydi } from '../lib/giderTakipSheets';
 import { usdKarsiligi } from '../lib/currency';
 import { KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER, RAPOR_MALIYETI_USD, type KullanimKategori } from '../config';
 import type { Env } from '../types';
@@ -48,5 +49,15 @@ export async function handleKullanimLimitArttir(request: Request, env: Env): Pro
 	const yeniLimit = mevcutLimit + ekRaporSayisi;
 	await updateKullanimLimit(env, kategori as KullanimKategori, yeniLimit, tutar, paraBirimi);
 
-	return json({ yeniLimit, eklenenRaporSayisi: ekRaporSayisi, yaklasikUsd: Math.round(usdTutar * 100) / 100 }, request);
+	const yaklasikUsd = Math.round(usdTutar * 100) / 100;
+	// Gerçek gider kaydı — işletmenin gider/gelir tablosunda kullanılmak üzere (kullanıcı isteği,
+	// 2026-08-16). Bu adım başarısız olsa bile limit zaten güncellendi, kullanıcıya hata gösterme.
+	try {
+		await ensureGiderTakipTab(env);
+		await appendHarcamaKaydi(env, { kategori: kategori as KullanimKategori, tutar, paraBirimi, yaklasikUsd });
+	} catch (err) {
+		console.error('Gider kaydı eklenemedi', err);
+	}
+
+	return json({ yeniLimit, eklenenRaporSayisi: ekRaporSayisi, yaklasikUsd }, request);
 }

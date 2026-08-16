@@ -361,6 +361,43 @@ export const KULLANIM_LIMIT_COLUMN_LABELS: Record<(typeof KULLANIM_LIMIT_COLUMNS
 	guncellenmeUtc: 'Güncellenme (UTC)',
 };
 
+// Gider Takibi (2026-08-16, kullanıcı isteği) — işletmenin gider/gelir tablosunda gider kalemi
+// olarak kullanılabilecek, muhasebeye uygun tek bir özet sekme. İki satır TÜRÜ tek tabloda:
+// - 'harcama': her "Limiti Yükselt" başarılı yüklemesinde APPEND edilir (bkz. routes/kullanimLimit.ts)
+//   — gerçek ödenen para (tutar/paraBirimi), Çiğdem'in gerçekten harcadığı miktar budur.
+// - 'aylikKullanim': her (yılAy, kategori) çifti için TEK satır, cron sweep tarafından o ay boyunca
+//   YERİNDE güncellenir (append değil) — bkz. scheduled.ts#runGiderTakipAylikOzetSweep. Ay değişince
+//   yeni bir satır açılır, eskisi dokunulmadan durur (donmuş aylık geçmiş = muhasebe için doğru
+//   davranış). Ayda ~4 satır (kategori başına 1) büyür — RakipTakipGecmis'teki gibi kasıtlı ve
+//   sınırlı bir büyüme, "sayfa sonsuza kadar uzamasın" kararını ihlal etmiyor.
+export const GIDER_TAKIP_TAB_NAME = 'GiderTakibi';
+
+export const GIDER_TAKIP_COLUMNS = [
+	'id',
+	'tarihUtc',
+	'tur', // 'harcama' | 'aylikKullanim'
+	'kategori',
+	'tutar',
+	'paraBirimi',
+	'yaklasikUsd',
+	'kullanilanSayisi',
+	'aylikLimit',
+	'aciklama',
+] as const;
+
+export const GIDER_TAKIP_COLUMN_LABELS: Record<(typeof GIDER_TAKIP_COLUMNS)[number], string> = {
+	id: 'ID',
+	tarihUtc: 'Tarih / Yıl-Ay (UTC)',
+	tur: 'Tür',
+	kategori: 'Kategori',
+	tutar: 'Tutar',
+	paraBirimi: 'Para Birimi',
+	yaklasikUsd: 'Yaklaşık USD',
+	kullanilanSayisi: 'Kullanılan Sayısı',
+	aylikLimit: 'Aylık Limit',
+	aciklama: 'Açıklama',
+};
+
 // Otomatik 10-rakip periyodik takip + OKR döngüsü (2026-08-15, Faz 1 — sadece veri modeli, henüz
 // hiçbir route/UI bunu kullanmıyor). Kullanıcı kararı: raporlar Sheet'i satır satır büyütmesin
 // (bkz. INTEGRASYON_TODO.md), o yüzden bu sekme klasik "her olayda append" değil, periyot türü

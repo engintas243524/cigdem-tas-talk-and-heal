@@ -127,6 +127,21 @@ describe('POST /panel/rakip-analizi/kullanim-limit-arttir', () => {
 		expect(ozetData.ozet.adresBulma.arttirilabilir).toBe(false);
 	});
 
+	it('logs the real spend as a "harcama" row in GiderTakibi — for the business expense table', async () => {
+		const { tabRows } = stubApis(0.03);
+		await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+			method: 'POST',
+			body: JSON.stringify({ kategori: 'icerikStrateji', tutar: 1000, paraBirimi: 'try' }),
+		});
+		const giderRows = [...(tabRows.get('GiderTakibi')?.values() ?? [])];
+		const harcama = giderRows.find((r) => r[2] === 'harcama');
+		expect(harcama).toBeDefined();
+		expect(harcama![3]).toBe('icerikStrateji');
+		expect(harcama![4]).toBe('1000');
+		expect(harcama![5]).toBe('TRY');
+		expect(harcama![6]).toBe('30');
+	});
+
 	it('rejects an amount too small to buy even one report', async () => {
 		stubApis(0.03);
 		const response = await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {

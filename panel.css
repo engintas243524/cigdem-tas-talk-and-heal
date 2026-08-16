@@ -99,16 +99,26 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
    büyüyordu (kullanıcı geri bildirimi, 2026-08-16). start ile her kutu SADECE kendi içeriği
    kadar yer kaplar, satırın en yükseğine göre esnetilmez. */
 .kota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; align-items: start; }
-.kota-tile { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.6rem 0.75rem; }
+.kota-tile { position: relative; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.6rem 0.75rem; }
 .kota-baslik { font-size: 0.78rem; color: var(--taupe); margin-bottom: 0.25rem; }
 .kota-deger { font-size: 1.05rem; font-weight: 600; }
 .kota-bar { height: 5px; border-radius: 3px; background: var(--paper); margin-top: 0.4rem; overflow: hidden; }
 .kota-bar > div { height: 100%; background: var(--sage); border-radius: 3px; }
 .kota-bar > div.dolu { background: var(--brand-deep); }
-/* Limit Yükseltme (2026-08-16) — sadece Anthropic kategorilerinde (arttirilabilir:true) görünür */
-.kota-limit-arttir { margin-top: 0.5rem; }
+/* Limit Yükseltme (2026-08-16) — sadece Anthropic kategorilerinde (arttirilabilir:true) görünür.
+   Form açıkken position:absolute ile normal akıştan çıkarılıyor (kullanıcı geri bildirimi,
+   2026-08-16 devamı): "Bu Ayki Kullanım" kutusu ya da komşu sayaç penceresi ARTIK büyümüyor,
+   form kendi kutusunun altından dışarı doğru (diğer içeriğin ÜSTÜNE) taşıyor. .kota-tile'a
+   position:relative bunun için eklendi (yukarıda). */
+.kota-limit-arttir { position: relative; margin-top: 0.5rem; }
 .kota-limit-toggle { background: none; border: none; padding: 0; font-size: 0.78rem; color: var(--sage); cursor: pointer; text-decoration: underline; }
-.kota-limit-form { margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.kota-limit-form {
+  position: absolute; top: 100%; left: -0.76rem; right: -0.76rem; margin-top: 0.4rem;
+  display: flex; flex-direction: column; gap: 0.4rem; z-index: 30;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+.kota-limit-form.hidden { display: none; }
 .kota-limit-link { font-size: 0.8rem; }
 .kota-limit-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .kota-limit-row select { flex: 1 1 100%; min-width: 0; }

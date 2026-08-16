@@ -1,4 +1,4 @@
-import { WHATSAPP_TEMPLATES, MAX_SESSION_COUNT, locationFor } from './config';
+import { WHATSAPP_TEMPLATES, MAX_SESSION_COUNT, locationFor, KULLANIM_KATEGORILERI, type KullanimKategori } from './config';
 import { getAllRows, writeCellMirrored } from './lib/sheets';
 import { sendTemplate } from './lib/whatsapp';
 import { getLocalDateParts, localTimeToUtc } from './lib/timezone';
@@ -6,6 +6,8 @@ import { closeOutSessionNote, sessionFields, bookedSessionIndexes } from './lib/
 import { ensureRakipTakipTab, getAllRakipTakipRows } from './lib/rakipTakipSheets';
 import { getRakipTakipAyar } from './lib/rakipTakipAyarSheets';
 import { rakipTakipAdimUygula, gecerliPeriyotTuru } from './routes/rakipTakip';
+import { ensureKullanimKaydiTab, getKullanimOzet } from './lib/kullanimKaydi';
+import { ensureGiderTakipTab, upsertAylikKullanimKaydi } from './lib/giderTakipSheets';
 import type { Env, SheetRow } from './types';
 
 // Çiğdem's fixed local timezone (Madde 5 design assumption) — the "end of the session's own day" a
@@ -127,6 +129,32 @@ export async function runRakipTakipSweep(env: Env, now: Date = new Date()): Prom
 			await rakipTakipAdimUygula(env, periyotTuru, []);
 		} catch (err) {
 			console.error(`RakipTakip sweep failed for periyotTuru=${periyotTuru}`, err);
+		}
+	}
+}
+
+// Gider Takibi'nin aylık kullanım-özeti tarafı (2026-08-16, kullanıcı isteği — "kullanım
+// adetlerinin sayıları da ayrı bir sayfada tutulsun"). Google/Anthropic çağrısı YAPMIYOR, sadece
+// KullanimKaydi'nin zaten hesapladığı bu ayki sayımı (getKullanimOzet) GiderTakibi'ne kopyalıyor —
+// maliyet riski yok, her 15 dakikada bir çalışması güvenli. Kategori başına ayda TEK satır (yerinde
+// güncellenir, bkz. lib/giderTakipSheets.ts#upsertAylikKullanimKaydi) — ay değişince yeni satır.
+export async function runGiderTakipAylikOzetSweep(env: Env, now: Date = new Date()): Promise<void> {
+	const yilAyBaslangicUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+
+	await ensureKullanimKaydiTab(env);
+	const ozet = await getKullanimOzet(env);
+
+	await ensureGiderTakipTab(env);
+	for (const kategori of Object.keys(KULLANIM_KATEGORILERI) as KullanimKategori[]) {
+		try {
+			await upsertAylikKullanimKaydi(env, {
+				yilAyBaslangicUtc,
+				kategori,
+				kullanilanSayisi: ozet[kategori].kullanilan,
+				aylikLimit: ozet[kategori].aylikLimit,
+			});
+		} catch (err) {
+			console.error(`Gider Takibi aylık özet sweep başarısız oldu, kategori=${kategori}`, err);
 		}
 	}
 }
