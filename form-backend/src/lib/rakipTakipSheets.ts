@@ -1,5 +1,5 @@
 import { RAKIP_TAKIP_TAB_NAME, RAKIP_TAKIP_COLUMNS, RAKIP_TAKIP_COLUMN_LABELS, RAKIP_TAKIP_PERIYOT_TURLERI } from '../config';
-import { columnLetter, sheetsFetch } from './sheets';
+import { columnLetter, sheetsFetch, sabitSatirYuksekligiUygula } from './sheets';
 import type { Env } from '../types';
 
 export type RakipTakipRow = Record<(typeof RAKIP_TAKIP_COLUMNS)[number], string>;
@@ -12,21 +12,10 @@ function emptyRakipTakipRow(): RakipTakipRow {
 
 // RakipTakip sekmesini oluşturur/tamamlar ve SABİT 6 satırı (bir periyot türü = bir satır) tohumlar
 // — bkz. config.ts'deki tasarım notu. rakipSheets.ts'deki ensureRakipAnaliziTab ile aynı
-// oluşturma/genişletme mantığı, tek fark satır tohumlaması.
-// projeksiyon/hedef/realizasyon/fark — uzun rapor metni tutan sütunlar. Google Sheets varsayılan
-// wrapStrategy'si (WRAP) uzun metni hücre içinde alt satıra taşıyıp SATIR YÜKSEKLİĞİNİ büyütür;
-// 6 sabit satırın her biri uzun bir rapor tutunca sayfa dikeyde "sonsuza kadar uzuyormuş" gibi
-// görünür hale gelirdi (kullanıcı kararı 2026-08-15). CLIP bunu önler — metin tek satırda kalır,
-// hücreye tıklayınca formül çubuğunda tam metin yine okunabilir.
-const UZUN_METIN_KOLON_ARALIGI = { startColumnIndex: 3, endColumnIndex: 7 }; // projeksiyon..fark
-
-// CLIP tek başına YETMİYOR: bir satırın yüksekliği WRAP ile bir kez büyüdükten sonra Sheets onu
-// sabit bir piksel boyutu olarak saklıyor — wrapStrategy'yi sonradan CLIP'e çevirmek o satırı
-// otomatik geri küçültmüyor (2026-08-15'te canlıda gözlemlendi). Çözüm: header + 6 sabit periyot
-// satırının hepsini standart Sheets satır yüksekliğine (21px) SABİTLEMEK — her ensureRakipTakipTab
-// çağrısında yeniden uygulanıyor, o yüzden daha önce şişmiş satırlar da geri küçülüyor.
-const STANDART_SATIR_YUKSEKLIGI_PX = 21;
-
+// oluşturma/genişletme mantığı, tek fark satır tohumlaması. Satır yüksekliği sabitleme
+// (projeksiyon/hedef/realizasyon/fark uzun rapor metni tutuyor, ama artık tüm sütunlar için
+// uygulanıyor) paylaşılan lib/sheets.ts#sabitSatirYuksekligiUygula içinde — bkz. o fonksiyonun
+// yorumu (2026-08-16'da RakipAnalizi/RakipTakipGecmis/KullanimKaydi sekmelerine de genelleştirildi).
 export async function ensureRakipTakipTab(env: Env): Promise<void> {
 	const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title,gridProperties.columnCount)');
 	const data = (await response.json()) as {
@@ -75,32 +64,7 @@ export async function ensureRakipTakipTab(env: Env): Promise<void> {
 	}
 
 	if (sheetId !== undefined) {
-		await sheetsFetch(env, ':batchUpdate', {
-			method: 'POST',
-			body: JSON.stringify({
-				requests: [
-					{
-						repeatCell: {
-							range: { sheetId, ...UZUN_METIN_KOLON_ARALIGI },
-							cell: { userEnteredFormat: { wrapStrategy: 'CLIP' } },
-							fields: 'userEnteredFormat.wrapStrategy',
-						},
-					},
-					{
-						updateDimensionProperties: {
-							range: {
-								sheetId,
-								dimension: 'ROWS',
-								startIndex: 0,
-								endIndex: 1 + RAKIP_TAKIP_PERIYOT_TURLERI.length, // header + 6 sabit satır
-							},
-							properties: { pixelSize: STANDART_SATIR_YUKSEKLIGI_PX },
-							fields: 'pixelSize',
-						},
-					},
-				],
-			}),
-		});
+		await sabitSatirYuksekligiUygula(env, sheetId, RAKIP_TAKIP_COLUMNS.length);
 	}
 }
 

@@ -1,5 +1,5 @@
 import { RAKIP_ANALIZI_TAB_NAME, RAKIP_ANALIZI_COLUMNS, RAKIP_ANALIZI_COLUMN_LABELS } from '../config';
-import { columnLetter, sheetsFetch } from './sheets';
+import { columnLetter, sheetsFetch, sabitSatirYuksekligiUygula } from './sheets';
 import type { Env } from '../types';
 
 export type RakipAnalizRow = Record<(typeof RAKIP_ANALIZI_COLUMNS)[number], string>;
@@ -19,8 +19,10 @@ export async function ensureRakipAnaliziTab(env: Env): Promise<void> {
 	};
 	const existing = (data.sheets ?? []).find((s) => s.properties?.title === RAKIP_ANALIZI_TAB_NAME);
 
+	let sheetId: number | undefined = existing?.properties?.sheetId;
+
 	if (!existing) {
-		await sheetsFetch(env, ':batchUpdate', {
+		const createResponse = await sheetsFetch(env, ':batchUpdate', {
 			method: 'POST',
 			body: JSON.stringify({
 				requests: [
@@ -32,30 +34,34 @@ export async function ensureRakipAnaliziTab(env: Env): Promise<void> {
 				],
 			}),
 		});
+		const createData = (await createResponse.json()) as { replies?: { addSheet?: { properties?: { sheetId?: number } } }[] };
+		sheetId = createData.replies?.[0]?.addSheet?.properties?.sheetId;
 		await writeHeaderRow(env);
-		return;
+	} else {
+		const columnCount = existing.properties?.gridProperties?.columnCount ?? 0;
+		if (columnCount < RAKIP_ANALIZI_COLUMNS.length && sheetId !== undefined) {
+			await sheetsFetch(env, ':batchUpdate', {
+				method: 'POST',
+				body: JSON.stringify({
+					requests: [
+						{
+							updateSheetProperties: {
+								properties: { sheetId, gridProperties: { columnCount: RAKIP_ANALIZI_COLUMNS.length } },
+								fields: 'gridProperties.columnCount',
+							},
+						},
+					],
+				}),
+			});
+		}
+		await writeHeaderRow(env);
 	}
 
-	const columnCount = existing.properties?.gridProperties?.columnCount ?? 0;
-	if (columnCount < RAKIP_ANALIZI_COLUMNS.length && existing.properties?.sheetId !== undefined) {
-		await sheetsFetch(env, ':batchUpdate', {
-			method: 'POST',
-			body: JSON.stringify({
-				requests: [
-					{
-						updateSheetProperties: {
-							properties: {
-								sheetId: existing.properties.sheetId,
-								gridProperties: { columnCount: RAKIP_ANALIZI_COLUMNS.length },
-							},
-							fields: 'gridProperties.columnCount',
-						},
-					},
-				],
-			}),
-		});
+	// Rapor Metni ve Not sütunları uzun metin tutabiliyor — satır yüksekliğinin şişmesini önler
+	// (bkz. lib/sheets.ts#sabitSatirYuksekligiUygula, 2026-08-16'da RakipTakip'ten genelleştirildi).
+	if (sheetId !== undefined) {
+		await sabitSatirYuksekligiUygula(env, sheetId, RAKIP_ANALIZI_COLUMNS.length);
 	}
-	await writeHeaderRow(env);
 }
 
 async function writeHeaderRow(env: Env): Promise<void> {

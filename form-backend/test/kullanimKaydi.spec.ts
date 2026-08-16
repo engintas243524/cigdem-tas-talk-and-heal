@@ -36,13 +36,24 @@ function stubSheetsApi(existingTabs: string[] = []) {
 		throw new Error(`Unexpected fetch in test: ${method} ${url}`);
 	});
 	vi.stubGlobal('fetch', fetchMock);
-	return { appended };
+	return { appended, fetchMock };
 }
 
 describe('kullanimKaydi', () => {
 	it('creates the KullanimKaydi tab when it does not exist yet', async () => {
 		stubSheetsApi([]);
 		await expect(ensureKullanimKaydiTab(env)).resolves.not.toThrow();
+	});
+
+	it('pins the whole row (CLIP + fixed row height) so a long detay never grows the tab', async () => {
+		const { fetchMock } = stubSheetsApi(['Sayfa1', 'KullanimKaydi']);
+		await ensureKullanimKaydiTab(env);
+		const dimensionCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string) as { requests?: { updateDimensionProperties?: unknown }[] };
+			return body.requests?.some((r) => r.updateDimensionProperties);
+		});
+		expect(dimensionCall).toBeDefined();
 	});
 
 	it('counts logged events per category for the current month, ignoring other categories', async () => {

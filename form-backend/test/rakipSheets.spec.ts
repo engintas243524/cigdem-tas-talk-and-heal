@@ -39,7 +39,7 @@ function stubSheetsApi(existingTabs: string[] = []) {
 		throw new Error(`Unexpected fetch in test: ${method} ${url}`);
 	});
 	vi.stubGlobal('fetch', fetchMock);
-	return { appended };
+	return { appended, fetchMock };
 }
 
 describe('rakipSheets', () => {
@@ -65,5 +65,24 @@ describe('rakipSheets', () => {
 		const rows = await getAllRakipAnalizRows(env);
 		expect(rows).toHaveLength(1);
 		expect(rows[0].row.isim).toBe('Örnek Klinik');
+	});
+
+	it('pins the whole row (CLIP + fixed row height) so long Not/Rapor Metni text never grows the tab', async () => {
+		const { fetchMock } = stubSheetsApi(['Sayfa1', 'RakipAnalizi']);
+		await ensureRakipAnaliziTab(env);
+		const dimensionCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string) as { requests?: { updateDimensionProperties?: unknown }[] };
+			return body.requests?.some((r) => r.updateDimensionProperties);
+		});
+		expect(dimensionCall).toBeDefined();
+		const body = JSON.parse((dimensionCall![1] as RequestInit).body as string) as {
+			requests: {
+				updateDimensionProperties?: { properties: { pixelSize: number } };
+				repeatCell?: { cell: { userEnteredFormat: { wrapStrategy: string } } };
+			}[];
+		};
+		expect(body.requests.find((r) => r.updateDimensionProperties)!.updateDimensionProperties!.properties.pixelSize).toBe(21);
+		expect(body.requests.find((r) => r.repeatCell)!.repeatCell!.cell.userEnteredFormat.wrapStrategy).toBe('CLIP');
 	});
 });

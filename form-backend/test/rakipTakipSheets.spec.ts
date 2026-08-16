@@ -119,7 +119,7 @@ describe('rakipTakipSheets', () => {
 		expect(body.requests[0].repeatCell.cell.userEnteredFormat.wrapStrategy).toBe('CLIP');
 	});
 
-	it('pins header+6 rows to the standard row height, so a previously-wrapped-tall row shrinks back (CLIP alone does not do this retroactively)', async () => {
+	it('pins rows (a generous ceiling covering header+6 and future rows) to the standard row height, so a previously-wrapped-tall row shrinks back (CLIP alone does not do this retroactively)', async () => {
 		const { fetchMock } = stubSheetsApi([]);
 		await ensureRakipTakipTab(env);
 		const dimensionCall = fetchMock.mock.calls.find((c) => {
@@ -133,7 +133,7 @@ describe('rakipTakipSheets', () => {
 		};
 		const req = body.requests.find((r) => r.updateDimensionProperties)!.updateDimensionProperties;
 		expect(req.range.startIndex).toBe(0);
-		expect(req.range.endIndex).toBe(7); // header + 6 sabit periyot satırı
+		expect(req.range.endIndex).toBeGreaterThan(7); // header + 6 sabit periyot satırının çok üstünde bir tavan
 		expect(req.properties.pixelSize).toBe(21);
 	});
 });

@@ -18,6 +18,44 @@ export function columnLetter(index: number): string {
 	return letters;
 }
 
+// Google Sheets varsayılan wrapStrategy'si (WRAP) uzun metni hücre içinde alt satıra taşıyıp SATIR
+// YÜKSEKLİĞİNİ büyütür — bir not/rapor metni hücresi uzun olunca o satır (ve dolayısıyla sayfa)
+// dikeyde şişer. CLIP bunu önler (metin tek satırda kalır, hücreye tıklayınca formül çubuğunda tam
+// metin yine okunabilir). CLIP TEK BAŞINA YETMİYOR: bir satırın yüksekliği WRAP ile bir kez
+// büyüdükten sonra Sheets onu sabit bir piksel boyutu olarak saklıyor — wrapStrategy'yi sonradan
+// CLIP'e çevirmek o satırı otomatik geri küçültmüyor (2026-08-15'te RakipTakip sekmesinde canlıda
+// gözlemlendi). Çözüm: standart Sheets satır yüksekliğine (21px) SABİTLEMEK — cömert bir tavana
+// (2000 satır — yeni boş Sheets sekmesinin varsayılan satır sayısı) kadar hem mevcut hem de ileride
+// eklenecek satırları kapsar, her ensureXTab çağrısında yeniden uygulanır (kendini onaran).
+// Kullanan her sekme (RakipAnalizi, RakipTakip, RakipTakipGecmis, KullanimKaydi) AYNI bu fonksiyonu
+// çağırır — mantık dört yerde ayrı ayrı kopyalanmıyor.
+const SATIR_YUKSEKLIGI_SABITLEME_TAVANI = 2000;
+const STANDART_SATIR_YUKSEKLIGI_PX = 21;
+
+export async function sabitSatirYuksekligiUygula(env: Env, sheetId: number, sutunSayisi: number): Promise<void> {
+	await sheetsFetch(env, ':batchUpdate', {
+		method: 'POST',
+		body: JSON.stringify({
+			requests: [
+				{
+					repeatCell: {
+						range: { sheetId, startColumnIndex: 0, endColumnIndex: sutunSayisi },
+						cell: { userEnteredFormat: { wrapStrategy: 'CLIP' } },
+						fields: 'userEnteredFormat.wrapStrategy',
+					},
+				},
+				{
+					updateDimensionProperties: {
+						range: { sheetId, dimension: 'ROWS', startIndex: 0, endIndex: SATIR_YUKSEKLIGI_SABITLEME_TAVANI },
+						properties: { pixelSize: STANDART_SATIR_YUKSEKLIGI_PX },
+						fields: 'pixelSize',
+					},
+				},
+			],
+		}),
+	});
+}
+
 export async function sheetsFetch(env: Env, path: string, init: RequestInit = {}): Promise<Response> {
 	const token = await getGoogleAccessToken(env);
 	const response = await fetch(`${SHEETS_API}/${env.GOOGLE_SHEET_ID}${path}`, {

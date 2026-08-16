@@ -5,7 +5,7 @@ import {
 	KULLANIM_KATEGORILERI,
 	type KullanimKategori,
 } from '../config';
-import { columnLetter, sheetsFetch } from './sheets';
+import { columnLetter, sheetsFetch, sabitSatirYuksekligiUygula } from './sheets';
 import type { Env } from '../types';
 
 type KullanimKaydiRow = Record<(typeof KULLANIM_KAYDI_COLUMNS)[number], string>;
@@ -27,8 +27,10 @@ export async function ensureKullanimKaydiTab(env: Env): Promise<void> {
 	};
 	const existing = (data.sheets ?? []).find((s) => s.properties?.title === KULLANIM_KAYDI_TAB_NAME);
 
+	let sheetId: number | undefined = existing?.properties?.sheetId;
+
 	if (!existing) {
-		await sheetsFetch(env, ':batchUpdate', {
+		const createResponse = await sheetsFetch(env, ':batchUpdate', {
 			method: 'POST',
 			body: JSON.stringify({
 				requests: [
@@ -36,27 +38,34 @@ export async function ensureKullanimKaydiTab(env: Env): Promise<void> {
 				],
 			}),
 		});
+		const createData = (await createResponse.json()) as { replies?: { addSheet?: { properties?: { sheetId?: number } } }[] };
+		sheetId = createData.replies?.[0]?.addSheet?.properties?.sheetId;
 		await writeHeaderRow(env);
-		return;
+	} else {
+		const columnCount = existing.properties?.gridProperties?.columnCount ?? 0;
+		if (columnCount < KULLANIM_KAYDI_COLUMNS.length && sheetId !== undefined) {
+			await sheetsFetch(env, ':batchUpdate', {
+				method: 'POST',
+				body: JSON.stringify({
+					requests: [
+						{
+							updateSheetProperties: {
+								properties: { sheetId, gridProperties: { columnCount: KULLANIM_KAYDI_COLUMNS.length } },
+								fields: 'gridProperties.columnCount',
+							},
+						},
+					],
+				}),
+			});
+		}
+		await writeHeaderRow(env);
 	}
 
-	const columnCount = existing.properties?.gridProperties?.columnCount ?? 0;
-	if (columnCount < KULLANIM_KAYDI_COLUMNS.length && existing.properties?.sheetId !== undefined) {
-		await sheetsFetch(env, ':batchUpdate', {
-			method: 'POST',
-			body: JSON.stringify({
-				requests: [
-					{
-						updateSheetProperties: {
-							properties: { sheetId: existing.properties.sheetId, gridProperties: { columnCount: KULLANIM_KAYDI_COLUMNS.length } },
-							fields: 'gridProperties.columnCount',
-						},
-					},
-				],
-			}),
-		});
+	// detay sütunu bazen uzun metin tutuyor (istek/yorum özeti) — satır yüksekliğinin şişmesini
+	// önler (bkz. lib/sheets.ts#sabitSatirYuksekligiUygula).
+	if (sheetId !== undefined) {
+		await sabitSatirYuksekligiUygula(env, sheetId, KULLANIM_KAYDI_COLUMNS.length);
 	}
-	await writeHeaderRow(env);
 }
 
 async function writeHeaderRow(env: Env): Promise<void> {

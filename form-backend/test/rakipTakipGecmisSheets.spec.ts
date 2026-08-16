@@ -93,6 +93,17 @@ describe('rakipTakipGecmisSheets', () => {
 		await expect(ensureRakipTakipGecmisTab(env)).resolves.not.toThrow();
 	});
 
+	it('pins the whole row (CLIP + fixed row height) so long raporMetni never grows the tab', async () => {
+		const { fetchMock } = stubSheetsApi([]);
+		await ensureRakipTakipGecmisTab(env);
+		const dimensionCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string) as { requests?: { updateDimensionProperties?: unknown }[] };
+			return body.requests?.some((r) => r.updateDimensionProperties);
+		});
+		expect(dimensionCall).toBeDefined();
+	});
+
 	it('adds a snapshot and stores parametreSkorlari as JSON', async () => {
 		stubSheetsApi([]);
 		await ensureRakipTakipGecmisTab(env);
