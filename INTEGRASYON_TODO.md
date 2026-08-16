@@ -1558,3 +1558,20 @@ sonra compact yapmamda bir sakınca var mı?"
 
 Testler: 263/263 geçti (yeni testler: partial-update/isim korunması, eksi tutar — para birimi
 kilidi/simetrik trunc/0'da sabitleme/sonKullanilanParaBirimi).
+
+## Kullanıcı bildirimi — Eksi tutarla düzeltmede "Kur bilgisi şu an alınamadı" hatası (2026-08-16, sıraya alındı)
+
+Kullanıcı Görsel/Video Stratejisi sayacına 300 TL yükleyip Limiti Güncelle'ye bastı (limit 0/43
+oldu), sonra bunu -300 TRY ile geri almak istedi — para birimi dropdown'ı doğru şekilde TRY'ye
+kilitlenmiş görünüyor, ama "Limiti Güncelle"ye basınca "Kur bilgisi şu an alınamadı, lütfen tekrar
+dene." hatası alındı (ekran görüntüsü kaydedildi). Kullanıcı bu işi commit+compact sonrasına
+sıraya aldı, henüz araştırılmadı.
+
+İlk şüphe (henüz doğrulanmadı, sonraki oturumda kontrol edilecek): `lib/currency.ts#usdKarsiligi`
+Frankfurter.app'e gidiyor — geçici bir ağ/rate-limit hatası mı, yoksa TRY için spesifik bir sorun
+mu (ör. Frankfurter TRY'yi desteklemiyor olabilir — ECB referans kurları tarihsel olarak TRY'yi
+bazı dönemlerde kapsam dışı bırakabiliyor, kontrol edilmeli) ayrıca pozitif 300 TRY girişinde aynı
+fonksiyon çalışmıştı (limit 0/43'e çıktı), yani -300 ile fark neyse ondan (belki eksi işaretli
+tutar Frankfurter'e sorgu parametresi olarak yanlış gönderiliyor) kaynaklanıyor olabilir. Sonraki
+oturumda: `usdKarsiligi` çağrısına giden gerçek istek/yanıtı ve `handleKullanimLimitArttir`'in
+eksi-tutar dalındaki `usdKarsiligi(tutar, paraBirimi)` çağrısını incelemekle başlanmalı.
