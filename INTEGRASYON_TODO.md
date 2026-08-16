@@ -1519,3 +1519,42 @@ alınsın ya da otomatik doğrulama yapılsın.
   düzeltilebileceğini hatırlatıyor. Formda kalıcı bir uyarı notu da var (confirm'e gerek kalmadan
   görünür). Otomatik doğrulama yerine bilinçli beyan + kolay elle düzeltme yolu tercih edildi —
   tek gerçekçi seçenek buydu.
+
+## Kullanıcı isteği — Eksi tutarla düzeltme + Rakip Ekle'de seçmeli alan düzenleme + boşluk düzeltme (2026-08-16, birebir kaydedildi)
+
+"- 'Yalnızca gerçekten ödediğin tutarı gir — girilen tutar doğrulanmıyor. Yanlış girdiysen,
+Google Sheet'teki KullanimLimitleri sekmesinden elle düzeltebilirsin.' uyarısına rağmen görmeden
+girilen yanlış miktarı -(eksi) miktar girerek(ama doğru para birimi sadece en son güncellem
+yaptığında kullandığı para birimi seçilebilir olacak şekilde) Linmiti Güncelle ye tıkladığında
+sayaçtaki limit güncellenir ve aynı anda google sheet teki ilgili sayfa, satır ve sütun da
+güncellenir. Manuel bu eksi bakiye düzeltebilme bilgisi de Limiti Güncelle butonu altında
+gösterilsin.
+- Rakip Ekle penceresindeki Varolan rakibi ara(düzenlemek için) kutusunun içinde sağıda
+düzenleme parametresleri olan İsim Adres Kaynak Nasıl Bulundu Tarih Not parametrelerden
+düzenlenmesk istenenlerin yanında onay/tik kutusu ile seçildikten sonra seçilen parametrelerin
+düzenleme kutularının açıldığı bir dropdown olsun ve istenen değişiklikler yapıldıktan sonra
+Düzenlemeyi Kaydet e basıldığında tablo ve google sheet te aynı anda düzenleme güncellensin
+- Konum ile rakip ara penceresinin altı aşağı doğru fazla boş uzunluğa sahip, Ara butonuna
+basıldığında bulunan sonuç (ilk baştta 3 seçeneğin gösterildiği- eğer aramada çıkan sonuç 3 ten
+az ise zaten okadar gösterilecektir) kadar aşağı doğru genişlemesi gerekli. Bunu hallettikten
+sonra compact yapmamda bir sakınca var mı?"
+
+**Durum güncellemesi (2026-08-16, üçü de tamamlandı):**
+- Madde 1 (eksi tutarla düzeltme): "Limiti Güncelle" artık eksi tutar kabul ediyor — SADECE o
+  kategoride en son gerçekten kullanılan para biriminde (backend `kullanim-ozet`'in yeni
+  `sonKullanilanParaBirimi` alanından okunuyor, frontend farklı para birimini seçtirmiyor,
+  backend da ayrıca doğruluyor). Yuvarlama floor'dan trunc'a çevrildi (simetrik — floor negatifte
+  gereğinden fazla rapor geri alıyordu). Yeni limit hiç eksiye düşmüyor (0'da sabitleniyor).
+  Bilgi notu artık "Limiti Güncelle" butonunun altında kalıcı olarak görünüyor.
+- Madde 2 (Rakip Ekle'de seçmeli alan düzenleme): arama sonucundan bir kayıt seçilince İsim/Link/
+  Not (ana form, her zaman aktif) dışında Adres/Kaynak/Nasıl Bulundu/Tarih için işaretlenmedikçe
+  pasif kalan bir onay-kutulu ek-alan paneli açılıyor — sadece işaretlenenler "Düzenlemeyi
+  Kaydet"e dahil ediliyor. Backend `rakip-duzelt` artık id dışında HER alanı opsiyonel kabul
+  ediyor (gönderilmeyen alan dokunulmadan kalıyor) — hem bu akış hem tablonun her-zaman-tüm-
+  alanları-gönderen "Düzenle" akışı aynı endpoint'i sorunsuz paylaşıyor.
+- Madde 3 (boş alan): `#rakipHarita` — hiç uygulanmamış bir Google Maps yer tutucusu — sabit
+  320px yükseklik ayırıp boşluk bırakıyordu, `hidden` yapıldı (harita özelliği ileride
+  uygulanınca kaldırılabilir).
+
+Testler: 263/263 geçti (yeni testler: partial-update/isim korunması, eksi tutar — para birimi
+kilidi/simetrik trunc/0'da sabitleme/sonKullanilanParaBirimi).

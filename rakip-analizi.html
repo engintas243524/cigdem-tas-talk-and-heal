@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=16">
+<link rel="stylesheet" href="panel.css?v=17">
 </head>
 <body>
 <div class="panel-wrap">
@@ -65,7 +65,11 @@
       <div class="actions">
         <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
       </div>
-      <div id="rakipHarita" style="height:320px;width:100%;margin-top:0.5rem;"></div>
+      <!-- Google Maps JS API'nin harita render kısmı (google.maps.Map + Marker) hiç yapılmadı —
+           liste görünümü haritasız da tam işlevsel (bkz. rakipAraBtn click handler'daki not). Bu
+           div boşken sabit 320px yükseklik ayırıp panelin altında büyük bir boşluk bırakıyordu
+           (kullanıcı bildirimi, 2026-08-16) — harita gerçekten uygulanana kadar gizli kalsın. -->
+      <div id="rakipHarita" class="hidden" style="height:320px;width:100%;margin-top:0.5rem;"></div>
     </div>
 
     <div class="field tab-panel tab-ekle" id="rakipEkleField">
@@ -667,7 +671,7 @@
           bar.appendChild(doluluk);
           tile.appendChild(bar);
         }
-        if (k.arttirilabilir) tile.appendChild(kotaLimitArttirBlogu(kategori));
+        if (k.arttirilabilir) tile.appendChild(kotaLimitArttirBlogu(kategori, k.sonKullanilanParaBirimi));
         container.appendChild(tile);
       });
     }).catch(function (e) { if (e.message !== 'unauthorized') { /* sessizce geç, sayaç kritik değil */ } });
@@ -682,7 +686,11 @@
   var ANTHROPIC_BILLING_URL = 'https://console.anthropic.com/settings/billing';
   var KOTA_PARA_BIRIMLERI = ['TRY', 'USD', 'EUR', 'GBP'];
 
-  function kotaLimitArttirBlogu(kategori) {
+  // sonKullanilanParaBirimi: backend'in kullanim-ozet'te döndürdüğü, o kategoride en son GERÇEKTEN
+  // kullanılan para birimi (hiç yükleme yapılmadıysa null). Eksi tutar girilince (düzeltme modu)
+  // para birimi seçimi buna KİLİTLENİR — bkz. aşağıdaki tutarInput 'input' dinleyicisi ve
+  // routes/kullanimLimit.ts'deki aynı kısıtın backend tarafı (kullanıcı isteği, 2026-08-16).
+  function kotaLimitArttirBlogu(kategori, sonKullanilanParaBirimi) {
     var wrap = document.createElement('div');
     wrap.className = 'kota-limit-arttir';
 
@@ -718,10 +726,23 @@
     select.addEventListener('change', function () { digerInput.classList.toggle('hidden', select.value !== 'DIGER'); });
     var tutarInput = document.createElement('input');
     tutarInput.type = 'number';
-    tutarInput.min = '0';
     tutarInput.step = '0.01';
-    tutarInput.placeholder = 'Yüklenen tutar';
+    tutarInput.placeholder = 'Yüklenen tutar (düzeltmek için eksi gir)';
     row.appendChild(select); row.appendChild(digerInput); row.appendChild(tutarInput);
+
+    // Eksi tutara geçildiğinde para birimini son kullanılana KİLİTLE — farklı para biriminde
+    // düzeltmeye izin verirsek FX kuru iki ayrı anda farklı değer verebilir, orijinal işlemi tam
+    // iptal etmez (bkz. yukarıdaki fonksiyon yorumu).
+    tutarInput.addEventListener('input', function () {
+      var eksi = Number(tutarInput.value) < 0;
+      if (eksi && sonKullanilanParaBirimi) {
+        select.value = KOTA_PARA_BIRIMLERI.indexOf(sonKullanilanParaBirimi) !== -1 ? sonKullanilanParaBirimi : 'DIGER';
+        if (select.value === 'DIGER') { digerInput.value = sonKullanilanParaBirimi; digerInput.classList.remove('hidden'); }
+        select.disabled = true; digerInput.disabled = true;
+      } else {
+        select.disabled = false; digerInput.disabled = false;
+      }
+    });
 
     var submitBtn = document.createElement('button');
     submitBtn.type = 'button';
@@ -733,19 +754,24 @@
 
     // Anthropic'in yükleme-tamamlandı bildirimi/bakiye API'si yok (araştırıldı, doğrulandı) — bu
     // form TAMAMEN beyana dayalı, girilen tutar sorgulanmadan doğrudan limite çevriliyor. Deneme/
-    // yanlışlıkla girilen bir tutar limiti gerçek dışı şişirir (2026-08-16'da tam bu yaşandı, elle
-    // düzeltildi) — confirm() burada son bir engel, otomatik doğrulama değil.
+    // yanlışlıkla girilen bir tutar limiti gerçek dışı şişirir (2026-08-16'da tam bu yaşandı) —
+    // artık eksi tutar girilerek AYNI formdan geri alınabiliyor, confirm() her iki yönde de son
+    // bir engel, otomatik doğrulama değil.
     submitBtn.addEventListener('click', function () {
       var paraBirimi = (select.value === 'DIGER' ? digerInput.value : select.value).trim().toUpperCase();
       var tutar = Number(tutarInput.value);
       if (!/^[A-Z]{3}$/.test(paraBirimi)) { setStatus(status, 'Geçerli bir 3 harfli para birimi kodu gir (ör. TRY, USD, EUR, GBP).', 'err'); return; }
-      if (!tutar || tutar <= 0) { setStatus(status, 'Geçerli bir tutar gir.', 'err'); return; }
-      var onay = confirm(
-        tutar + ' ' + paraBirimi + " tutarını GERÇEKTEN sağlayıcıya (Anthropic) yüklediğinden emin misin?\n\n" +
-        'Bu bir deneme/test değilse ve ödeme gerçekten yapıldıysa devam et. Yanlış ya da deneme amaçlı bir tutar ' +
-        'girmek limiti gerçek dışı yükseltir — bunu düzeltmenin tek yolu Google Sheet\'teki KullanimLimitleri ' +
-        "sekmesinde ilgili satırın Limit sütununu elle düzeltmek."
-      );
+      if (!tutar) { setStatus(status, 'Geçerli bir tutar gir (düzeltmek için eksi gir).', 'err'); return; }
+      var onay = tutar > 0
+        ? confirm(
+            tutar + ' ' + paraBirimi + " tutarını GERÇEKTEN sağlayıcıya (Anthropic) yüklediğinden emin misin?\n\n" +
+            'Bu bir deneme/test değilse ve ödeme gerçekten yapıldıysa devam et. Yanlış ya da deneme amaçlı bir tutar ' +
+            'girmek limiti gerçek dışı yükseltir — bunu daha sonra AYNI para biriminde eksi tutar girerek geri alabilirsin.'
+          )
+        : confirm(
+            'Bu, ' + Math.abs(tutar) + ' ' + paraBirimi + " tutarındaki ÖNCEKİ bir yüklemeyi geri alacak (limiti düşürecek).\n\n" +
+            'Sadece gerçekte yapılmamış/yanlış girilmiş bir yüklemeyi düzeltiyorsan devam et.'
+          );
       if (!onay) return;
       submitBtn.disabled = true;
       setStatus(status, 'Güncelleniyor…', '');
@@ -754,7 +780,8 @@
       }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
         .then(function (res) {
           if (!res.ok) { submitBtn.disabled = false; setStatus(status, res.data.error || 'Güncellenemedi.', 'err'); return; }
-          setStatus(status, 'Limit ' + res.data.yeniLimit + "'e yükseltildi (+" + res.data.eklenenRaporSayisi + ' rapor, ~$' + res.data.yaklasikUsd + ').', 'ok');
+          var yon = res.data.eklenenRaporSayisi >= 0 ? '+' : '';
+          setStatus(status, 'Limit ' + res.data.yeniLimit + "'e güncellendi (" + yon + res.data.eklenenRaporSayisi + ' rapor, ~$' + res.data.yaklasikUsd + ').', 'ok');
           loadKullanimSayaci();
         }).catch(function () { submitBtn.disabled = false; setStatus(status, 'Güncellenemedi, tekrar dene.', 'err'); });
     });
@@ -763,7 +790,9 @@
     uyariNot.className = 'muted';
     uyariNot.style.fontSize = '0.72rem';
     uyariNot.style.margin = '0.3rem 0 0';
-    uyariNot.textContent = 'Yalnızca gerçekten ödediğin tutarı gir — girilen tutar doğrulanmıyor. Yanlış girdiysen, Google Sheet\'teki KullanimLimitleri sekmesinden elle düzeltebilirsin.';
+    uyariNot.textContent = 'Yalnızca gerçekten ödediğin tutarı gir — girilen tutar doğrulanmıyor. ' +
+      'Yanlış girdiysen, aynı para biriminde EKSİ tutar girip Limiti Güncelle\'ye basarak buradan geri alabilirsin ' +
+      '(ya da Google Sheet\'teki KullanimLimitleri sekmesinden elle düzelt).';
 
     form.appendChild(link); form.appendChild(row); form.appendChild(submitBtn); form.appendChild(status); form.appendChild(uyariNot);
     toggleBtn.addEventListener('click', function () { form.classList.toggle('hidden'); });
@@ -978,12 +1007,74 @@
   // dolduruluyor, "Rakip Ekle" butonu o kayıt için GÜNCELLEME'ye dönüşüyor (id/adres/kaynak/arama*
   // alanları formda görünmese de kayıtta korunuyor — sadece İsim/Link/Not bu formdan düzenlenir).
   var rakipEkleDuzenlenenKayit = null;
+  // Ek alan (Adres/Kaynak/Nasıl Bulundu/Tarih) düzenleme kontrolleri — kullanıcı isteği (2026-08-16,
+  // üçüncü geri bildirim): İsim/Link/Not zaten ana formda her zaman düzenlenebilir, bu 4 alan İSE
+  // sadece işaretlenirse (onay kutusu) güncellemeye dahil edilir — işaretlenmeyenler dokunulmaz.
+  var rakipEkleDuzenleAlanKontrolleri = {};
 
   function rakipEkleDuzenlemeyiTemizle() {
     rakipEkleDuzenlenenKayit = null;
     el('rakipDuzenlemeBanner').classList.add('hidden');
     el('rakipIsim').value = ''; el('rakipLink').value = ''; el('rakipNot').value = '';
     el('rakipEkleBtn').textContent = 'Rakip Ekle';
+    var panel = el('rakipDuzenleAlanlarPaneli');
+    if (panel) panel.remove();
+    rakipEkleDuzenleAlanKontrolleri = {};
+  }
+
+  function rakipEkleDuzenleAlanlarPaneliOlustur(r) {
+    var eski = el('rakipDuzenleAlanlarPaneli');
+    if (eski) eski.remove();
+    rakipEkleDuzenleAlanKontrolleri = {};
+
+    var details = document.createElement('details');
+    details.className = 'param-dropdown';
+    details.id = 'rakipDuzenleAlanlarPaneli';
+    var summary = document.createElement('summary');
+    summary.textContent = 'Ek alanları düzenle (Adres, Kaynak, Nasıl Bulundu, Tarih)';
+    details.appendChild(summary);
+
+    var list = document.createElement('div');
+    list.className = 'param-dropdown-list';
+    var g = rakipGorunumAlanlari(r);
+    var alanlar = [
+      { key: 'adres', label: 'Adres', tip: 'text', deger: r.adres || '' },
+      { key: 'kaynak', label: 'Kaynak', tip: 'select', deger: r.kaynak },
+      { key: 'nasilBulundu', label: 'Nasıl Bulundu', tip: 'text', deger: g.nasilBulundu === '—' ? '' : g.nasilBulundu },
+      { key: 'tarih', label: 'Tarih', tip: 'datetime-local', deger: isoToDatetimeLocalDeger(r.createdAtUtc) },
+    ];
+    alanlar.forEach(function (alan) {
+      var satir = document.createElement('div');
+      satir.className = 'rakip-duzenle-alan-satiri';
+      var label = document.createElement('label');
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(' ' + alan.label));
+      satir.appendChild(label);
+
+      var input;
+      if (alan.tip === 'select') {
+        input = document.createElement('select');
+        ['manuel', 'harita'].forEach(function (k) {
+          var opt = document.createElement('option');
+          opt.value = k; opt.textContent = k === 'harita' ? 'Haritadan' : 'Manuel';
+          if (k === alan.deger) opt.selected = true;
+          input.appendChild(opt);
+        });
+      } else {
+        input = document.createElement('input');
+        input.type = alan.tip;
+        input.value = alan.deger;
+      }
+      input.disabled = true;
+      checkbox.addEventListener('change', function () { input.disabled = !checkbox.checked; });
+      satir.appendChild(input);
+      list.appendChild(satir);
+      rakipEkleDuzenleAlanKontrolleri[alan.key] = { checkbox: checkbox, input: input };
+    });
+    details.appendChild(list);
+    return details;
   }
 
   function rakipEkleDuzenlemeyeGir(r) {
@@ -1000,6 +1091,7 @@
     iptalLink.href = '#'; iptalLink.textContent = 'İptal';
     iptalLink.addEventListener('click', function (e) { e.preventDefault(); rakipEkleDuzenlemeyiTemizle(); });
     banner.appendChild(span); banner.appendChild(iptalLink);
+    banner.insertAdjacentElement('afterend', rakipEkleDuzenleAlanlarPaneliOlustur(r));
     el('rakipEkleBtn').textContent = 'Düzenlemeyi Kaydet';
     el('rakipAraDuzenle').value = '';
     el('rakipAraSonuclari').classList.add('hidden');
@@ -1046,13 +1138,20 @@
 
     if (rakipEkleDuzenlenenKayit) {
       var kayit = rakipEkleDuzenlenenKayit;
+      // İsim/Link/Not her zaman gönderilir (ana formun kalıcı alanları) — Adres/Kaynak/Nasıl
+      // Bulundu/Tarih SADECE işaretlenmişse eklenir, aksi halde satırın mevcut değeri korunur
+      // (backend'in opsiyonel-alan desteğine dayanıyor, kullanıcı isteği 2026-08-16).
+      var payload = { id: kayit.id, isim: isim, link: el('rakipLink').value.trim(), not: el('rakipNot').value };
+      Object.keys(rakipEkleDuzenleAlanKontrolleri).forEach(function (key) {
+        var ctrl = rakipEkleDuzenleAlanKontrolleri[key];
+        if (!ctrl.checkbox.checked) return;
+        if (key === 'tarih') { if (ctrl.input.value) payload.tarih = new Date(ctrl.input.value).toISOString(); }
+        else { payload[key] = ctrl.input.value.trim(); }
+      });
       setStatus(el('rakipEkleStatus'), 'Güncelleniyor...', '');
       authFetch('/panel/rakip-analizi/rakip-duzelt', {
         method: 'POST',
-        body: JSON.stringify({
-          id: kayit.id, isim: isim, adres: kayit.adres || '', kaynak: kayit.kaynak,
-          link: el('rakipLink').value.trim(), not: el('rakipNot').value,
-        }),
+        body: JSON.stringify(payload),
       }).then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
         .then(function (res) {
           if (!res.ok) { setStatus(el('rakipEkleStatus'), res.data.error || 'Güncellenemedi.', 'err'); return; }

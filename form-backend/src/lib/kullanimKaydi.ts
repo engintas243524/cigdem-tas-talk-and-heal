@@ -7,7 +7,7 @@ import {
 	type KullanimKategori,
 } from '../config';
 import { columnLetter, sheetsFetch, sabitSatirYuksekligiUygula } from './sheets';
-import { ensureKullanimLimitTab, getGuncelLimit } from './kullanimLimitSheets';
+import { ensureKullanimLimitTab, getGuncelLimit, getAllKullanimLimitRows } from './kullanimLimitSheets';
 import type { Env } from '../types';
 
 type KullanimKaydiRow = Record<(typeof KULLANIM_KAYDI_COLUMNS)[number], string>;
@@ -98,6 +98,12 @@ export interface KullanimOzetKategori {
 	// true ise frontend "Limiti Yükselt" akışını gösterir (bkz. routes/kullanimLimit.ts) — sadece
 	// Anthropic/Claude kategorileri (icerikStrateji, aksiyonAnaliz), Google kategorilerinde yok.
 	arttirilabilir: boolean;
+	// Eksi tutarla düzeltme (2026-08-16, kullanıcı isteği): yanlış girilen bir yükleme sadece AYNI
+	// para biriminde eksi tutarla telafi edilebilir (farklı para birimiyle düzeltmek FX kurunun iki
+	// ayrı anda iki farklı değer vermesi riskiyle orijinal işlemi tam iptal etmeyebilir). Frontend
+	// bu alanı okuyup eksi tutar girilince para birimi seçimini buna kilitliyor. Hiç yükleme
+	// yapılmamışsa null — o zaman zaten telafi edilecek bir şey yok.
+	sonKullanilanParaBirimi: string | null;
 }
 
 // Bir kategorinin O ANKİ (güncel) aylık limitini döner — arttırılabilir kategoriler için
@@ -109,6 +115,14 @@ async function efektifLimit(env: Env, kategori: KullanimKategori): Promise<numbe
 	}
 	await ensureKullanimLimitTab(env);
 	return getGuncelLimit(env, kategori);
+}
+
+async function sonKullanilanParaBirimiGetir(env: Env, kategori: KullanimKategori): Promise<string | null> {
+	if (!(KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori)) return null;
+	await ensureKullanimLimitTab(env);
+	const rows = await getAllKullanimLimitRows(env);
+	const satir = rows.find(({ row }) => row.kategori === kategori);
+	return satir?.row.sonEklenenParaBirimi || null;
 }
 
 // Bu ayki (UTC takvim ayı) kullanımı kategori başına sayar. Tüm satırları okuyup bellekte
@@ -140,6 +154,7 @@ export async function getKullanimOzet(env: Env): Promise<Record<KullanimKategori
 			kullanilan: sayimlar[kategori] ?? 0,
 			aylikLimit: await efektifLimit(env, kategori),
 			arttirilabilir: (KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori),
+			sonKullanilanParaBirimi: await sonKullanilanParaBirimiGetir(env, kategori),
 		};
 	}
 	return ozet;

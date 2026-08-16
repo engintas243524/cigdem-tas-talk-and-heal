@@ -131,17 +131,18 @@ export async function handleRakipSil(request: Request, env: Env): Promise<Respon
 	return json({ deleted: rowNumbers.length }, request);
 }
 
-// POST /panel/rakip-analizi/rakip-duzelt { id, isim, adres?, kaynak?, nasilBulundu?, tarih?, not?,
-// link? } — Kayıtlı Rakipler tablosunda satır içi "Düzenle" akışı VE Rakip Ekle'deki ara-ve-
-// düzenle akışı (2026-08-16, kullanıcı isteği — ikinci/üçüncü geri bildirim: "listedeki HER
-// rakibin ... tüm başlıklara ait düzenleme yapılabilsin" — ilk sürümdeki "sadece kaynak='manuel'"
-// ve "sadece İsim/Adres/Not" kısıtları burada kaldırıldı). id/rowNumber değişmediği için
-// Sheet'teki AYNI satır yerinde güncellenir (append değil). link/nasilBulundu opsiyonel — sadece
-// body'de VARSA güncellenir (Kayıtlı Rakipler tablosunun inline-edit formunda link alanı yok,
-// gönderilmeyince mevcut değeri SİLMEMESİ gerekiyor). nasilBulundu: bu, Sheet'te tek bir sütun
-// değil (aramaSorgu/aramaAdres/aramaRadiusMeters'tan hesaplanan bir görüntü metni) — elle
-// düzenlenirse ham metin aramaSorgu'ya yazılır, aramaAdres/aramaRadiusMeters temizlenir (aksi
-// halde eski yapılandırılmış parçalarla düzenlenmiş metin karışıp tutarsız bir görüntü oluşurdu).
+// POST /panel/rakip-analizi/rakip-duzelt { id, isim?, adres?, kaynak?, nasilBulundu?, tarih?,
+// not?, link? } — Kayıtlı Rakipler tablosunda satır içi "Düzenle" akışı (tüm alanları her zaman
+// gönderir) VE Rakip Ekle'deki ara-ve-düzenle akışı (2026-08-16, üçüncü geri bildirim: sadece
+// İŞARETLENEN/değiştirilen alanları gönderir, gerisi dokunulmadan kalmalı). Bu yüzden id
+// DIŞINDAKİ HER ALAN opsiyonel — sadece body'de VARSA o alan güncellenir, yoksa satırın mevcut
+// değeri korunur (updateRakipAnalizRow'un {...mevcutRow, ...patch} birleştirmesi buna dayanıyor).
+// isim istisna: gönderilmese bile satırın SONUÇTA boş isimle kalmaması garanti ediliyor (mevcut
+// isim korunur ya da açıkça boş gönderilirse reddedilir). id/rowNumber değişmediği için Sheet'teki
+// AYNI satır yerinde güncellenir (append değil). nasilBulundu: bu, Sheet'te tek bir sütun değil
+// (aramaSorgu/aramaAdres/aramaRadiusMeters'tan hesaplanan bir görüntü metni) — elle düzenlenirse
+// ham metin aramaSorgu'ya yazılır, aramaAdres/aramaRadiusMeters temizlenir (aksi halde eski
+// yapılandırılmış parçalarla düzenlenmiş metin karışıp tutarsız bir görüntü oluşurdu).
 export async function handleRakipDuzelt(request: Request, env: Env): Promise<Response> {
 	let body: {
 		id?: unknown;
@@ -159,12 +160,12 @@ export async function handleRakipDuzelt(request: Request, env: Env): Promise<Res
 		return errorResponse(request, 400, 'Geçersiz istek.');
 	}
 	const id = String(body.id ?? '');
-	const isim = String(body.isim ?? '').trim();
 	if (!id) return errorResponse(request, 400, 'Rakip id gerekli.');
-	if (!isim) return errorResponse(request, 400, 'Rakip ismi gerekli.');
 
-	const kaynak = String(body.kaynak ?? '');
-	if (kaynak !== 'manuel' && kaynak !== 'harita') return errorResponse(request, 400, 'Geçersiz kaynak.');
+	if (body.kaynak !== undefined) {
+		const kaynak = String(body.kaynak);
+		if (kaynak !== 'manuel' && kaynak !== 'harita') return errorResponse(request, 400, 'Geçersiz kaynak.');
+	}
 
 	let createdAtUtc: string | undefined;
 	if (body.tarih !== undefined && body.tarih !== null && String(body.tarih).trim()) {
@@ -178,11 +179,13 @@ export async function handleRakipDuzelt(request: Request, env: Env): Promise<Res
 	const bulunan = rows.find(({ row }) => row.id === id);
 	if (!bulunan) return errorResponse(request, 404, 'Rakip bulunamadı.');
 
-	const adres = String(body.adres ?? '').trim();
-	const not = String(body.not ?? '')
-		.trim()
-		.slice(0, NOTE_MAX_LENGTH);
-	const patch: Partial<RakipAnalizRow> = { isim, adres, kaynak, not };
+	const isim = body.isim !== undefined ? String(body.isim).trim() : bulunan.row.isim;
+	if (!isim) return errorResponse(request, 400, 'Rakip ismi gerekli.');
+
+	const patch: Partial<RakipAnalizRow> = { isim };
+	if (body.adres !== undefined) patch.adres = String(body.adres).trim();
+	if (body.kaynak !== undefined) patch.kaynak = String(body.kaynak);
+	if (body.not !== undefined) patch.not = String(body.not).trim().slice(0, NOTE_MAX_LENGTH);
 	if (createdAtUtc) patch.createdAtUtc = createdAtUtc;
 	if (body.link !== undefined) patch.link = String(body.link).trim();
 	if (body.nasilBulundu !== undefined) {

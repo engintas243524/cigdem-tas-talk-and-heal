@@ -276,6 +276,46 @@ describe('POST /panel/rakip-analizi/rakip-sil', () => {
 });
 
 describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
+	// Rakip Ekle'nin seçmeli-alan (checkbox) düzenleme akışı için (2026-08-16, üçüncü geri
+	// bildirim): sadece işaretlenen alanlar gönderilir, gerisi DOKUNULMADAN kalmalı.
+	it('only updates fields explicitly sent, preserving everything else (partial update)', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Sabit İsim', adres: 'Sabit Adres', not: 'Sabit not', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+
+		// Sadece not gönderiliyor — isim/adres/kaynak hiç gönderilmiyor.
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, not: 'Sadece not değişti' }),
+		});
+		expect(response.status).toBe(200);
+
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as {
+			rakipler: { isim: string; adres: string; kaynak: string; not: string }[];
+		};
+		expect(listData.rakipler[0]).toMatchObject({
+			isim: 'Sabit İsim',
+			adres: 'Sabit Adres',
+			kaynak: 'manuel',
+			not: 'Sadece not değişti',
+		});
+	});
+
+	it('rejects explicitly clearing isim to empty, even in a partial update', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'X', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', { method: 'POST', body: JSON.stringify({ id, isim: '' }) });
+		expect(response.status).toBe(400);
+	});
+
 	it('updates isim/adres/kaynak/not in place, without changing its id or adding a row', async () => {
 		stubApis();
 		const created = await authedRequest('/panel/rakip-analizi/rakip', {

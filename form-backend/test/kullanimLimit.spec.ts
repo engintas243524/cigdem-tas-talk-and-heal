@@ -162,4 +162,85 @@ describe('POST /panel/rakip-analizi/kullanim-limit-arttir', () => {
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(401);
 	});
+
+	// Eksi tutarla düzeltme (2026-08-16, kullanıcı yanlışlıkla gerçek olmayan bir tutar girip
+	// Limiti Güncelle'ye bastığında yaşadı — elle düzeltmek zorunda kalındı, sonra bu akış eklendi).
+	describe('negatif tutarla düzeltme', () => {
+		it('rejects a negative amount when no top-up has ever been made for that category', async () => {
+			stubApis();
+			const response = await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: -100, paraBirimi: 'TRY' }),
+			});
+			expect(response.status).toBe(400);
+		});
+
+		it('rejects a negative amount in a different currency than the last real top-up', async () => {
+			stubApis(0.03);
+			await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: 200, paraBirimi: 'TRY' }),
+			});
+			const response = await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: -200, paraBirimi: 'USD' }),
+			});
+			expect(response.status).toBe(400);
+		});
+
+		it('accepts a negative amount matching the last currency and exactly reverses the earlier addition (symmetric trunc rounding)', async () => {
+			stubApis(0.03); // 200 TRY * 0.03 = $6 → trunc(6/0.2) = 30 ek rapor
+			await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: 200, paraBirimi: 'TRY' }),
+			});
+			const after1 = await authedRequest('/panel/rakip-analizi/kullanim-ozet');
+			const ozet1 = (await after1.json()) as { ozet: Record<string, { aylikLimit: number | null }> };
+			expect(ozet1.ozet.icerikStrateji.aylikLimit).toBe(12 + 30);
+
+			const reversal = await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: -200, paraBirimi: 'TRY' }),
+			});
+			expect(reversal.status).toBe(200);
+			const reversalData = (await reversal.json()) as { eklenenRaporSayisi: number; yeniLimit: number };
+			expect(reversalData.eklenenRaporSayisi).toBe(-30); // trunc, floor DEĞİL — tam simetrik
+			expect(reversalData.yeniLimit).toBe(12); // tam olarak orijinal değerine döndü
+
+			const after2 = await authedRequest('/panel/rakip-analizi/kullanim-ozet');
+			const ozet2 = (await after2.json()) as { ozet: Record<string, { aylikLimit: number | null }> };
+			expect(ozet2.ozet.icerikStrateji.aylikLimit).toBe(12);
+		});
+
+		it('clamps the new limit at 0, never goes negative', async () => {
+			stubApis(0.03);
+			await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: 200, paraBirimi: 'TRY' }),
+			});
+			const response = await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: -100000, paraBirimi: 'TRY' }),
+			});
+			expect(response.status).toBe(200);
+			const data = (await response.json()) as { yeniLimit: number };
+			expect(data.yeniLimit).toBe(0);
+		});
+
+		it('exposes sonKullanilanParaBirimi in kullanim-ozet so the frontend can lock the currency selector', async () => {
+			stubApis(0.03);
+			let ozetResponse = await authedRequest('/panel/rakip-analizi/kullanim-ozet');
+			let ozetData = (await ozetResponse.json()) as { ozet: Record<string, { sonKullanilanParaBirimi: string | null }> };
+			expect(ozetData.ozet.icerikStrateji.sonKullanilanParaBirimi).toBeNull();
+			expect(ozetData.ozet.adresBulma.sonKullanilanParaBirimi).toBeNull();
+
+			await authedRequest('/panel/rakip-analizi/kullanim-limit-arttir', {
+				method: 'POST',
+				body: JSON.stringify({ kategori: 'icerikStrateji', tutar: 200, paraBirimi: 'TRY' }),
+			});
+			ozetResponse = await authedRequest('/panel/rakip-analizi/kullanim-ozet');
+			ozetData = (await ozetResponse.json()) as { ozet: Record<string, { sonKullanilanParaBirimi: string | null }> };
+			expect(ozetData.ozet.icerikStrateji.sonKullanilanParaBirimi).toBe('TRY');
+		});
+	});
 });
