@@ -1258,6 +1258,16 @@ Açık kalan (senin bulduğun, gerçek bir eksik): bu bir sonraki adım olsun am
 4- Ayrıca Konum ile rakip ara sekmesinin altında ya da yanında arama kriterleri girilip ara butonuna basıldığında bulunan rakiplerin konumlarının göründüğü ve içinde ilk bulunandan son bulunan kadar rakamların yazılı olduğu yuvarlak çemberler olsun, bu çemberlerin üzerine imleç geldiğinde  rakibin bilgileri görünür olsun, eğer bu çembere bir kere tıklarsa bu rakip kıyaslanacağı tabloya eklensin ve haritadaki rengi mavi olsun(bu arada arama sonrası tüm rakipler in çemberi beyaz olsun), rakip mavi rengiyken üstüne ikinci defa tıklanırsa rengi kırmızı olsun ve kıyas tablosundan silinsin( bu arada çiğdem rakip kıyas tablosundan istediği zamanda da istediği rakib(ler)i silip listeden çıkarabilsin, bu durumda da haritadaki rakibin rengi kırmızı olsun. Harita ister mouse ister bir scroll bar ile zoom-in/zoom-out olabilsin. Haritanın arayüz görseli fitüristik koyu temalı olsun
 Bunları adım adım hallederken arada eklemek istediğim şeyler olursa ekleye ekleye ilerleriz. İleriki aşamalarda buraya Hermes ajanı da entegre edilerek çiğdem in bütün sitesinde olduğu gibi bu sayfada da istediği her şeyi ama herşeyi yaptırabilecek olsun.
 
+**Durum (2026-08-17): Madde 4 (harita) TAMAMLANDI.** Numaralı/koyu-fütüristik-temalı, hover'da
+bilgi gösteren, tıklayınca beyaz→mavi→kırmızı geçişli, tablo checkbox'ıyla senkron çemberler
+eklendi (ayrı, HTTP-referrer kısıtlamalı client-side Maps JS key — tascigdem1977 Google Cloud
+hesabında). "Kıyas tablosu"na eklenme, henüz yapılmamış olan madde 3'teki büyük sıralanabilir
+tablo yerine, mevcut `rakipAramaSecili`/"Seçilenleri Ekle" state'ine bağlandı — madde 3 (sosyal
+medya hesap seçimi + sıralanabilir çoklu rakip kıyas tablosu + grafik/kaydet/paylaş) HÂLÂ
+YAPILMADI, ayrı ve büyük bir iş. Madde 1 (netleştirme sorusu) ve madde 2 (toplu analiz —
+`rakipIds` zaten çoklu seçim destekliyor, muhtemelen bu ihtiyacı zaten karşılıyor) teyit
+edilmedi/gözden geçirilmedi. Commit `2096b39`, push edildi, GitHub Pages'e yansıdı.
+
 ## Rakip Analizi — Kullanım Sayacı (2026-08-15, unutulmasın diye ayrı not)
 
 Kullanıcı isteği (birebir): "rakip analizi sayfasında kullanıcının limitlerinden kalan Görsel/Video
