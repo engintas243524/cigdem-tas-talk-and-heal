@@ -105,10 +105,10 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .kota-limit-toggle { background: none; border: none; padding: 0; font-size: 0.78rem; color: var(--sage); cursor: pointer; text-decoration: underline; }
 .kota-limit-form { margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
 .kota-limit-link { font-size: 0.8rem; }
-.kota-limit-row { display: flex; gap: 0.4rem; }
-.kota-limit-row select { flex: 0 0 auto; }
-.kota-limit-row input[type="text"] { flex: 0 0 5rem; }
-.kota-limit-row input[type="number"] { flex: 1 1 auto; min-width: 0; }
+.kota-limit-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.kota-limit-row select { flex: 1 1 100%; min-width: 0; }
+.kota-limit-row input[type="text"] { flex: 1 1 100%; min-width: 0; }
+.kota-limit-row input[type="number"] { flex: 1 1 100%; min-width: 0; }
 .status.err a { color: inherit; font-weight: 600; text-decoration: underline; margin-left: 0.2rem; }
 /* Analiz parametreleri artık bir <details> dropdown'u — Aksiyon/Hedef Analizi'nin çok daha
    kapsamlı (12) parametre listesi her zaman açık durursa panel çok uzardı, bu yüzden katlanabilir. */
