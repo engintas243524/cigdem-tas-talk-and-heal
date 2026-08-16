@@ -26,7 +26,7 @@
       sosyal medya hesaplarında da görünür hale getirilecek. Henüz aksiyon alınmadı, ilgili
       aşama geldiğinde ele alınacak.
 - [ ] **Rakip Analizi API hesabı (2026-08-14):** Anthropic + Google Places API key'leri
-      Çiğdem'in kendi hesabı **`tascigdem19771@gmail.com`** üzerinden alınacak (test hesabı
+      Çiğdem'in kendi hesabı **`tascigdem1977@gmail.com`** üzerinden alınacak (test hesabı
       değil, baştan gerçek hesap — Phase 5 taşıma ihtiyacını bu özellik için ortadan kaldırır).
 - [ ] **Fiyat & Bilgi sayfası gerçek verisi** (Ücretler/Ödeme/İptal Politikası — `pricing.html`
       içinde açıkça "TBD" etiketiyle işaretli, uydurma rakam konulmadı)

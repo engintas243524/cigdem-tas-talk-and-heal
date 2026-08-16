@@ -168,17 +168,27 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .kota-limit-row input[type="text"] { flex: 1 1 100%; min-width: 0; }
 .kota-limit-row input[type="number"] { flex: 1 1 100%; min-width: 0; }
 .status.err a { color: inherit; font-weight: 600; text-decoration: underline; margin-left: 0.2rem; }
-/* Analiz parametreleri artık bir <details> dropdown'u — Aksiyon/Hedef Analizi'nin çok daha
-   kapsamlı (12) parametre listesi her zaman açık durursa panel çok uzardı, bu yüzden katlanabilir. */
-#dalParametreler { margin: 0.4rem 0 0.7rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
-#dalParametreler summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.88rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; justify-content: space-between; }
-#dalParametreler summary::-webkit-details-marker { display: none; }
-#dalParametreler summary::after { content: '▾'; color: var(--taupe); margin-left: 0.5rem; }
-#dalParametreler[open] summary::after { content: '▴'; }
-#dalParametreler summary:hover { background: var(--paper); }
+/* Katlanabilir <details class="param-dropdown"> — Analiz parametreleri, Grafik Verisi, Rakip
+   Ekle'nin "Ek alanları düzenle" paneli hepsi bu class'ı paylaşır (id'ye özel değil, class'a özel
+   olmalı, aksi halde yeni eklenen bloklar bu buton/çerçeve görünümünü miras almaz — 2026-08-16
+   düzeltmesi: #dalGrafikVerisi bu yüzden düz/stilsiz görünüyordu). */
+.param-dropdown { margin: 0.4rem 0 0.7rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.param-dropdown summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.88rem; font-weight: 500; color: var(--ink); list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.param-dropdown summary::-webkit-details-marker { display: none; }
+.param-dropdown summary::after { content: '▾'; color: var(--taupe); margin-left: 0.5rem; }
+.param-dropdown[open] summary::after { content: '▴'; }
+.param-dropdown summary:hover { background: var(--paper); }
 .param-dropdown-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.3rem 0.8rem; padding: 0 0.85rem 0.75rem; border-top: 1px solid var(--border); padding-top: 0.6rem; max-height: 260px; overflow-y: auto; }
 .param-dropdown-list label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 400; color: var(--ink); }
 .param-dropdown-list input[type="checkbox"] { width: auto; margin: 0; }
+/* Grafik Verisi'nin altlı üstlü satırları (2026-08-16 kullanıcı isteği: 1. satır 20-parametre
+   checkbox + kendi alt-seçici dropdown'u, 2. satır Randevu trendi + RakipTakip parametre geçmişi).
+   İç içe <details class="param-dropdown"> bu satırın içinde normal genişliğinde (içeriği kadar)
+   yer alsın diye margin sıfırlanıyor — dıştaki .param-dropdown'ın varsayılan margin'i satır
+   hizasını bozar. */
+.grafik-verisi-satirlar { display: flex; flex-direction: column; gap: 0.6rem; padding: 0 0.85rem 0.75rem; border-top: 1px solid var(--border); padding-top: 0.6rem; }
+.grafik-verisi-satir { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; }
+.grafik-verisi-satir .param-dropdown { margin: 0; }
 /* Rakip Ekle'nin ara-ve-düzenle akışındaki seçmeli alan satırları (Adres/Kaynak/Nasıl Bulundu/
    Tarih) — kullanıcı isteği (2026-08-16): onay kutusu işaretlenmeden input pasif/soluk görünür. */
 .rakip-duzenle-alan-satiri { display: flex; flex-direction: column; gap: 0.2rem; }

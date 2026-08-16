@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=17">
+<link rel="stylesheet" href="panel.css?v=18">
 </head>
 <body>
 <div class="panel-wrap">
@@ -123,44 +123,50 @@
       <p class="muted" id="dalSeciliRakipler"></p>
       <!-- Görsel/Video Stratejisi'nde seçilen rakipler sadece genel/güncel trend bağlamı için
            kullanılır (rakip rakip karşılaştırma YAPILMAZ — KVKK + "içerik kopyalanmaz" ilkesi).
-           Aksiyon/Hedef Analizi'nde ise tam karşılaştırmalı analiz yapılabilir. Bu 3 parametre
-           doğrudan rakip karşılaştırmasına ait olduğundan sadece Aksiyon/Hedef Analizi'nde
-           gösterilir — setDal() içinde toggle edilir, bkz. #dalParametreler .hidden mantığı. -->
-      <details id="dalParametreler" class="param-dropdown">
-        <summary id="dalParametreOzet">Analiz parametreleri</summary>
-        <div class="param-dropdown-list">
-          <label><input type="checkbox" id="paramSosyalMedya" value="sosyalMedya" checked> Sosyal medya aktiflik/format sıklığı</label>
-          <label><input type="checkbox" id="paramFiyat" value="fiyat" checked> Fiyat/paket karşılaştırması</label>
-          <label><input type="checkbox" id="paramKonum" value="konum" checked> Konum/yakınlık</label>
-          <label><input type="checkbox" id="paramGooglePuani" value="googlePuani" checked> Google puanı/yorum sayısı ve içeriği</label>
-          <label><input type="checkbox" id="paramWebSitesi" value="webSitesi" checked> Web sitesi kalitesi/SEO görünürlüğü</label>
-          <label><input type="checkbox" id="paramRandevuSistemi" value="randevuSistemi" checked> Online randevu alma kolaylığı</label>
-          <label><input type="checkbox" id="paramUzmanlikCesitliligi" value="uzmanlikCesitliligi" checked> Uzmanlık alanı/terapi yöntemi çeşitliliği</label>
-          <label><input type="checkbox" id="paramSeansSekli" value="seansSekli" checked> Online/yüz yüze seans seçenekleri</label>
-          <label><input type="checkbox" id="paramCalismaSaatleri" value="calismaSaatleri" checked> Çalışma saatleri esnekliği (akşam/hafta sonu)</label>
-          <label><input type="checkbox" id="paramMarkaGuveni" value="markaGuveni" checked> Marka güveni (sertifika, dernek üyeliği, medya görünürlüğü)</label>
-          <label><input type="checkbox" id="paramReklamGorunurlugu" value="reklamGorunurlugu" checked> Reklam/pazarlama görünürlüğü (Google Ads, sponsorlu içerik)</label>
-          <label><input type="checkbox" id="paramDilSecenekleri" value="dilSecenekleri" checked> Dil seçenekleri (çoklu dil hizmeti)</label>
-          <label><input type="checkbox" id="paramHedefKitle" value="hedefKitle" checked> Hedef kitle/niş konumlandırma (çift, ergen, travma vb. özel odak)</label>
-          <label><input type="checkbox" id="paramEkipBuyuklugu" value="ekipBuyuklugu" checked> Ekip büyüklüğü/kapasite (tek terapist mi, çok terapistli klinik mi)</label>
-          <label><input type="checkbox" id="paramDeneyimSuresi" value="deneyimSuresi" checked> Deneyim süresi/kuruluş yılı</label>
-          <label><input type="checkbox" id="paramSigortaKurumsal" value="sigortaKurumsal" checked> Sigorta/kurumsal anlaşmalar</label>
-          <label><input type="checkbox" id="paramUcretsizOnGorusme" value="ucretsizOnGorusme" checked> Ücretsiz ön görüşme/deneme seansı sunuyor mu</label>
-          <label><input type="checkbox" id="paramReferansVakaPaylasimi" value="referansVakaPaylasimi" checked> Referans/vaka paylaşımı derinliği</label>
-          <label><input type="checkbox" id="paramTopluluktEtkinlik" value="topluluktEtkinlik" checked> Atölye/webinar/topluluk etkinliği düzenliyor mu</label>
-          <label><input type="checkbox" id="paramFiyatSeffafligi" value="fiyatSeffafligi" checked> Fiyatı web sitesinde açıkça paylaşıyor mu (şeffaflık)</label>
-        </div>
-      </details>
-      <!-- "Grafik Verisi" özelliği (2026-08-16, kullanıcı isteği) — sadece Aksiyon/Hedef Analizi'nde
-           gösterilir (icerikStrateji rakip karşılaştırması yapmıyor, bkz. yukarıdaki #dalParametreler
-           notu — aynı gerekçe grafiğe de uygulanıyor). Çoklu seçim: üçü de aynı anda işaretlenebilir,
-           rapor PDF'i her seçili kaynaktan ayrı bir grafik sayfası içerir. -->
+           Aksiyon/Hedef Analizi'nde ise tam karşılaştırmalı analiz yapılabilir, o yüzden bu 20
+           parametrelik seçici + Grafik Verisi bloğu sadece o dalda gösterilir — setDal() içinde
+           #dalGrafikVerisi .hidden ile toggle edilir. #dalParametreler artık #dalGrafikVerisi'nin
+           İÇİNDE (2026-08-16, kullanıcı isteği: "20 parametre" grafik satırının kendi alt-seçicisi
+           olsun) — ayrı bir .hidden yönetimine gerek yok, üst blok gizlenince o da gizlenir. Aynı
+           seçim hem rapor metninin odaklandığı parametreleri hem "Şu anki 20 parametre
+           karşılaştırması" grafiğini besliyor (bkz. handleAksiyonAnaliz body.parametreler). Çoklu
+           seçim: üçü de (20 parametre/Randevu trendi/RakipTakip parametre geçmişi) aynı anda
+           işaretlenebilir, rapor PDF'i her seçili kaynaktan ayrı bir grafik sayfası içerir. -->
       <details id="dalGrafikVerisi" class="param-dropdown hidden">
         <summary id="dalGrafikOzet">Grafik Verisi</summary>
-        <div class="param-dropdown-list">
-          <label><input type="checkbox" id="dalGrafikParametre20" value="parametre20"> Şu anki 20 parametre karşılaştırması (anlık)</label>
-          <label><input type="checkbox" id="dalGrafikRandevuTrendi" value="randevuTrendi"> Randevu trendi</label>
-          <label><input type="checkbox" id="dalGrafikRakipTakipGecmisi" value="rakipTakipGecmisi"> RakipTakip parametre geçmişi</label>
+        <div class="grafik-verisi-satirlar">
+          <div class="grafik-verisi-satir">
+            <label><input type="checkbox" id="dalGrafikParametre20" value="parametre20" checked> Şu anki 20 parametre karşılaştırması (anlık)</label>
+            <details id="dalParametreler" class="param-dropdown">
+              <summary id="dalParametreOzet">Analiz parametreleri</summary>
+              <div class="param-dropdown-list">
+                <label><input type="checkbox" id="paramSosyalMedya" value="sosyalMedya" checked> Sosyal medya aktiflik/format sıklığı</label>
+                <label><input type="checkbox" id="paramFiyat" value="fiyat" checked> Fiyat/paket karşılaştırması</label>
+                <label><input type="checkbox" id="paramKonum" value="konum" checked> Konum/yakınlık</label>
+                <label><input type="checkbox" id="paramGooglePuani" value="googlePuani" checked> Google puanı/yorum sayısı ve içeriği</label>
+                <label><input type="checkbox" id="paramWebSitesi" value="webSitesi" checked> Web sitesi kalitesi/SEO görünürlüğü</label>
+                <label><input type="checkbox" id="paramRandevuSistemi" value="randevuSistemi" checked> Online randevu alma kolaylığı</label>
+                <label><input type="checkbox" id="paramUzmanlikCesitliligi" value="uzmanlikCesitliligi" checked> Uzmanlık alanı/terapi yöntemi çeşitliliği</label>
+                <label><input type="checkbox" id="paramSeansSekli" value="seansSekli" checked> Online/yüz yüze seans seçenekleri</label>
+                <label><input type="checkbox" id="paramCalismaSaatleri" value="calismaSaatleri" checked> Çalışma saatleri esnekliği (akşam/hafta sonu)</label>
+                <label><input type="checkbox" id="paramMarkaGuveni" value="markaGuveni" checked> Marka güveni (sertifika, dernek üyeliği, medya görünürlüğü)</label>
+                <label><input type="checkbox" id="paramReklamGorunurlugu" value="reklamGorunurlugu" checked> Reklam/pazarlama görünürlüğü (Google Ads, sponsorlu içerik)</label>
+                <label><input type="checkbox" id="paramDilSecenekleri" value="dilSecenekleri" checked> Dil seçenekleri (çoklu dil hizmeti)</label>
+                <label><input type="checkbox" id="paramHedefKitle" value="hedefKitle" checked> Hedef kitle/niş konumlandırma (çift, ergen, travma vb. özel odak)</label>
+                <label><input type="checkbox" id="paramEkipBuyuklugu" value="ekipBuyuklugu" checked> Ekip büyüklüğü/kapasite (tek terapist mi, çok terapistli klinik mi)</label>
+                <label><input type="checkbox" id="paramDeneyimSuresi" value="deneyimSuresi" checked> Deneyim süresi/kuruluş yılı</label>
+                <label><input type="checkbox" id="paramSigortaKurumsal" value="sigortaKurumsal" checked> Sigorta/kurumsal anlaşmalar</label>
+                <label><input type="checkbox" id="paramUcretsizOnGorusme" value="ucretsizOnGorusme" checked> Ücretsiz ön görüşme/deneme seansı sunuyor mu</label>
+                <label><input type="checkbox" id="paramReferansVakaPaylasimi" value="referansVakaPaylasimi" checked> Referans/vaka paylaşımı derinliği</label>
+                <label><input type="checkbox" id="paramTopluluktEtkinlik" value="topluluktEtkinlik" checked> Atölye/webinar/topluluk etkinliği düzenliyor mu</label>
+                <label><input type="checkbox" id="paramFiyatSeffafligi" value="fiyatSeffafligi" checked> Fiyatı web sitesinde açıkça paylaşıyor mu (şeffaflık)</label>
+              </div>
+            </details>
+          </div>
+          <div class="grafik-verisi-satir">
+            <label><input type="checkbox" id="dalGrafikRandevuTrendi" value="randevuTrendi"> Randevu trendi</label>
+            <label><input type="checkbox" id="dalGrafikRakipTakipGecmisi" value="rakipTakipGecmisi"> RakipTakip parametre geçmişi</label>
+          </div>
         </div>
         <div class="row">
           <select id="dalGrafikPeriyot" class="grow">
@@ -265,18 +271,53 @@
 
       <!-- Zaman İçi Karşılaştırma Raporu: RakipTakipGecmis'teki (son 12 periyot, rotasyonlu)
            geçmişten Talk and Heal ile seçilen rakib(ler)i grafikle karşılaştırır. En az bir
-           kapanmış dönem gerekir (yukarıdaki "Bu periyodun raporunu üret" ile). Parametre seçimi
-           şimdilik yok — tüm 20 parametre için, veri olanlar gösteriliyor.
+           kapanmış dönem gerekir (yukarıdaki "Bu periyodun raporunu üret" ile).
            "Grafik Verisi" özelliği (2026-08-16, kullanıcı isteği) — çoklu seçim, önceden burada
            SADECE RakipTakip parametre geçmişi vardı, o yüzden o checkbox varsayılan işaretli
-           (eski davranışı koruyor), diğer ikisi opt-in. -->
+           (eski davranışı koruyor), diğer ikisi opt-in. Aksiyon/Hedef Analizi'ndeki #dalGrafikVerisi
+           ile aynı desen: buton gibi katlanabilir <details>, satır 1 = 20-parametre checkbox + kendi
+           alt-seçici dropdown'u (#karsilastirmaParametreler, hangi parametreler dahil edilsin —
+           backend zaten body.parametreler'ı kabul ediyordu, sadece frontend hiç göndermiyordu),
+           satır 2 = Randevu trendi + RakipTakip parametre geçmişi birlikte. -->
       <h4 style="margin:1.2rem 0 0.4rem;">Zaman İçi Karşılaştırma Raporu</h4>
       <p class="muted">Kayıtlı Rakipler'den seçtiğin rakip(ler) kullanılır — birebir modda tam olarak 1, ortalama modda istediğin kadar.</p>
-      <div class="param-dropdown-list" style="margin-bottom:0.6rem;">
-        <label><input type="checkbox" id="karsilastirmaGrafikParametre20" value="parametre20"> Şu anki 20 parametre karşılaştırması (anlık)</label>
-        <label><input type="checkbox" id="karsilastirmaGrafikRandevuTrendi" value="randevuTrendi"> Randevu trendi</label>
-        <label><input type="checkbox" id="karsilastirmaGrafikRakipTakipGecmisi" value="rakipTakipGecmisi" checked> RakipTakip parametre geçmişi</label>
-      </div>
+      <details id="karsilastirmaGrafikVerisi" class="param-dropdown">
+        <summary id="karsilastirmaGrafikOzet">Grafik Verisi</summary>
+        <div class="grafik-verisi-satirlar">
+          <div class="grafik-verisi-satir">
+            <label><input type="checkbox" id="karsilastirmaGrafikParametre20" value="parametre20"> Şu anki 20 parametre karşılaştırması (anlık)</label>
+            <details id="karsilastirmaParametreler" class="param-dropdown">
+              <summary id="karsilastirmaParametreOzet">Analiz parametreleri</summary>
+              <div class="param-dropdown-list">
+                <label><input type="checkbox" id="karsilastirmaParamSosyalMedya" value="sosyalMedya" checked> Sosyal medya aktiflik/format sıklığı</label>
+                <label><input type="checkbox" id="karsilastirmaParamFiyat" value="fiyat" checked> Fiyat/paket karşılaştırması</label>
+                <label><input type="checkbox" id="karsilastirmaParamKonum" value="konum" checked> Konum/yakınlık</label>
+                <label><input type="checkbox" id="karsilastirmaParamGooglePuani" value="googlePuani" checked> Google puanı/yorum sayısı ve içeriği</label>
+                <label><input type="checkbox" id="karsilastirmaParamWebSitesi" value="webSitesi" checked> Web sitesi kalitesi/SEO görünürlüğü</label>
+                <label><input type="checkbox" id="karsilastirmaParamRandevuSistemi" value="randevuSistemi" checked> Online randevu alma kolaylığı</label>
+                <label><input type="checkbox" id="karsilastirmaParamUzmanlikCesitliligi" value="uzmanlikCesitliligi" checked> Uzmanlık alanı/terapi yöntemi çeşitliliği</label>
+                <label><input type="checkbox" id="karsilastirmaParamSeansSekli" value="seansSekli" checked> Online/yüz yüze seans seçenekleri</label>
+                <label><input type="checkbox" id="karsilastirmaParamCalismaSaatleri" value="calismaSaatleri" checked> Çalışma saatleri esnekliği (akşam/hafta sonu)</label>
+                <label><input type="checkbox" id="karsilastirmaParamMarkaGuveni" value="markaGuveni" checked> Marka güveni (sertifika, dernek üyeliği, medya görünürlüğü)</label>
+                <label><input type="checkbox" id="karsilastirmaParamReklamGorunurlugu" value="reklamGorunurlugu" checked> Reklam/pazarlama görünürlüğü (Google Ads, sponsorlu içerik)</label>
+                <label><input type="checkbox" id="karsilastirmaParamDilSecenekleri" value="dilSecenekleri" checked> Dil seçenekleri (çoklu dil hizmeti)</label>
+                <label><input type="checkbox" id="karsilastirmaParamHedefKitle" value="hedefKitle" checked> Hedef kitle/niş konumlandırma (çift, ergen, travma vb. özel odak)</label>
+                <label><input type="checkbox" id="karsilastirmaParamEkipBuyuklugu" value="ekipBuyuklugu" checked> Ekip büyüklüğü/kapasite (tek terapist mi, çok terapistli klinik mi)</label>
+                <label><input type="checkbox" id="karsilastirmaParamDeneyimSuresi" value="deneyimSuresi" checked> Deneyim süresi/kuruluş yılı</label>
+                <label><input type="checkbox" id="karsilastirmaParamSigortaKurumsal" value="sigortaKurumsal" checked> Sigorta/kurumsal anlaşmalar</label>
+                <label><input type="checkbox" id="karsilastirmaParamUcretsizOnGorusme" value="ucretsizOnGorusme" checked> Ücretsiz ön görüşme/deneme seansı sunuyor mu</label>
+                <label><input type="checkbox" id="karsilastirmaParamReferansVakaPaylasimi" value="referansVakaPaylasimi" checked> Referans/vaka paylaşımı derinliği</label>
+                <label><input type="checkbox" id="karsilastirmaParamTopluluktEtkinlik" value="topluluktEtkinlik" checked> Atölye/webinar/topluluk etkinliği düzenliyor mu</label>
+                <label><input type="checkbox" id="karsilastirmaParamFiyatSeffafligi" value="fiyatSeffafligi" checked> Fiyatı web sitesinde açıkça paylaşıyor mu (şeffaflık)</label>
+              </div>
+            </details>
+          </div>
+          <div class="grafik-verisi-satir">
+            <label><input type="checkbox" id="karsilastirmaGrafikRandevuTrendi" value="randevuTrendi"> Randevu trendi</label>
+            <label><input type="checkbox" id="karsilastirmaGrafikRakipTakipGecmisi" value="rakipTakipGecmisi" checked> RakipTakip parametre geçmişi</label>
+          </div>
+        </div>
+      </details>
       <div class="row">
         <select id="karsilastirmaPeriyot" class="grow">
           <option value="haftalik">Haftalık</option>
@@ -1227,10 +1268,11 @@
       document.querySelectorAll('#karsilastirmaGrafikParametre20, #karsilastirmaGrafikRandevuTrendi, #karsilastirmaGrafikRakipTakipGecmisi'),
       function (cb) { return cb; }
     ).filter(function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
+    var parametreler = Array.prototype.map.call(document.querySelectorAll('#karsilastirmaParametreler input[type="checkbox"]:checked'), function (cb) { return cb.value; });
     authFetch('/panel/rakip-analizi/rakip-takip/karsilastirma', {
       method: 'POST',
       body: JSON.stringify({
-        periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler,
+        periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler,
         grafikKaynaklari: grafikKaynaklari,
       }),
     })
@@ -1638,9 +1680,10 @@
     el('dalAksiyonBtn').classList.toggle('active', dal === 'aksiyonAnaliz');
     el('dalIstekField').classList.toggle('tab-icerik', dal === 'icerikStrateji');
     el('dalIstekField').classList.toggle('tab-aksiyon', dal === 'aksiyonAnaliz');
-    // Bu 3 parametre (sosyal medya/fiyat/konum) doğrudan rakip karşılaştırması içindir — sadece
+    // Analiz parametreleri + Grafik Verisi doğrudan rakip karşılaştırması içindir — sadece
     // Aksiyon/Hedef Analizi'nde anlamlı, Görsel/Video Stratejisi küratif olduğu için gösterilmez.
-    el('dalParametreler').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
+    // #dalParametreler artık #dalGrafikVerisi'nin İÇİNDE (bkz. yukarıdaki HTML notu) — ayrı toggle
+    // gerekmiyor, üst blok gizlenince o da gizlenir.
     el('dalGrafikVerisi').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
     // Zaman içi karşılaştırma raporu ayrı bir periyot-bazlı akış (Otomatik Rakip Takibi bölümü) —
     // burada tekrar inşa etmek yerine sadece Aksiyon/Hedef Analizi'ndeyken oraya bir link gösterir
@@ -1660,6 +1703,13 @@
   }
   el('dalParametreler').addEventListener('change', dalParametreOzetGuncelle);
   dalParametreOzetGuncelle();
+  function karsilastirmaParametreOzetGuncelle() {
+    var toplam = document.querySelectorAll('#karsilastirmaParametreler input[type="checkbox"]').length;
+    var secili = document.querySelectorAll('#karsilastirmaParametreler input[type="checkbox"]:checked').length;
+    el('karsilastirmaParametreOzet').textContent = 'Analiz parametreleri (' + secili + '/' + toplam + ' seçili)';
+  }
+  el('karsilastirmaParametreler').addEventListener('change', karsilastirmaParametreOzetGuncelle);
+  karsilastirmaParametreOzetGuncelle();
   setDal('icerikStrateji');
   if (typeof navigator !== 'undefined' && navigator.share) { el('dalPaylasBtn').classList.remove('hidden'); }
 
@@ -1806,7 +1856,13 @@
     if (currentDal === 'icerikStrateji') {
       payload = { istek: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler };
     } else {
-      grafikKaynaklariSecili = Array.prototype.map.call(document.querySelectorAll('#dalGrafikVerisi input[type="checkbox"]:checked'), function (cb) { return cb.value; });
+      // #dalGrafikParametre20/#dalGrafikRandevuTrendi/#dalGrafikRakipTakipGecmisi tek tek — genel
+      // "#dalGrafikVerisi input[type=checkbox]:checked" seçici artık içindeki #dalParametreler'in
+      // 20 checkbox'ını da yakalardı (2026-08-16, iç içe yerleşim sonrası).
+      grafikKaynaklariSecili = Array.prototype.map.call(
+        document.querySelectorAll('#dalGrafikParametre20, #dalGrafikRandevuTrendi, #dalGrafikRakipTakipGecmisi'),
+        function (cb) { return cb; }
+      ).filter(function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
       payload = {
         yorum: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler,
         grafikKaynaklari: grafikKaynaklariSecili, grafikPeriyotTuru: el('dalGrafikPeriyot').value, grafikMod: el('dalGrafikMod').value,
