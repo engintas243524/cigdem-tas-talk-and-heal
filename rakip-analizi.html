@@ -68,11 +68,12 @@
       <div class="actions">
         <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
       </div>
-      <!-- Google Maps JS API'nin harita render kısmı (google.maps.Map + Marker) hiç yapılmadı —
-           liste görünümü haritasız da tam işlevsel (bkz. rakipAraBtn click handler'daki not). Bu
-           div boşken sabit 320px yükseklik ayırıp panelin altında büyük bir boşluk bırakıyordu
-           (kullanıcı bildirimi, 2026-08-16) — harita gerçekten uygulanana kadar gizli kalsın. -->
-      <div id="rakipHarita" class="hidden" style="height:320px;width:100%;margin-top:0.5rem;"></div>
+      <!-- Harita (2026-08-17, 2026-08-15'te kaydedilen istek): numaralı, tıklanabilir daireler —
+           beyaz (seçilmemiş) → tıklanınca mavi (kıyaslamaya eklendi, #rakipAramaSecili ile aynı
+           state) → tekrar tıklanınca kırmızı (çıkarıldı). Tablo tarafındaki onay kutusuyla da
+           senkron (bkz. haritaMarkerRengiGuncelle çağrıları). Google Maps JS script'i lazy-load —
+           kullanıcı hiç arama yapmazsa hiç indirilmiyor (bkz. haritaScriptYukle). -->
+      <div id="rakipHarita" class="hidden" style="height:420px;width:100%;margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden;"></div>
     </div>
 
     <div class="field tab-panel tab-ekle" id="rakipEkleField">
@@ -1552,6 +1553,123 @@
   var rakipAramaBaglam = null;
   var rakipAramaSecili = {}; // dizideki index -> true, "Seçilenleri Ekle" için
 
+  // Harita (2026-08-17) — Google Maps JS API key'i (2026-08-17, Çiğdem'in tascigdem1977 Google
+  // Cloud hesabında, HTTP-referrer kısıtlamalı, sadece talkandheal.co.uk/engintas243524.github.io'dan
+  // çalışıyor — bu yüzden sunucu tarafındaki GOOGLE_PLACES_API_KEY'den (kısıtlamasız, sadece
+  // Worker'dan çağrılıyor) FARKLI, ayrı bir key). Public/client-side kullanım için tasarlanmış bir
+  // key türü, gizli tutulmasına gerek yok (referrer kısıtlaması koruyor, secrecy değil).
+  var HARITA_MAPS_KEY = 'AIzaSyCCOKSYxQMAJpwvXFjTpUx7DhPLxQT36-I';
+  var haritaScriptIstendi = false;
+  var haritaObj = null;
+  var haritaMarkerlar = {}; // dizideki index -> google.maps.Marker
+  var rakipHaritaRenk = {}; // dizideki index -> 'red' (mavi durumu zaten rakipAramaSecili'de; beyaz = hiç kaydı yok)
+  var haritaInfoWindow = null;
+
+  // Koyu/fütüristik tema — Google Maps'in standart açık paletini kapatıp lacivert/siyah zemin +
+  // camgöbeği (cyan) yol/su vurgusuyla değiştiriyor.
+  var HARITA_KOYU_STIL = [
+    { elementType: 'geometry', stylers: [{ color: '#0b1220' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#0b1220' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#8ba3c7' }] },
+    { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#1a2b4a' }] },
+    { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#16233f' }] },
+    { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#0e1a30' }] },
+    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#1d3a5f' }] },
+    { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#0e2540' }] },
+    { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#061018' }] },
+    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#3a5a7a' }] },
+  ];
+
+  // Google Maps JS script'i lazy-load — kullanıcı hiç konum araması yapmazsa hiç indirilmiyor.
+  // Birden fazla çağrı aynı anda gelirse (art arda tıklama) hepsi aynı tek yükleme bittiğinde
+  // tetiklenir (haritaScriptBekleyenler kuyruğu).
+  var haritaScriptBekleyenler = [];
+  function haritaScriptYukle(callback) {
+    if (window.google && window.google.maps) { callback(); return; }
+    haritaScriptBekleyenler.push(callback);
+    if (haritaScriptIstendi) return;
+    haritaScriptIstendi = true;
+    window.__haritaHazir = function () {
+      haritaScriptBekleyenler.forEach(function (fn) { fn(); });
+      haritaScriptBekleyenler = [];
+    };
+    var script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + HARITA_MAPS_KEY + '&callback=__haritaHazir';
+    script.async = true;
+    document.head.appendChild(script);
+  }
+
+  function haritaRenginiGetir(i) {
+    if (rakipAramaSecili[i]) return '#3B82F6';
+    if (rakipHaritaRenk[i] === 'red') return '#DC2626';
+    return '#FFFFFF';
+  }
+
+  function haritaMarkerRengiGuncelle(i) {
+    var marker = haritaMarkerlar[i];
+    if (!marker) return;
+    var icon = marker.getIcon();
+    icon.fillColor = haritaRenginiGetir(i);
+    marker.setIcon(icon);
+  }
+
+  // Bir çembere tıklamak, o rakibi arama-sonuçları tablosundaki onay kutusuyla AYNI seçim
+  // state'ine ("Seçilenleri Ekle/Sil" için kullanılan rakipAramaSecili) ekler/çıkarır — harita ve
+  // tablo birbirinin senkronize bir görünümü, ayrı bir "kıyas tablosu" state'i YOK (2026-08-15'teki
+  // istekte ayrıca tarif edilen çok daha büyük sıralanabilir kıyas tablosu henüz yapılmadı, bkz.
+  // INTEGRASYON_TODO.md — o gelene kadar en anlamlı köprü bu).
+  function haritaCemberTiklandi(i) {
+    if (rakipAramaSecili[i]) {
+      delete rakipAramaSecili[i];
+      rakipHaritaRenk[i] = 'red';
+    } else {
+      rakipAramaSecili[i] = true;
+    }
+    updateRakipSonuclarTopluBtn();
+    haritaMarkerRengiGuncelle(i);
+    var satirlar = el('rakipSonuclar').querySelectorAll('.rakip-row:not(.head)');
+    var checkbox = satirlar[i] && satirlar[i].querySelector('input[type="checkbox"]');
+    if (checkbox) checkbox.checked = !!rakipAramaSecili[i];
+  }
+
+  // Tam yeniden çizim — arama sonrası, "Seçilenleri Sil"den sonra, "Seçilenleri Ekle" bittikten
+  // sonra çağrılır (liste yapısı değiştiği için tek tek marker güncellemek yetmiyor).
+  function haritaCiz() {
+    var places = rakipAramaSonuclariCache;
+    el('rakipHarita').classList.toggle('hidden', places.length === 0);
+    if (!places.length) return;
+    haritaScriptYukle(function () {
+      if (!haritaObj) {
+        haritaObj = new google.maps.Map(el('rakipHarita'), {
+          zoom: 13, styles: HARITA_KOYU_STIL, mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+        });
+        haritaInfoWindow = new google.maps.InfoWindow();
+      }
+      Object.keys(haritaMarkerlar).forEach(function (k) { haritaMarkerlar[k].setMap(null); });
+      haritaMarkerlar = {};
+      var bounds = new google.maps.LatLngBounds();
+      places.forEach(function (p, i) {
+        if (!p.lat || !p.lng) return;
+        var pos = { lat: p.lat, lng: p.lng };
+        bounds.extend(pos);
+        var marker = new google.maps.Marker({
+          position: pos, map: haritaObj, label: { text: String(i + 1), color: '#0b1220', fontWeight: '700' },
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: haritaRenginiGetir(i), fillOpacity: 1, strokeColor: '#22d3ee', strokeWeight: 2 },
+        });
+        marker.addListener('mouseover', function () {
+          haritaInfoWindow.setContent('<div style="color:#0b1220;font-weight:600;">' + p.name + '</div><div style="color:#334155;font-size:0.85em;">' + (p.address || '') + '</div>');
+          haritaInfoWindow.open(haritaObj, marker);
+        });
+        marker.addListener('mouseout', function () { haritaInfoWindow.close(); });
+        marker.addListener('click', function () { haritaCemberTiklandi(i); });
+        haritaMarkerlar[i] = marker;
+      });
+      if (!bounds.isEmpty()) haritaObj.fitBounds(bounds);
+    });
+  }
+
   // btn opsiyonel: toplu eklemede sayfalama nedeniyle DOM'da henüz render edilmemiş seçili
   // satırlar için buton yok, o durumda sadece istek gönderilir (görsel geri bildirim atlanır).
   function tekRakipEkle(p, btn) {
@@ -1586,6 +1704,7 @@
     list.innerHTML = '';
     el('rakipSonuclarBaslik').classList.toggle('hidden', places.length === 0);
     updateRakipSonuclarTopluBtn();
+    haritaCiz();
     if (!places.length) { toggleWrap.innerHTML = ''; manuelSayfalama.innerHTML = ''; return; }
 
     var tumSecili = places.length > 0 && places.every(function (p, i) { return !!rakipAramaSecili[i]; });
@@ -1605,8 +1724,9 @@
       checkbox.type = 'checkbox';
       checkbox.checked = !!rakipAramaSecili[i];
       checkbox.addEventListener('change', function () {
-        if (checkbox.checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; }
+        if (checkbox.checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; rakipHaritaRenk[i] = 'red'; }
         updateRakipSonuclarTopluBtn();
+        haritaMarkerRengiGuncelle(i);
       });
       var addBtn = document.createElement('button');
       addBtn.type = 'button'; addBtn.className = 'btn-secondary'; addBtn.textContent = 'Ekle';
@@ -1635,6 +1755,7 @@
     var indeksler = Object.keys(rakipAramaSecili).map(Number).sort(function (a, b) { return b - a; });
     indeksler.forEach(function (i) { rakipAramaSonuclariCache.splice(i, 1); });
     rakipAramaSecili = {};
+    rakipHaritaRenk = {};
     rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
     renderAramaSonuclari();
   });
@@ -1657,8 +1778,10 @@
     });
     Promise.all(istekler).then(function () {
       rakipAramaSecili = {};
+      rakipHaritaRenk = {};
       loadRakipListe();
       updateRakipSonuclarTopluBtn();
+      haritaCiz();
     }).finally(function () { btn.disabled = false; });
   });
 
@@ -1678,13 +1801,10 @@
       rakipAramaSonuclariCache = places;
       rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
       rakipAramaSecili = {};
+      rakipHaritaRenk = {};
       renderAramaSonuclari();
       if (!places.length) { setStatus(el('rakipAraStatus'), 'Bu konum/yarıçapta sonuç bulunamadı.', ''); return; }
       setStatus(el('rakipAraStatus'), places.length + ' sonuç bulundu.', 'ok');
-      // Not: Google Maps JS API'nin harita render kısmı (google.maps.Map + Marker) ayrı bir
-      // <script src="https://maps.googleapis.com/maps/api/js?key=..."> yüklemesi gerektiriyor —
-      // bu adımın kapsamı dışında, ayrı bir küçük takip görevi olarak bırakıldı (liste görünümü
-      // haritasız da tam işlevsel).
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', 'err'); });
   });
 
