@@ -224,6 +224,9 @@
       <div id="rakipTakipListe"></div>
       <div class="status" id="rakipTakipStatus"></div>
       <div id="rakipTakipSonuc" class="muted" style="white-space:pre-wrap;"></div>
+      <div class="actions hidden" id="rakipTakipRaporAksiyonlar">
+        <button class="btn-secondary" id="rakipTakipIndirBtn" type="button">İndir (PDF)</button>
+      </div>
 
       <!-- Zaman İçi Karşılaştırma Raporu: RakipTakipGecmis'teki (son 12 periyot, rotasyonlu)
            geçmişten Talk and Heal ile seçilen rakib(ler)i grafikle karşılaştırır. En az bir
@@ -253,6 +256,9 @@
       <div class="status" id="karsilastirmaStatus"></div>
       <div id="karsilastirmaNarratif" class="muted" style="white-space:pre-wrap;"></div>
       <div id="karsilastirmaGrafikler"></div>
+      <div class="actions hidden" id="karsilastirmaRaporAksiyonlar">
+        <button class="btn-secondary" id="karsilastirmaIndirBtn" type="button">İndir (PDF)</button>
+      </div>
     </div>
   </section>
 
@@ -280,6 +286,171 @@
 
   var el = function (id) { return document.getElementById(id); };
   var raLoginView = el('raLoginView'), rakipAnaliziSection = el('rakipAnaliziSection');
+
+  // Paylaşılan PDF rapor şablonu (2026-08-16, kullanıcı isteği: "kodda özel export şablonu") —
+  // önceden her rapor indirme butonu Claude'un ham metnini splitTextToSize+text ile tek font
+  // boyutunda döküyordu (başlıksız/madde işaretsiz, okunması zor). Backend'deki sistem promptları
+  // artık "## Başlık" ve "- madde" ile hafif markdown yapısı istiyor (bkz. form-backend
+  // RAPOR_YAPISI_TALIMATI) — bu fonksiyon o yapıyı parse edip başlık/bölüm/madde biçimlendirmesi +
+  // marka şeridiyle bir PDF üretir. grafikler doluysa (karşılaştırma raporu) her biri ayrı sayfada,
+  // zaten ekranda render edilmiş Chart.js canvas'ı yeniden çizmeden doğrudan görsel olarak gömülür.
+  var RAPOR_PDF_SAGE = [124, 156, 74]; // #7C9C4A — karşılaştırma grafiğiyle aynı marka rengi
+  var RAPOR_PDF_SOL_MARJ = 15, RAPOR_PDF_SAG_MARJ = 15, RAPOR_PDF_GENISLIK = 210, RAPOR_PDF_YUKSEKLIK = 297;
+  var RAPOR_PDF_ICERIK_GENISLIK = RAPOR_PDF_GENISLIK - RAPOR_PDF_SOL_MARJ - RAPOR_PDF_SAG_MARJ;
+
+  // jsPDF'in yerleşik "helvetica" fontu WinAnsi kodlaması kullanıyor — ı/ş/ğ/İ/Ş/Ğ (Türkçe'ye özgü
+  // Latin Extended-A karakterleri) bu sette YOK, bozuk sembol olarak basılıyor (2026-08-16'da görsel
+  // testte keşfedildi: "inşa"→"in_a", "kısa"→"k1sa"). Çözüm: Lato TTF'yi (tam Türkçe/Latin Extended
+  // desteği var, OFL lisanslı) CDN'den çekip jsPDF'e gömmek — jsPDF/Chart.js kararıyla aynı gerekçe
+  // (CDN, build adımı yok). Roboto/Noto Sans artık google/fonts deposunda SADECE variable-font
+  // olarak duruyor (statik Bold dosyası yok, jsPDF tek-ağırlık TTF bekliyor) — Lato hâlâ ayrı
+  // Regular/Bold statik dosyalar sağlıyor, o yüzden o seçildi. @main ile sürüm sabitlenmiş jsdelivr
+  // GitHub-proxy URL'i kullanılıyor (branch alias'sız hâli 2026-08-16'da 404 döndü, sebebi
+  // belirsiz — muhtemelen jsdelivr'ın bu spesifik repo için önbellek/indeks tutarsızlığı).
+  var RAPOR_PDF_FONT_URLS = {
+    normal: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Regular.ttf',
+    bold: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Bold.ttf',
+  };
+  var raporPdfFontPromise = null; // { normal: base64, bold: base64 } | null (yüklenemediyse) — bir kez fetch edilip önbelleğe alınır
+
+  function raporPdfArrayBufferToBase64(buffer) {
+    var binary = '';
+    var bytes = new Uint8Array(buffer);
+    var parcaBoyutu = 0x8000;
+    for (var i = 0; i < bytes.length; i += parcaBoyutu) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + parcaBoyutu));
+    }
+    return window.btoa(binary);
+  }
+
+  function raporPdfFontYukle() {
+    if (raporPdfFontPromise) return raporPdfFontPromise;
+    raporPdfFontPromise = Promise.all([
+      fetch(RAPOR_PDF_FONT_URLS.normal).then(function (r) { return r.arrayBuffer(); }),
+      fetch(RAPOR_PDF_FONT_URLS.bold).then(function (r) { return r.arrayBuffer(); }),
+    ]).then(function (buffers) {
+      return { normal: raporPdfArrayBufferToBase64(buffers[0]), bold: raporPdfArrayBufferToBase64(buffers[1]) };
+    }).catch(function () {
+      return null; // font çekilemedi (ağ sorunu) — çağıran taraf helvetica'ya düşer, aksansız ama çalışan bir PDF üretir
+    });
+    return raporPdfFontPromise;
+  }
+
+  function raporPdfOlustur(dosyaAdi, baslik, altBaslikMetin, govdeMetin, grafikler) {
+    if (!window.jspdf) return;
+    raporPdfFontYukle().then(function (font) {
+      var doc = new window.jspdf.jsPDF();
+      var fontAdi = 'helvetica';
+      if (font) {
+        doc.addFileToVFS('Lato-Regular.ttf', font.normal);
+        doc.addFont('Lato-Regular.ttf', 'Lato', 'normal');
+        doc.addFileToVFS('Lato-Bold.ttf', font.bold);
+        doc.addFont('Lato-Bold.ttf', 'Lato', 'bold');
+        fontAdi = 'Lato';
+      }
+      var y = 15;
+
+      function sayfaBasiKontrolEt(gerekliYukseklik) {
+        if (y + gerekliYukseklik > RAPOR_PDF_YUKSEKLIK - 18) {
+          doc.addPage();
+          y = 20;
+        }
+      }
+
+      doc.setFillColor(RAPOR_PDF_SAGE[0], RAPOR_PDF_SAGE[1], RAPOR_PDF_SAGE[2]);
+      doc.rect(0, 0, RAPOR_PDF_GENISLIK, 10, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont(fontAdi, 'normal');
+      doc.text('Talk and Heal — Rakip Analizi', RAPOR_PDF_SOL_MARJ, 7);
+      doc.setTextColor(40, 40, 40);
+      y = 22;
+
+      doc.setFontSize(16);
+      doc.setFont(fontAdi, 'bold');
+      var baslikSatirlari = doc.splitTextToSize(baslik || '', RAPOR_PDF_ICERIK_GENISLIK);
+      doc.text(baslikSatirlari, RAPOR_PDF_SOL_MARJ, y);
+      y += baslikSatirlari.length * 7 + 2;
+
+      if (altBaslikMetin) {
+        doc.setFontSize(9);
+        doc.setFont(fontAdi, 'normal');
+        doc.setTextColor(120, 120, 120);
+        doc.text(altBaslikMetin, RAPOR_PDF_SOL_MARJ, y);
+        doc.setTextColor(40, 40, 40);
+        y += 10;
+      } else {
+        y += 4;
+      }
+
+      (govdeMetin || '').split('\n').forEach(function (satir) {
+        var t = satir.trim();
+        if (!t) { y += 3; return; }
+        if (t.indexOf('## ') === 0) {
+          var baslikMetni = t.slice(3).trim();
+          sayfaBasiKontrolEt(16);
+          y += 4;
+          doc.setFontSize(13);
+          doc.setFont(fontAdi, 'bold');
+          doc.setTextColor(RAPOR_PDF_SAGE[0], RAPOR_PDF_SAGE[1], RAPOR_PDF_SAGE[2]);
+          var bl = doc.splitTextToSize(baslikMetni, RAPOR_PDF_ICERIK_GENISLIK);
+          doc.text(bl, RAPOR_PDF_SOL_MARJ, y);
+          y += bl.length * 6 + 2;
+          doc.setTextColor(40, 40, 40);
+          doc.setFont(fontAdi, 'normal');
+        } else if (t.indexOf('- ') === 0) {
+          var maddeMetni = t.slice(2).trim();
+          doc.setFontSize(10.5);
+          doc.setFont(fontAdi, 'normal');
+          var ml = doc.splitTextToSize(maddeMetni, RAPOR_PDF_ICERIK_GENISLIK - 6);
+          sayfaBasiKontrolEt(ml.length * 5 + 2);
+          doc.text('•', RAPOR_PDF_SOL_MARJ, y);
+          doc.text(ml, RAPOR_PDF_SOL_MARJ + 5, y);
+          y += ml.length * 5 + 2;
+        } else {
+          doc.setFontSize(10.5);
+          doc.setFont(fontAdi, 'normal');
+          var pl = doc.splitTextToSize(t, RAPOR_PDF_ICERIK_GENISLIK);
+          sayfaBasiKontrolEt(pl.length * 5 + 2);
+          doc.text(pl, RAPOR_PDF_SOL_MARJ, y);
+          y += pl.length * 5 + 3;
+        }
+      });
+
+      (grafikler || []).forEach(function (g) {
+        if (!g || !g.canvas) return;
+        doc.addPage();
+        y = 20;
+        doc.setFontSize(12);
+        doc.setFont(fontAdi, 'bold');
+        doc.setTextColor(RAPOR_PDF_SAGE[0], RAPOR_PDF_SAGE[1], RAPOR_PDF_SAGE[2]);
+        var gbl = doc.splitTextToSize(g.baslik || '', RAPOR_PDF_ICERIK_GENISLIK);
+        doc.text(gbl, RAPOR_PDF_SOL_MARJ, y);
+        doc.setTextColor(40, 40, 40);
+        doc.setFont(fontAdi, 'normal');
+        y += gbl.length * 6 + 6;
+        try {
+          var img = g.canvas.toDataURL('image/png');
+          var oran = g.canvas.height / g.canvas.width;
+          var genislik = RAPOR_PDF_ICERIK_GENISLIK;
+          var yukseklik = genislik * oran;
+          doc.addImage(img, 'PNG', RAPOR_PDF_SOL_MARJ, y, genislik, yukseklik);
+        } catch (e) { /* canvas boş/başarısızsa grafiği atla, rapor metni zaten PDF'te var */ }
+      });
+
+      var sayfaSayisi = doc.internal.getNumberOfPages();
+      for (var i = 1; i <= sayfaSayisi; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont(fontAdi, 'normal');
+        doc.setTextColor(150, 150, 150);
+        doc.text('Talk and Heal Rakip Analizi Paneli', RAPOR_PDF_SOL_MARJ, RAPOR_PDF_YUKSEKLIK - 10);
+        doc.text(String(i) + ' / ' + sayfaSayisi, RAPOR_PDF_GENISLIK - RAPOR_PDF_SAG_MARJ - 12, RAPOR_PDF_YUKSEKLIK - 10);
+      }
+
+      doc.save(dosyaAdi);
+    });
+  }
 
   // Kayıtlı Rakipler ve Arama Sonuçları tabloları birebir aynı sütunlara sahip (İsim/Adres/
   // Kaynak/Nasıl Bulundu/Tarih/Not) ve aynı "ilk 3 tam, gerisi silik" sayfalama davranışını
@@ -855,10 +1026,12 @@
       .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Ayar kaydedilemedi.', 'err'); });
   });
 
+  var sonRakipTakipVerisi = null;
   function rakipTakipUret(periyotTuru, btn) {
     btn.disabled = true;
     setStatus(el('rakipTakipStatus'), 'Üretiliyor...', '');
     el('rakipTakipSonuc').textContent = '';
+    el('rakipTakipRaporAksiyonlar').classList.add('hidden');
     var rakipIds = Object.keys(rakipListeSecili);
     authFetch('/panel/rakip-analizi/rakip-takip/uret', { method: 'POST', body: JSON.stringify({ periyotTuru: periyotTuru, rakipIds: rakipIds }) })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
@@ -868,15 +1041,25 @@
         setStatus(el('rakipTakipStatus'), RAKIP_TAKIP_ASAMA_ETIKETLER[res.data.asama] || res.data.asama, 'ok');
         el('rakipTakipSonuc').textContent =
           'Aksiyon/Hedef:\n' + res.data.aksiyonRaporu + '\n\nGörsel/Video (küratif):\n' + res.data.icerikRaporu;
+        sonRakipTakipVerisi = { periyotTuru: periyotTuru, aksiyonRaporu: res.data.aksiyonRaporu, icerikRaporu: res.data.icerikRaporu };
+        el('rakipTakipRaporAksiyonlar').classList.remove('hidden');
         loadRakipTakip();
       }).catch(function (e) { btn.disabled = false; if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Üretilemedi, tekrar dene.', 'err'); });
   }
+
+  el('rakipTakipIndirBtn').addEventListener('click', function () {
+    if (!sonRakipTakipVerisi) return;
+    var govde = '## Aksiyon/Hedef\n' + sonRakipTakipVerisi.aksiyonRaporu + '\n\n## Görsel/Video (küratif)\n' + sonRakipTakipVerisi.icerikRaporu;
+    var dosyaAdi = 'rakip-takip-' + sonRakipTakipVerisi.periyotTuru + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
+    raporPdfOlustur(dosyaAdi, 'Otomatik Rakip Takibi Raporu', new Date().toLocaleDateString('tr-TR'), govde, []);
+  });
 
   // Zaman İçi Karşılaştırma Raporu — RakipTakipGecmis'teki geçmişten Talk and Heal'i seçilen
   // rakib(ler)le grafikle karşılaştırır. Chart.js CDN ile yükleniyor (aynı jsPDF/sıfır-bağımlılık
   // kararı). Pasta grafiği kasıtlı olarak sunulmuyor — bu bir zaman serisi (ilerleme/gerileme),
   // pasta grafiği bir ANDAKİ oranları göstermek için uygun, trend göstermek için değil.
   var karsilastirmaChartlar = [];
+  var sonKarsilastirmaVerisi = null;
   el('karsilastirmaUretBtn').addEventListener('click', function () {
     var periyotTuru = el('karsilastirmaPeriyot').value;
     var mod = el('karsilastirmaMod').value;
@@ -887,14 +1070,17 @@
     setStatus(el('karsilastirmaStatus'), 'Üretiliyor...', '');
     el('karsilastirmaNarratif').textContent = '';
     el('karsilastirmaGrafikler').innerHTML = '';
+    el('karsilastirmaRaporAksiyonlar').classList.add('hidden');
     karsilastirmaChartlar.forEach(function (c) { c.destroy(); });
     karsilastirmaChartlar = [];
+    sonKarsilastirmaVerisi = null;
     authFetch('/panel/rakip-analizi/rakip-takip/karsilastirma', { method: 'POST', body: JSON.stringify({ periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds }) })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) { setStatusLimit(el('karsilastirmaStatus'), res.data.error || 'Üretilemedi.', res.data.limitUrl); return; }
         setStatus(el('karsilastirmaStatus'), '', '');
         el('karsilastirmaNarratif').textContent = res.data.narratif || '';
+        var canvasBilgileri = [];
         (res.data.parametreSonuclari || []).forEach(function (p) {
           var veriVar = p.talkAndHeal.some(function (d) { return d.deger !== null; }) || p.rakip.some(function (d) { return d.deger !== null; });
           if (!veriVar) return;
@@ -925,11 +1111,26 @@
             options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { position: 'bottom' } } },
           });
           karsilastirmaChartlar.push(chart);
+          canvasBilgileri.push({ canvas: canvas, baslik: p.aciklama });
         });
         if (!el('karsilastirmaGrafikler').children.length) {
           el('karsilastirmaGrafikler').textContent = 'Hiçbir parametre için henüz yeterli veri yok.';
         }
+        sonKarsilastirmaVerisi = {
+          periyotTuru: periyotTuru,
+          rakipEtiketi: res.data.rakipEtiketi,
+          narratif: res.data.narratif || '',
+          canvasBilgileri: canvasBilgileri,
+        };
+        el('karsilastirmaRaporAksiyonlar').classList.remove('hidden');
       }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('karsilastirmaStatus'), 'Üretilemedi, tekrar dene.', 'err'); });
+  });
+
+  el('karsilastirmaIndirBtn').addEventListener('click', function () {
+    if (!sonKarsilastirmaVerisi) return;
+    var altBaslik = 'Talk and Heal vs ' + sonKarsilastirmaVerisi.rakipEtiketi + ' — ' + new Date().toLocaleDateString('tr-TR');
+    var dosyaAdi = 'karsilastirma-' + sonKarsilastirmaVerisi.periyotTuru + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
+    raporPdfOlustur(dosyaAdi, 'Zaman İçi Karşılaştırma Raporu', altBaslik, sonKarsilastirmaVerisi.narratif, sonKarsilastirmaVerisi.canvasBilgileri);
   });
 
   // 402 (kota/bakiye doldu) yanıtlarında, düz hata mesajının yanına tıklanabilir bir "hallet"
@@ -1486,12 +1687,9 @@
   }
 
   el('dalIndirBtn').addEventListener('click', function () {
-    if (!sonRaporMetni || !window.jspdf) return;
-    var doc = new window.jspdf.jsPDF();
-    var satirlar = doc.splitTextToSize(sonRaporMetni, 180);
-    doc.setFontSize(11);
-    doc.text(satirlar, 15, 15);
-    doc.save(raporDosyaAdi());
+    if (!sonRaporMetni) return;
+    var baslik = currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu';
+    raporPdfOlustur(raporDosyaAdi(), baslik, new Date().toLocaleDateString('tr-TR'), sonRaporMetni, []);
   });
 
   el('dalWhatsappBtn').addEventListener('click', function () {

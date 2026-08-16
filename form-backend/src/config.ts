@@ -499,3 +499,34 @@ export const RAKIP_TAKIP_GECMIS_COLUMN_LABELS: Record<(typeof RAKIP_TAKIP_GECMIS
 // Talk and Heal'in kendi varlık kimliği — bir rakip id'siyle asla çakışmaz (crypto.randomUUID
 // formatı değil, sabit okunabilir bir string).
 export const TALK_AND_HEAL_VARLIK_ID = 'talkAndHeal';
+
+// Raporlar arşivi (2026-08-16, kullanıcı isteği) — üretilen HER AI raporunun (manuel icerikStrateji/
+// aksiyonAnaliz, RakipTakip'in periyodik aksiyon+içerik raporları, zaman-içi karşılaştırmanın
+// narratifi) ham metni burada append-only saklanır. Amaç: (1) bir sonraki rapor üretiminin geçmiş
+// rapor(lar)ı girdi olarak kullanabilmesi, (2) geriye dönük süreç analizi — ikisi de sadece Sheets
+// gibi backend'in okuyabildiği bir kaynaktan mümkün, kullanıcının yerel bilgisayarındaki bir PDF'ten
+// değil (o sadece insan-okunurluğu için, bkz. rakip-analizi.html raporPdfOlustur). KullanimKaydi ile
+// AYNI desen (append-only, kendini onaran header) — RakipAnalizi'nin (rakip VERİSİ) sekmesinden
+// bilerek ayrı: o sekmenin her rapor tıklamasında büyümemesi 2026-08-15'te kasıtlı olarak
+// kararlaştırılmıştı, bu karar hâlâ geçerli — rapor arşivi kendi ayrı sekmesinde yaşar.
+export const RAPORLAR_TAB_NAME = 'Raporlar';
+
+export const RAPORLAR_TURLERI = {
+	icerikStrateji: 'Görsel/Video Stratejisi',
+	aksiyonAnaliz: 'Aksiyon/Hedef Analizi',
+	rakipTakipAksiyon: 'RakipTakip — Aksiyon/Hedef',
+	rakipTakipIcerik: 'RakipTakip — Görsel/Video',
+	karsilastirma: 'Zaman İçi Karşılaştırma',
+} as const;
+
+export type RaporTuru = keyof typeof RAPORLAR_TURLERI;
+
+export const RAPORLAR_COLUMNS = ['id', 'tarihUtc', 'tur', 'baglam', 'metin'] as const;
+
+export const RAPORLAR_COLUMN_LABELS: Record<(typeof RAPORLAR_COLUMNS)[number], string> = {
+	id: 'ID',
+	tarihUtc: 'Tarih (UTC)',
+	tur: 'Rapor Türü',
+	baglam: 'Bağlam',
+	metin: 'Rapor Metni',
+};

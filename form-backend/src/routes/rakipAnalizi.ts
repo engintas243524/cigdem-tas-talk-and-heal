@@ -15,8 +15,20 @@ import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
 import { ensureKullanimKaydiTab, logKullanim, getKullanimOzet, kotaDolduMu } from '../lib/kullanimKaydi';
 import { belgedenMetinCikar, metinCikarWebLink } from '../lib/belgeCikar';
+import { appendRaporKaydi } from '../lib/raporlarSheets';
 import { ANTHROPIC_BILLING_URL } from '../config';
 import type { Env } from '../types';
+
+// Rapor PDF şablonu (rakip-analizi.html#raporPdfOlustur, 2026-08-16) bu yapıyı güvenle parse
+// edebilmek için Claude'dan tutarlı, hafif bir markdown biçimi istiyor — düz metnin PDF'te
+// başlıksız/madde işaretsiz tek blok halinde dökülmesini önler. Dil sadeliği talimatını BOZMUYOR,
+// sadece üstüne ekleniyor.
+export const RAPOR_YAPISI_TALIMATI = `
+
+Çıktının biçimi: ilk satır kısa bir başlık (madde işaretsiz, tek cümle). Ardından 2-4 tane "## Başlık"
+ile ayrılmış bölüm. Somut öneri/adım/aksiyon içeren her satırı "- " ile başlayan bir madde olarak
+yaz. Bölüm başlıkları ve madde işaretleri DIŞINDA markdown biçimlendirmesi (kalın/italik/tablo/kod
+bloğu) kullanma.`;
 
 const NOTE_MAX_LENGTH = 5000;
 // İçe Aktar (Faz D1) tek seferde en fazla kaç kaynak belge/link kabul eder — hem prompt boyutunu
@@ -264,7 +276,7 @@ kopyalamadan, sadece stratejilerinden (hangi platformda, ne sıklıkla, hangi fo
 etkileşim alıyor) ilham alarak Talk and Heal için ORİJİNAL, telifsiz-stok veya AI-üretilmiş içerik
 önerileri sun. Türkçe yaz, somut ve uygulanabilir öneriler ver. Sade, gündelik bir dil kullan —
 pazarlama/iş jargonu, uzun karmaşık cümleler ve süslü terimlerden kaçın; hiç bu alanda uzman
-olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.`;
+olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
 
 export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
@@ -372,8 +384,15 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	// Kullanıcı kararı (2026-08-15): raporlar artık RakipAnalizi sekmesine satır olarak
 	// eklenmiyor — her "Rapor Üret" tıklaması sayfayı aşağı doğru sonsuza kadar büyütüyordu.
 	// Rapor zaten PDF/WhatsApp/e-posta/Paylaş ile dışa aktarılabiliyor (bkz. rakip-analizi.html
-	// dalRaporAksiyonlar), Sheet'te ayrıca saklanmasına gerek yok. Kullanım kaydı (yukarıdaki
-	// logKullanim) zaten ayrı, sabit büyümeyen bir sekmede tutuluyor.
+	// dalRaporAksiyonlar). Ham metin, ayrı ve ayrıca büyümeyen bir sorun teşkil etmeyen "Raporlar"
+	// arşiv sekmesine yazılıyor (2026-08-16, kullanıcı isteği) — geriye dönük analiz/sonraki süreç
+	// girdisi için, bkz. lib/raporlarSheets.ts. Arşiv yazımı başarısız olsa bile kullanıcı raporu
+	// zaten aldı, akışı durdurmuyoruz.
+	try {
+		await appendRaporKaydi(env, 'icerikStrateji', istek.slice(0, 200), rapor);
+	} catch (err) {
+		console.error('Rapor arşive kaydedilemedi (icerikStrateji)', err);
+	}
 	return json({ rapor }, request);
 }
 
@@ -389,7 +408,7 @@ DOĞRUDAN karşılaştırma yapabilirsin (fiyat/konum/sosyal medya aktifliği gi
 analiz edip bir sonraki dönem için düzeltilmiş hedef/yol haritası öner. Türkçe yaz, somut ve
 ölçülebilir ol. Sade, gündelik bir dil kullan — pazarlama/iş jargonu, uzun karmaşık cümleler ve
 süslü terimlerden kaçın; hiç bu alanda uzman olmayan sıradan bir okuyucunun tek okuyuşta
-anlayacağı, kısa cümlelerle yaz.`;
+anlayacağı, kısa cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
 
 // POST /panel/rakip-analizi/aksiyon-analiz { yorum, rakipIds?, parametreler? } — booking
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses
@@ -448,7 +467,13 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 
 	// Kullanıcı kararı (2026-08-15) — bkz. handleIcerikStrateji'deki aynı not: raporlar artık
 	// RakipAnalizi sekmesine satır olarak eklenmiyor, sayfanın sonsuza kadar büyümesine sebep
-	// oluyordu.
+	// oluyordu. Ham metin "Raporlar" arşiv sekmesine gidiyor — bkz. handleIcerikStrateji'deki aynı
+	// not (2026-08-16).
+	try {
+		await appendRaporKaydi(env, 'aksiyonAnaliz', yorum.slice(0, 200), rapor);
+	} catch (err) {
+		console.error('Rapor arşive kaydedilemedi (aksiyonAnaliz)', err);
+	}
 	return json({ rapor }, request);
 }
 

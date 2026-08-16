@@ -12,11 +12,13 @@ import { parametreSkorlariUret } from '../lib/rakipParametreSkor';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
 import { errorResponse, json } from '../lib/http';
 import { ensureKullanimKaydiTab, logKullanim, kotaDolduMu, KotaDolduError } from '../lib/kullanimKaydi';
+import { appendRaporKaydi } from '../lib/raporlarSheets';
 import {
 	rakipOzetOlustur,
 	AKSIYON_ANALIZ_SYSTEM_PROMPT,
 	ICERIK_STRATEJI_SYSTEM_PROMPT,
 	ANALIZ_PARAMETRE_ACIKLAMALARI,
+	RAPOR_YAPISI_TALIMATI,
 } from './rakipAnalizi';
 import {
 	RAKIP_TAKIP_PERIYOT_TURLERI,
@@ -202,6 +204,17 @@ export async function rakipTakipAdimUygula(
 
 	await logKullanim(env, 'aksiyonAnaliz', `RakipTakip ${periyotTuru}: ${asama}`);
 
+	// Raporlar arşivi (2026-08-16, kullanıcı isteği) — bkz. lib/raporlarSheets.ts ve config.ts'deki
+	// RAPORLAR_TAB_NAME yorumu. RakipTakip satırındaki projeksiyon/hedef/fark hücreleri her yeni
+	// dönemde YERİNDE güncelleniyor (append değil) — arşiv olmasa aksiyonRaporu'nun geçmiş halleri
+	// kaybolurdu. Ana akışı bozmasın diye try/catch içinde, gecmisSnapshotlariniKaydet ile aynı desen.
+	try {
+		await appendRaporKaydi(env, 'rakipTakipAksiyon', `${periyotTuru}: ${asama}`, aksiyonRaporu);
+		await appendRaporKaydi(env, 'rakipTakipIcerik', `${periyotTuru}: ${asama}`, icerikRaporu);
+	} catch (err) {
+		console.error(`RakipTakip rapor arşiv kaydı başarısız (${periyotTuru})`, err);
+	}
+
 	return { asama, mesaj, aksiyonRaporu, icerikRaporu };
 }
 
@@ -307,7 +320,7 @@ Sana Talk and Heal ile bir/birkaç rakibin zaman içindeki parametre puanları (
 veriliyor. Bu veriyi yorumla: hangi parametrelerde Talk and Heal ilerliyor/geriliyor, hangilerinde
 rakip önde, veri yoksa bunu açıkça belirt (uydurma). Türkçe yaz. Sade, gündelik bir dil kullan —
 jargon ve süslü terimlerden kaçın; hiç bu alanda uzman olmayan bir okuyucunun anlayacağı kısa
-cümlelerle yaz.`;
+cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
 
 export interface KarsilastirmaParametreSonucu {
 	parametre: string;
@@ -392,6 +405,13 @@ export async function handleRakipTakipKarsilastirma(request: Request, env: Env):
 
 	await ensureKullanimKaydiTab(env);
 	await logKullanim(env, 'aksiyonAnaliz', `RakipTakip karşılaştırma ${periyotTuru} (${mod}): ${rakipEtiketi}`);
+
+	// Raporlar arşivi — bkz. rakipTakipAdimUygula'daki aynı not.
+	try {
+		await appendRaporKaydi(env, 'karsilastirma', `${periyotTuru} (${mod}): ${rakipEtiketi}`, narratif);
+	} catch (err) {
+		console.error(`Karşılaştırma raporu arşiv kaydı başarısız (${periyotTuru})`, err);
+	}
 
 	return json({ periyotTuru, mod, rakipEtiketi, parametreSonuclari, narratif }, request);
 }
