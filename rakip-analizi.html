@@ -189,8 +189,8 @@
 
         <div id="iceAktarDropZone" class="drop-zone">
           <p>Dosyaları buraya sürükle bırak ya da <label for="iceAktarFileInput" class="drop-zone-link">seç</label></p>
-          <p class="hint">Desteklenen: PDF, TXT, MD, DOCX, CSV, PPTX, EPUB</p>
-          <input type="file" id="iceAktarFileInput" accept=".pdf,.txt,.md,.docx,.csv,.pptx,.epub" multiple class="hidden" />
+          <p class="hint">Desteklenen: PDF, TXT, MD, DOCX, CSV, PPTX, EPUB + kod/yapılandırma dosyaları (JSON, PY, JS, TS, HTML, CSS, YAML, XML, SH, SQL)</p>
+          <input type="file" id="iceAktarFileInput" accept=".pdf,.txt,.md,.docx,.csv,.pptx,.epub,.json,.py,.js,.ts,.jsx,.tsx,.html,.css,.yaml,.yml,.xml,.sh,.sql" multiple class="hidden" />
         </div>
 
         <div class="field">
@@ -1548,7 +1548,10 @@
   // Görsel/Video Stratejisi ile Aksiyon/Hedef Analizi arasında dal değişse de eklenen kaynaklar
   // kalıcı kalır (dal-özel değil, genel bağlam) — setDal() bu listeyi sıfırlamıyor.
   var iceAktarilanlar = [];
-  var ICE_AKTAR_UZANTILAR = ['pdf', 'txt', 'md', 'docx', 'csv', 'pptx', 'epub'];
+  var ICE_AKTAR_UZANTILAR = [
+    'pdf', 'txt', 'md', 'docx', 'csv', 'pptx', 'epub',
+    'json', 'py', 'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'yaml', 'yml', 'xml', 'sh', 'sql',
+  ];
 
   function iceAktarOzetGuncelle() {
     var hazir = iceAktarilanlar.filter(function (x) { return x.durum === 'hazir'; }).length;

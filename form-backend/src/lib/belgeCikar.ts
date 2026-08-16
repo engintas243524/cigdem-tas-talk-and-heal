@@ -105,6 +105,10 @@ function metinCikarEpub(bytes: Uint8Array): string {
 	return kirp(bolumler.join('\n\n'));
 }
 
+// Kod/yapılandırma dosyaları (2026-08-16, kullanıcı isteği) — hepsi düz metin, txt/md/csv ile
+// AYNI çıkarıcıyı (metinCikarTxt) kullanır, özel bir ayrıştırma gerektirmez.
+const KOD_UZANTILARI = ['json', 'py', 'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'yaml', 'yml', 'xml', 'sh', 'sql'];
+
 const CIKARICILAR: Record<string, (bytes: Uint8Array) => string> = {
 	txt: metinCikarTxt,
 	md: metinCikarTxt,
@@ -112,6 +116,7 @@ const CIKARICILAR: Record<string, (bytes: Uint8Array) => string> = {
 	docx: metinCikarDocx,
 	pptx: metinCikarPptx,
 	epub: metinCikarEpub,
+	...Object.fromEntries(KOD_UZANTILARI.map((uzanti) => [uzanti, metinCikarTxt])),
 };
 
 // pdf burada yok — çağıran taraf (routes/rakipAnalizi.ts) pdf'i bu fonksiyona hiç göndermiyor,
