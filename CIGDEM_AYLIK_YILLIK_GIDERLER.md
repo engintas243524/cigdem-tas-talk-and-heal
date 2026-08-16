@@ -1,5 +1,9 @@
 # Talk and Heal — Tam Kapsamlı Aylık/Yıllık Gider ve Marj Tablosu (Çiğdem için, güncellendi 2026-08-17)
 
+**Bu bir yaşayan belge** (kullanıcı kararı, 2026-08-17) — tek seferlik bir hesap değil, yeni bir
+maliyetli araç/özellik eklendikçe ya da TBD satırlarından biri (Stripe/WhatsApp/vergi) netleştikçe
+tekrar hesaplanıp güncellenecek.
+
 Bu tablo iki bölümden oluşuyor: (1) şu an aktif kullanılan araçların **gerçek/ölçülmüş**
 maliyeti, (2) planlanan gelecek özelliklerin (video edit, otomatik paylaşım, linktree benzeri
 yapı) maliyete etkisi. **Vergi ve gelir-bağımlı satırlar (marj) için gerçek rakam yok** — uydurma
