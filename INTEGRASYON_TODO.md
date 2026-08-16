@@ -1591,3 +1591,20 @@ güncellendi (negatif `amount` artık mock'ta da 422 döndürüyor) — önceki 
 döndüğü için bu regresyon teste hiç yakalanmamıştı, şimdi yakalanıyor. `npx tsc --noEmit`,
 `npx prettier --check`, `npm test` (263/263) hepsi geçti. Hata günlüğüne (BE-67,
 `05-Backend-Entegrasyon`) da işlenecek.
+
+## Kullanıcı bildirimi — 4 maddelik istek (2026-08-16, birebir kayıt)
+
+- bu ayki kullanım bu halde: [Image #50]
+- Görsel/Video Stratejisi ve Aksiyon/Hedef Analizi altındaki İçe Aktar butonunu Dosya Yükle olarak
+  değiştir Aynı Dosya Yükle butonunu Otomatik Rakip Takibi nde Karşılaştırma Raporu Üret(bu butonu
+  da Rapor Üret butonu gibi yeşil renkte yap) butonunun üstüne de ekle
+- Çizgi grafik veya sütun grafik seçeneği tıklanarak üretilen raporlar normal raporun içinde Çizgi
+  grafik veya sütun grafik eklenmesi şeklinde rapor üretimi sağlıyor değil mi!!! Yani sadece içinde
+  Çizgi grafik veya sütun grafik olan bir salt grafik içerikli rapor değil. Benim istediğim Çizgi
+  grafik veya sütun grafik seçimleri ile ilerlendiğinde en son Karşılaştırma Raporu Üret butonuna
+  basıldığında seçilen grafik türünü içeren komple bir rapor elde edilmesi şeklinde. Eğer istediğim
+  şekilde değilse lütfen istediğim şekilde düzelt ve aynı özelliği Aksiyon/Hedef Analizi raporu
+  üretiminden önce de tam istediğim şekilde yapılması için ekle
+
+(Image #50: "Bu Ayki Kullanım" başlıklı turuncu kutu, alt kısmında hiç içerik/sayı görünmüyor —
+boş kalmış görünüyor. Kullanıcı mesajı henüz işlenmedi, sıradaki adım araştırma.)

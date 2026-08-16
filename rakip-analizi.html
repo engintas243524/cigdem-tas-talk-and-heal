@@ -164,7 +164,7 @@
       </div>
       <p class="muted" id="dalMicHint"></p>
       <p class="muted hidden" id="dalKarsilastirmaLink"><a href="#rakipTakipField">Zaman içi karşılaştırma raporu (grafikli) mi istiyorsun? →</a></p>
-      <button class="btn-secondary" id="dalIceAktarBtn" type="button">İçe Aktar</button>
+      <button class="btn-secondary" id="dalIceAktarBtn" type="button">Dosya Yükle</button>
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
       <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
@@ -252,7 +252,8 @@
           <option value="bar">Sütun grafik</option>
         </select>
       </div>
-      <button class="btn-secondary" id="karsilastirmaUretBtn" type="button">Karşılaştırma Raporu Üret</button>
+      <button class="btn-secondary" id="karsilastirmaIceAktarBtn" type="button">Dosya Yükle</button>
+      <button class="btn-primary" id="karsilastirmaUretBtn" type="button">Karşılaştırma Raporu Üret</button>
       <div class="status" id="karsilastirmaStatus"></div>
       <div id="karsilastirmaNarratif" class="muted" style="white-space:pre-wrap;"></div>
       <div id="karsilastirmaGrafikler"></div>
@@ -1074,7 +1075,13 @@
     karsilastirmaChartlar.forEach(function (c) { c.destroy(); });
     karsilastirmaChartlar = [];
     sonKarsilastirmaVerisi = null;
-    authFetch('/panel/rakip-analizi/rakip-takip/karsilastirma', { method: 'POST', body: JSON.stringify({ periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds }) })
+    var hazirIceAktarilanlar = iceAktarilanlar.filter(function (x) { return x.durum === 'hazir'; });
+    var kaynakBelgeler = hazirIceAktarilanlar.filter(function (x) { return !x.pdfBase64; }).map(function (x) { return x.metin; });
+    var kaynakPdfler = hazirIceAktarilanlar.filter(function (x) { return x.pdfBase64; }).map(function (x) { return x.pdfBase64; });
+    authFetch('/panel/rakip-analizi/rakip-takip/karsilastirma', {
+      method: 'POST',
+      body: JSON.stringify({ periyotTuru: periyotTuru, mod: mod, rakipIds: rakipIds, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler }),
+    })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (!res.ok) { setStatusLimit(el('karsilastirmaStatus'), res.data.error || 'Üretilemedi.', res.data.limitUrl); return; }
@@ -1545,7 +1552,9 @@
 
   function iceAktarOzetGuncelle() {
     var hazir = iceAktarilanlar.filter(function (x) { return x.durum === 'hazir'; }).length;
-    el('dalIceAktarBtn').textContent = hazir ? 'İçe Aktar (' + hazir + ')' : 'İçe Aktar';
+    var etiket = hazir ? 'Dosya Yükle (' + hazir + ')' : 'Dosya Yükle';
+    el('dalIceAktarBtn').textContent = etiket;
+    el('karsilastirmaIceAktarBtn').textContent = etiket;
   }
 
   function iceAktarListesiCiz() {
@@ -1649,6 +1658,7 @@
   });
 
   el('dalIceAktarBtn').addEventListener('click', function () { el('iceAktarModal').classList.remove('hidden'); });
+  el('karsilastirmaIceAktarBtn').addEventListener('click', function () { el('iceAktarModal').classList.remove('hidden'); });
   el('iceAktarKapatBtn').addEventListener('click', function () { el('iceAktarModal').classList.add('hidden'); });
   el('iceAktarModal').addEventListener('click', function (e) { if (e.target.id === 'iceAktarModal') el('iceAktarModal').classList.add('hidden'); });
 

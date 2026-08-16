@@ -19,6 +19,8 @@ import {
 	ICERIK_STRATEJI_SYSTEM_PROMPT,
 	ANALIZ_PARAMETRE_ACIKLAMALARI,
 	RAPOR_YAPISI_TALIMATI,
+	iceAktarPromptEki,
+	ICE_AKTAR_MAX_ADET,
 } from './rakipAnalizi';
 import {
 	RAKIP_TAKIP_PERIYOT_TURLERI,
@@ -337,7 +339,14 @@ export interface KarsilastirmaParametreSonucu {
 // ortalamaSerisiHesapla). Grafik türü (çizgi/pasta/sütun) tamamen frontend kararı, backend sadece
 // {tarih, deger} dizileri döner.
 export async function handleRakipTakipKarsilastirma(request: Request, env: Env): Promise<Response> {
-	let body: { periyotTuru?: unknown; mod?: unknown; rakipIds?: unknown; parametreler?: unknown };
+	let body: {
+		periyotTuru?: unknown;
+		mod?: unknown;
+		rakipIds?: unknown;
+		parametreler?: unknown;
+		kaynakBelgeler?: unknown;
+		kaynakPdfler?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -347,6 +356,8 @@ export async function handleRakipTakipKarsilastirma(request: Request, env: Env):
 	if (!gecerliPeriyotTuru(periyotTuru)) return errorResponse(request, 400, 'Geçersiz periyot türü.');
 	const mod = body.mod === 'ortalama' ? 'ortalama' : '1e1';
 	const rakipIds = Array.isArray(body.rakipIds) ? body.rakipIds.map((x) => String(x)) : [];
+	const kaynakBelgeler = Array.isArray(body.kaynakBelgeler) ? body.kaynakBelgeler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
+	const kaynakPdfler = Array.isArray(body.kaynakPdfler) ? body.kaynakPdfler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 	if (!rakipIds.length) return errorResponse(request, 400, 'En az bir rakip seçilmeli.');
 	if (mod === '1e1' && rakipIds.length !== 1)
 		return errorResponse(request, 400, 'Birebir karşılaştırma için tam olarak bir rakip seçilmeli.');
@@ -390,8 +401,10 @@ export async function handleRakipTakipKarsilastirma(request: Request, env: Env):
 		const ozetSatirlari = parametreSonuclari.map(
 			(p) => `${p.aciklama}: Talk and Heal=${JSON.stringify(p.talkAndHeal)}, ${rakipEtiketi}=${JSON.stringify(p.rakip)}`,
 		);
-		const userPrompt = `Talk and Heal ile ${rakipEtiketi} arasındaki zaman içi karşılaştırma verisi (her değer 1-10 arası bir puan, null=veri yok):\n${ozetSatirlari.join('\n')}`;
-		narratif = await generateReport(env, KARSILASTIRMA_SYSTEM_PROMPT, userPrompt);
+		const userPrompt =
+			`Talk and Heal ile ${rakipEtiketi} arasındaki zaman içi karşılaştırma verisi (her değer 1-10 arası bir puan, null=veri yok):\n${ozetSatirlari.join('\n')}` +
+			iceAktarPromptEki(kaynakBelgeler);
+		narratif = await generateReport(env, KARSILASTIRMA_SYSTEM_PROMPT, userPrompt, kaynakPdfler);
 	} catch (err) {
 		if (err instanceof InsufficientCreditError) {
 			return json(

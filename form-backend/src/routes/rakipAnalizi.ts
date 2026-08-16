@@ -33,7 +33,7 @@ bloğu) kullanma.`;
 const NOTE_MAX_LENGTH = 5000;
 // İçe Aktar (Faz D1) tek seferde en fazla kaç kaynak belge/link kabul eder — hem prompt boyutunu
 // hem de kullanıcının yanlışlıkla onlarca dosya sürükleyip bırakmasını sınırlamak için.
-const ICE_AKTAR_MAX_ADET = 10;
+export const ICE_AKTAR_MAX_ADET = 10;
 const GOOGLE_QUOTA_URL = 'https://console.cloud.google.com/iam-admin/quotas';
 
 function newId(): string {
@@ -327,7 +327,7 @@ export function rakipOzetOlustur(
 // İçe Aktar (Faz D1) ile eklenen metin kaynaklarını (docx/pptx/epub/txt/md/csv/web linki/yapıştırılan
 // metin — pdf'ler burada yok, onlar generateReport'a ayrı bir document content block olarak gidiyor)
 // rapor promptuna ekler.
-function iceAktarPromptEki(kaynakBelgeler: string[]): string {
+export function iceAktarPromptEki(kaynakBelgeler: string[]): string {
 	if (!kaynakBelgeler.length) return '';
 	return `\n\nİçe aktarılan ek kaynaklar:\n${kaynakBelgeler.map((t, i) => `--- Kaynak ${i + 1} ---\n${t}`).join('\n\n')}`;
 }
