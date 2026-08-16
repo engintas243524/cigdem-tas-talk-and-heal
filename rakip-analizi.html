@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=13">
+<link rel="stylesheet" href="panel.css?v=14">
 </head>
 <body>
 <div class="panel-wrap">
@@ -61,6 +61,7 @@
       <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
       <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
       <div class="actions" id="rakipSonuclarToggleWrap"></div>
+      <div class="sayfalama-manuel" id="rakipSonuclarManuelSayfalama"></div>
       <div class="actions">
         <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
       </div>
@@ -93,6 +94,7 @@
       <p class="muted">Onay kutusuyla seçtiğin rakip(ler) hem silme hem de aşağıdaki rapor üretimi (Görsel/Video Stratejisi, Aksiyon/Hedef Analizi) için kullanılır.</p>
       <div class="rakip-table" id="rakipListe"></div>
       <div class="actions" id="rakipListeToggleWrap"></div>
+      <div class="sayfalama-manuel" id="rakipListeManuelSayfalama"></div>
       <div class="actions">
         <button class="btn-secondary hidden" id="rakipSilBtn" type="button" style="background:var(--brand-deep);color:#fff;border-color:var(--brand-deep);">Seçilenleri Sil</button>
       </div>
@@ -310,41 +312,81 @@
     });
   }
 
-  // Kullanıcı kararı (2026-08-16): sadece TEK yön anlamlıyken (en başta sadece "daha fazla"
-  // gösterilebilir, sonuna gelince sadece "daha az") buton normal (tam genişlik) boyutta;
-  // ARADA bir durumdaysak (hem ileri hem geri gidilebiliyorsa) iki buton TEK bir butonun ortadan
-  // ikiye bölünmüş hali gibi (boşluksuz, sadece dış köşeler yuvarlak — bkz. panel.css
-  // .sayfalama-cift) yan yana gösterilir. "Tümünü Göster"/"İlk N'e Dön" kısayolları kaldırıldı,
-  // sadece +adım/-adım kalıyor.
+  // Kullanıcı kararı (2026-08-16, ikinci geri bildirim — ilkini geçersiz kılıyor): HER ZAMAN tam
+  // olarak 2 buton, her zaman tek bir butonun ortadan ikiye bölünmüş hali gibi (boşluksuz, sadece
+  // dış köşeler yuvarlak — bkz. panel.css .sayfalama-cift) yan yana gösterilir — tek başına tam
+  // genişlikte buton durumu YOK artık. Uçlarda (sadece ilk adım kadarı görünürken / hepsi
+  // görünürken) "Daha Fazla"/"Daha Az"ın yerini o yönde ANLAMSIZ kaldığı için "Tümünü Görüntüle"/
+  // "Tümünü Gizle" kısayolu alır — 100 rakip varsa art arda +3 tıklamak yerine tek tıkla hepsini
+  // görebilsin, hepsi açıkken tek tıkla ilk 3'e dönebilsin.
   function sayfalamaButonlariCiz(wrapEl, state, total, onChange) {
     wrapEl.innerHTML = '';
-    wrapEl.classList.remove('sayfalama-cift');
     if (total <= state.adim) return;
 
     var dahaFazlaVar = state.visible < total;
     var dahaAzVar = state.visible > state.adim;
 
+    var solBtn = document.createElement('button');
+    solBtn.type = 'button'; solBtn.className = 'btn-secondary';
     if (dahaFazlaVar) {
-      var dahaFazla = document.createElement('button');
-      dahaFazla.type = 'button'; dahaFazla.className = 'btn-secondary';
-      dahaFazla.textContent = 'Daha Fazla (+' + Math.min(state.adim, total - state.visible) + ')';
-      dahaFazla.addEventListener('click', function () {
-        state.visible = Math.min(total, state.visible + state.adim);
-        onChange();
-      });
-      wrapEl.appendChild(dahaFazla);
+      solBtn.textContent = 'Daha Fazla (+' + Math.min(state.adim, total - state.visible) + ')';
+      solBtn.addEventListener('click', function () { state.visible = Math.min(total, state.visible + state.adim); onChange(); });
+    } else {
+      solBtn.textContent = 'Tümünü Gizle';
+      solBtn.addEventListener('click', function () { state.visible = state.adim; onChange(); });
     }
+
+    var sagBtn = document.createElement('button');
+    sagBtn.type = 'button'; sagBtn.className = 'btn-secondary';
     if (dahaAzVar) {
-      var dahaAz = document.createElement('button');
-      dahaAz.type = 'button'; dahaAz.className = 'btn-secondary';
-      dahaAz.textContent = 'Daha Az (-' + state.adim + ')';
-      dahaAz.addEventListener('click', function () {
-        state.visible = Math.max(state.adim, state.visible - state.adim);
-        onChange();
-      });
-      wrapEl.appendChild(dahaAz);
+      sagBtn.textContent = 'Daha Az (-' + state.adim + ')';
+      sagBtn.addEventListener('click', function () { state.visible = Math.max(state.adim, state.visible - state.adim); onChange(); });
+    } else {
+      sagBtn.textContent = 'Tümünü Görüntüle';
+      sagBtn.addEventListener('click', function () { state.visible = total; onChange(); });
     }
-    if (dahaFazlaVar && dahaAzVar) wrapEl.classList.add('sayfalama-cift');
+
+    wrapEl.appendChild(solBtn); wrapEl.appendChild(sagBtn);
+    wrapEl.classList.add('sayfalama-cift');
+  }
+
+  // Görüntülenecek satır sayısını doğrudan girebilme (sayı kutusu) ya da hazır bir aralıktan
+  // seçebilme (dropdown, üst sınırı her render'da güncel toplam rakip sayısına göre yeniden
+  // hesaplanıyor) — kullanıcı isteği (2026-08-16), büyük listelerde (ör. 100 rakip) +3/-3 ile tek
+  // tek ilerlemek yerine doğrudan istenen satıra atlanabilsin diye.
+  function sayfalamaManuelKontrolCiz(container, state, total, onChange) {
+    container.innerHTML = '';
+    if (total <= state.adim) return;
+
+    var input = document.createElement('input');
+    input.type = 'number'; input.min = String(state.adim); input.max = String(total); input.value = String(state.visible);
+    input.title = 'Kaç satır görünsün? (' + state.adim + '-' + total + ')';
+    input.addEventListener('change', function () {
+      var n = Math.round(Number(input.value));
+      if (!Number.isFinite(n)) { input.value = String(state.visible); return; }
+      state.visible = Math.max(state.adim, Math.min(total, n));
+      onChange();
+    });
+
+    var select = document.createElement('select');
+    var placeholder = document.createElement('option');
+    placeholder.value = ''; placeholder.textContent = 'Hızlı seç…'; placeholder.disabled = true; placeholder.selected = true;
+    select.appendChild(placeholder);
+    for (var n = state.adim; n < total; n += state.adim) {
+      var opt = document.createElement('option');
+      opt.value = String(n); opt.textContent = String(n) + ' satır';
+      select.appendChild(opt);
+    }
+    var tumOpt = document.createElement('option');
+    tumOpt.value = String(total); tumOpt.textContent = 'Tümü (' + total + ')';
+    select.appendChild(tumOpt);
+    select.addEventListener('change', function () {
+      if (!select.value) return;
+      state.visible = Number(select.value);
+      onChange();
+    });
+
+    container.appendChild(input); container.appendChild(select);
   }
 
   // Şu ana kadar eklenen (manuel veya haritadan) rakiplerin listesi — bunlar sadece Google
@@ -370,11 +412,12 @@
 
   function renderRakipListe() {
     var list = el('rakipListe'), bos = el('rakipListeBos'), toggleWrap = el('rakipListeToggleWrap');
+    var manuelSayfalama = el('rakipListeManuelSayfalama');
     var rakipler = rakipListeCache;
     list.innerHTML = '';
     bos.classList.toggle('hidden', rakipler.length > 0);
     rakipSecimGuncellendi();
-    if (!rakipler.length) { toggleWrap.innerHTML = ''; return; }
+    if (!rakipler.length) { toggleWrap.innerHTML = ''; manuelSayfalama.innerHTML = ''; return; }
 
     var tumSecili = rakipler.length > 0 && rakipler.every(function (r) { return !!rakipListeSecili[r.id]; });
     rakipTabloBasligiCiz(list, tumSecili, function (checked) {
@@ -410,6 +453,7 @@
     });
 
     sayfalamaButonlariCiz(toggleWrap, rakipListeState, rakipler.length, renderRakipListe);
+    sayfalamaManuelKontrolCiz(manuelSayfalama, rakipListeState, rakipler.length, renderRakipListe);
   }
 
   el('rakipSilBtn').addEventListener('click', function () {
@@ -809,11 +853,12 @@
 
   function renderAramaSonuclari() {
     var list = el('rakipSonuclar'), toggleWrap = el('rakipSonuclarToggleWrap');
+    var manuelSayfalama = el('rakipSonuclarManuelSayfalama');
     var places = rakipAramaSonuclariCache;
     list.innerHTML = '';
     el('rakipSonuclarBaslik').classList.toggle('hidden', places.length === 0);
     updateRakipSonuclarTopluBtn();
-    if (!places.length) { toggleWrap.innerHTML = ''; return; }
+    if (!places.length) { toggleWrap.innerHTML = ''; manuelSayfalama.innerHTML = ''; return; }
 
     var tumSecili = places.length > 0 && places.every(function (p, i) { return !!rakipAramaSecili[i]; });
     rakipTabloBasligiCiz(list, tumSecili, function (checked) {
@@ -850,6 +895,7 @@
     });
 
     sayfalamaButonlariCiz(toggleWrap, rakipAramaState, places.length, renderAramaSonuclari);
+    sayfalamaManuelKontrolCiz(manuelSayfalama, rakipAramaState, places.length, renderAramaSonuclari);
   }
 
   el('rakipSonuclarTopluEkleBtn').addEventListener('click', function () {

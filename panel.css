@@ -28,13 +28,19 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .mic-lang-toggle button.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: var(--space-2); }
 .actions button { flex: 1 1 auto; min-width: 150px; padding: 0.8rem 1rem; font-size: 0.95rem; font-weight: 500; }
-/* Sayfalama (Daha Fazla/Daha Az) çift butonu — kullanıcı isteği (2026-08-16): her iki yön de
-   anlamlıyken tek bir butonun ortadan ikiye bölünmüş hali gibi görünsün (boşluksuz, sadece dış
-   köşeler yuvarlak, ortada tek bir ayırıcı çizgi). Tek buton kalınca (sadece "daha fazla" ya da
-   sadece "daha az") bu sınıf uygulanmaz, buton normal tam genişlikte kalır. */
+/* Sayfalama (Daha Fazla/Daha Az/Tümünü Görüntüle/Tümünü Gizle) çift butonu — kullanıcı isteği
+   (2026-08-16, ikinci geri bildirim): HER ZAMAN tam bir butonun ortadan ikiye bölünmüş hali gibi
+   görünsün (boşluksuz, sadece dış köşeler yuvarlak, ortada tek bir ayırıcı çizgi) — artık tek
+   buton/tam genişlik durumu yok, uçlarda ikinci buton Tümünü Görüntüle/Tümünü Gizle olarak
+   değişiyor (bkz. rakip-analizi.html#sayfalamaButonlariCiz). */
 .actions.sayfalama-cift { gap: 0; }
 .actions.sayfalama-cift button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .actions.sayfalama-cift button:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; }
+/* Görüntülenecek satır sayısını manuel girme (kutu) / hazır aralıktan seçme (dropdown) —
+   kullanıcı isteği (2026-08-16), büyük listelerde (ör. 100 rakip) doğrudan istenen satıra atlama. */
+.sayfalama-manuel { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+.sayfalama-manuel input[type="number"] { flex: 0 1 6rem; min-width: 0; padding: 0.4rem 0.5rem; font-size: 0.85rem; }
+.sayfalama-manuel select { flex: 1 1 auto; min-width: 0; padding: 0.4rem 0.5rem; font-size: 0.85rem; }
 .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
 .btn-secondary.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 .btn-primary { background: var(--btn-cta); color: #fff; }
