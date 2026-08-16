@@ -21,6 +21,7 @@ import {
 	handleRakipAra,
 	handleRakipListe,
 	handleRakipSil,
+	handleRakipDuzelt,
 	handleKullanimOzet,
 	handleIcerikStrateji,
 	handleAksiyonAnaliz,
@@ -85,6 +86,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handleRakipListe(request, env);
 			case 'POST /panel/rakip-analizi/rakip-sil':
 				return (await requirePanelAuth(request, env)) ?? handleRakipSil(request, env);
+			case 'POST /panel/rakip-analizi/rakip-duzelt':
+				return (await requirePanelAuth(request, env)) ?? handleRakipDuzelt(request, env);
 			case 'GET /panel/rakip-analizi/kullanim-ozet':
 				return (await requirePanelAuth(request, env)) ?? handleKullanimOzet(request, env);
 			case 'POST /panel/rakip-analizi/icerik-strateji':

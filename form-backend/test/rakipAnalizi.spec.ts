@@ -52,7 +52,16 @@ function stubApis() {
 				},
 			);
 		}
-		if (url.includes('/values/') && method === 'PUT') return new Response('{}', { status: 200 });
+		if (url.includes('/values/') && method === 'PUT') {
+			// rakip-duzelt (updateRakipAnalizRow) tek bir satırı YERİNDE günceller — range'deki satır
+			// numarasını (ör. !A3) sheetsAppended[1]'e eşleyip o satırı gerçekten üzerine yazıyoruz,
+			// aksi halde bu stub PUT'u sessizce yutar ve düzeltme hiç kalıcı olmamış gibi görünür.
+			const rowMatch = decodeURIComponent(url).match(/!A(\d+)/);
+			const rowNumber = rowMatch ? Number(rowMatch[1]) : null;
+			const body = JSON.parse(init!.body as string) as { values: string[][] };
+			if (rowNumber && rowNumber >= 2) sheetsAppended[rowNumber - 2] = body.values[0];
+			return new Response('{}', { status: 200 });
+		}
 		if (url.includes('/values/') && method === 'GET') return new Response(JSON.stringify({ values: sheetsAppended }), { status: 200 });
 		if (url.includes('places.googleapis.com')) {
 			return new Response(
@@ -259,6 +268,75 @@ describe('POST /panel/rakip-analizi/rakip-sil', () => {
 	it('rejects requests without a valid panel token', async () => {
 		stubApis();
 		const request = new Request('http://localhost/panel/rakip-analizi/rakip-sil', { method: 'POST', body: JSON.stringify({ ids: ['x'] }) });
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, testEnv, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(401);
+	});
+});
+
+describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
+	it('updates isim/adres/not in place for a manuel row, without changing its id or adding a row', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Eski İsim', adres: 'Eski Adres', not: 'Eski not', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'Yeni İsim', adres: 'Yeni Adres', not: 'Yeni not' }),
+		});
+		expect(response.status).toBe(200);
+
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as { rakipler: { id: string; isim: string; adres: string; not: string }[] };
+		expect(listData.rakipler).toHaveLength(1);
+		expect(listData.rakipler[0]).toMatchObject({ id, isim: 'Yeni İsim', adres: 'Yeni Adres', not: 'Yeni not' });
+	});
+
+	it('rejects editing a harita-sourced row', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Haritadan Bulunan', kaynak: 'harita', adres: 'X' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'Değiştirilmeye Çalışıldı' }),
+		});
+		expect(response.status).toBe(400);
+	});
+
+	it('rejects an unknown id', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id: 'olmayan-id', isim: 'X' }),
+		});
+		expect(response.status).toBe(404);
+	});
+
+	it('rejects an empty isim', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'X', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', { method: 'POST', body: JSON.stringify({ id, isim: '' }) });
+		expect(response.status).toBe(400);
+	});
+
+	it('requires panel auth', async () => {
+		stubApis();
+		const request = new Request('http://localhost/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id: 'x', isim: 'Y' }),
+		});
 		const ctx = createExecutionContext();
 		const response = await worker.fetch(request, testEnv, ctx);
 		await waitOnExecutionContext(ctx);

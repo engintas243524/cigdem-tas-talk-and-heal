@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=14">
+<link rel="stylesheet" href="panel.css?v=15">
 </head>
 <body>
 <div class="panel-wrap">
@@ -92,7 +92,7 @@
       <h3>Kayıtlı Rakipler</h3>
       <p class="muted" id="rakipListeBos">Henüz kaydedilmiş rakip yok.</p>
       <p class="muted">Onay kutusuyla seçtiğin rakip(ler) hem silme hem de aşağıdaki rapor üretimi (Görsel/Video Stratejisi, Aksiyon/Hedef Analizi) için kullanılır.</p>
-      <div class="rakip-table" id="rakipListe"></div>
+      <div class="rakip-table aksiyon-kolonlu" id="rakipListe"></div>
       <div class="actions" id="rakipListeToggleWrap"></div>
       <div class="sayfalama-manuel" id="rakipListeManuelSayfalama"></div>
       <div class="actions">
@@ -395,6 +395,11 @@
   var rakipListeCache = [];
   var rakipListeState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
   var rakipListeSecili = {}; // id -> true, seçili (silinecek) rakipler
+  // Aynı anda en fazla bir satır düzenleniyor — kullanıcı isteği (2026-08-16): sadece kaynak='manuel'
+  // satırlar tablo üzerinde İsim/Adres/Not için düzenlenebilir (Kaynak/Tarih/Nasıl Bulundu sabit
+  // kalır — Kaynak satırın kimliğini belirliyor, Tarih otomatik oluşturma zamanı, Nasıl Bulundu
+  // sadece harita kaynaklı satırlarda anlamlı). Haritadan bulunan satırlar bilerek kapsam dışı.
+  var rakipListeDuzenlemeId = null;
 
   // rakipListeSecili tek bir seçim durumu — hem "Seçilenleri Sil" hem de aşağıdaki rapor
   // üretiminin ("Görsel/Video Stratejisi"/"Aksiyon/Hedef Analizi") hangi rakiplere bakacağını
@@ -430,8 +435,9 @@
     rakipler.slice(0, rakipListeState.visible + 1).forEach(function (r, i) {
       var row = document.createElement('div');
       row.className = 'rakip-row' + (i === rakipListeState.visible ? ' silik-onizleme' : '');
+      var duzenleniyor = rakipListeDuzenlemeId === r.id;
 
-      var checkboxSpan = document.createElement('span');
+      var aksiyonSpan = document.createElement('span');
       var checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = !!rakipListeSecili[r.id];
@@ -439,8 +445,7 @@
         if (checkbox.checked) { rakipListeSecili[r.id] = true; } else { delete rakipListeSecili[r.id]; }
         rakipSecimGuncellendi();
       });
-      checkboxSpan.appendChild(checkbox);
-      row.appendChild(checkboxSpan);
+      aksiyonSpan.appendChild(checkbox);
 
       var tarih = r.createdAtUtc ? new Date(r.createdAtUtc).toLocaleString('tr-TR') : '—';
       var kaynakEtiket = r.kaynak === 'harita' ? 'Haritadan' : 'Manuel';
@@ -448,7 +453,56 @@
       if (r.kaynak === 'harita' && (r.aramaSorgu || r.aramaAdres)) {
         nasilBulundu = "'" + (r.aramaSorgu || '?') + "' aramasıyla" + (r.aramaRadiusMeters ? ' (' + r.aramaRadiusMeters + 'm)' : '') + (r.aramaAdres ? ' — ' + r.aramaAdres : '');
       }
-      rakipVeriHucreleriEkle(row, { isim: r.isim, adres: r.adres || '—', kaynakEtiket: kaynakEtiket, nasilBulundu: nasilBulundu, tarih: tarih, not: r.not || '—' });
+
+      if (r.kaynak === 'manuel' && duzenleniyor) {
+        var isimInput = document.createElement('input'); isimInput.type = 'text'; isimInput.value = r.isim;
+        var adresInput = document.createElement('input'); adresInput.type = 'text'; adresInput.value = r.adres || '';
+        var notInput = document.createElement('input'); notInput.type = 'text'; notInput.value = r.not || '';
+
+        var kaydetBtn = document.createElement('button');
+        kaydetBtn.type = 'button'; kaydetBtn.className = 'btn-secondary'; kaydetBtn.textContent = 'Düzelt';
+        var vazgecBtn = document.createElement('button');
+        vazgecBtn.type = 'button'; vazgecBtn.className = 'btn-secondary'; vazgecBtn.textContent = 'Vazgeç';
+        vazgecBtn.addEventListener('click', function () { rakipListeDuzenlemeId = null; renderRakipListe(); });
+        kaydetBtn.addEventListener('click', function () {
+          var yeniIsim = isimInput.value.trim();
+          if (!yeniIsim) { isimInput.focus(); return; }
+          kaydetBtn.disabled = true; vazgecBtn.disabled = true;
+          authFetch('/panel/rakip-analizi/rakip-duzelt', {
+            method: 'POST',
+            body: JSON.stringify({ id: r.id, isim: yeniIsim, adres: adresInput.value.trim(), not: notInput.value.trim() }),
+          }).then(function (resp) { return resp.json().then(function (data) { return { ok: resp.ok, data: data }; }); })
+            .then(function (res) {
+              if (!res.ok) { kaydetBtn.disabled = false; vazgecBtn.disabled = false; setStatus(el('rakipSilStatus'), res.data.error || 'Düzeltilemedi.', 'err'); return; }
+              rakipListeDuzenlemeId = null;
+              loadRakipListe();
+            })
+            .catch(function (e) {
+              kaydetBtn.disabled = false; vazgecBtn.disabled = false;
+              if (e.message !== 'unauthorized') setStatus(el('rakipSilStatus'), 'Düzeltilemedi, tekrar dene.', 'err');
+            });
+        });
+        aksiyonSpan.appendChild(kaydetBtn); aksiyonSpan.appendChild(vazgecBtn);
+        row.appendChild(aksiyonSpan);
+
+        [isimInput, adresInput, { value: kaynakEtiket, readOnly: true }, { value: nasilBulundu, readOnly: true }, { value: tarih, readOnly: true }, notInput]
+          .forEach(function (field, colIdx) {
+            var cell = document.createElement('span');
+            cell.setAttribute('data-label', RAKIP_TABLO_BASLIKLARI[colIdx]);
+            if (field.readOnly) { cell.textContent = field.value; }
+            else { cell.appendChild(field); }
+            row.appendChild(cell);
+          });
+      } else {
+        if (r.kaynak === 'manuel') {
+          var duzenleBtn = document.createElement('button');
+          duzenleBtn.type = 'button'; duzenleBtn.className = 'btn-secondary'; duzenleBtn.textContent = 'Düzelt';
+          duzenleBtn.addEventListener('click', function () { rakipListeDuzenlemeId = r.id; renderRakipListe(); });
+          aksiyonSpan.appendChild(duzenleBtn);
+        }
+        row.appendChild(aksiyonSpan);
+        rakipVeriHucreleriEkle(row, { isim: r.isim, adres: r.adres || '—', kaynakEtiket: kaynakEtiket, nasilBulundu: nasilBulundu, tarih: tarih, not: r.not || '—' });
+      }
       list.appendChild(row);
     });
 

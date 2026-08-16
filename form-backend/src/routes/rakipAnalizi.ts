@@ -5,6 +5,7 @@ import {
 	emptyRakipAnalizRow,
 	ensureRakipAnaliziTab,
 	deleteRakipAnalizRows,
+	updateRakipAnalizRow,
 } from '../lib/rakipSheets';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
 import { searchCompetitors } from '../lib/places';
@@ -127,6 +128,39 @@ export async function handleRakipSil(request: Request, env: Env): Promise<Respon
 
 	await deleteRakipAnalizRows(env, rowNumbers);
 	return json({ deleted: rowNumbers.length }, request);
+}
+
+// POST /panel/rakip-analizi/rakip-duzelt { id, isim, adres?, not? } — Kayıtlı Rakipler tablosunda
+// satır içi "Düzelt" akışı (2026-08-16, kullanıcı isteği): sadece kaynak='manuel' satırlar
+// düzenlenebilir (haritadan bulunan satırların kimliği arama sonucundan geliyor, bilerek kapsam
+// dışı). Sadece İsim/Adres/Not güncellenir — Kaynak/Tarih/Nasıl Bulundu (arama* alanları) sabit
+// kalır, id/rowNumber değişmediği için Sheet'teki AYNI satır yerinde güncellenir (append değil).
+export async function handleRakipDuzelt(request: Request, env: Env): Promise<Response> {
+	let body: { id?: unknown; isim?: unknown; adres?: unknown; not?: unknown };
+	try {
+		body = (await request.json()) as typeof body;
+	} catch {
+		return errorResponse(request, 400, 'Geçersiz istek.');
+	}
+	const id = String(body.id ?? '');
+	const isim = String(body.isim ?? '').trim();
+	if (!id) return errorResponse(request, 400, 'Rakip id gerekli.');
+	if (!isim) return errorResponse(request, 400, 'Rakip ismi gerekli.');
+
+	await ensureRakipAnaliziTab(env);
+	const rows = await getAllRakipAnalizRows(env);
+	const bulunan = rows.find(({ row }) => row.id === id);
+	if (!bulunan) return errorResponse(request, 404, 'Rakip bulunamadı.');
+	if (bulunan.row.kaynak !== 'manuel') {
+		return errorResponse(request, 400, 'Sadece manuel eklenen rakipler tablo üzerinden düzenlenebilir.');
+	}
+
+	const adres = String(body.adres ?? '').trim();
+	const not = String(body.not ?? '')
+		.trim()
+		.slice(0, NOTE_MAX_LENGTH);
+	await updateRakipAnalizRow(env, bulunan.rowNumber, bulunan.row, { isim, adres, not });
+	return json({ id }, request);
 }
 
 // GET /panel/rakip-analizi/rakip-ara?adres=&sorgu=&radiusMeters= — adres/semt metni + serbest

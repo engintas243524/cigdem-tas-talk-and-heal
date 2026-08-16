@@ -100,6 +100,24 @@ export async function getAllRakipAnalizRows(env: Env): Promise<{ rowNumber: numb
 	});
 }
 
+// Var olan bir rakip satırını YERİNDE günceller (append DEĞİL) — Kayıtlı Rakipler tablosunun
+// "Düzelt" akışı (2026-08-16, kullanıcı isteği) bunu çağırıyor. rakipTakipSheets.ts#updateRakipTakipRow
+// ile aynı desen: mevcut satır okunur, patch üstüne yazılır, tüm satır tek seferde geri yazılır.
+export async function updateRakipAnalizRow(
+	env: Env,
+	rowNumber: number,
+	mevcutRow: RakipAnalizRow,
+	patch: Partial<RakipAnalizRow>,
+): Promise<void> {
+	const yeniRow: RakipAnalizRow = { ...mevcutRow, ...patch };
+	const range = `${RAKIP_ANALIZI_TAB_NAME}!A${rowNumber}:${columnLetter(RAKIP_ANALIZI_COLUMNS.length - 1)}${rowNumber}`;
+	const values = [RAKIP_ANALIZI_COLUMNS.map((key) => String(yeniRow[key] ?? ''))];
+	await sheetsFetch(env, `/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
+		method: 'PUT',
+		body: JSON.stringify({ values }),
+	});
+}
+
 // Verilen (1-indexed) satır numaralarını RakipAnalizi sekmesinden tamamen siler. Sheets API'nin
 // deleteDimension'ı her istek uygulandıkça alttaki satırları yukarı kaydırdığı için, aynı
 // batchUpdate içindeki istekler BÜYÜKTEN KÜÇÜĞE sıralanmalı — yoksa ikinci silme yanlış satırı
