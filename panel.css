@@ -91,7 +91,9 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 #rakipSonuclar li:first-child { border-top: none; }
 #rakipSonuclar li button { flex: 0 0 auto; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
 /* Kullanım Sayacı (rakip-analizi.html) */
-.kota-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem; }
+/* Sabit 2 sütun: Adres Bulma/Rakip Arama üst satır, Görsel-Video Stratejisi/Aksiyon-Hedef Analizi
+   alt satır — auto-fit ile geniş ekranda 4'ü tek satıra sığıyordu, bu düzeni bozuyordu. */
+.kota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
 .kota-tile { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.6rem 0.75rem; }
 .kota-baslik { font-size: 0.78rem; color: var(--taupe); margin-bottom: 0.25rem; }
 .kota-deger { font-size: 1.05rem; font-weight: 600; }

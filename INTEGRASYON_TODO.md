@@ -1429,3 +1429,19 @@ Talk and Heal'in kendi niteliksel parametreleri (sosyal medya aktifliği, fiyat 
 de skorlanabilir hale gelir, sadece randevu sayılarıyla sınırlı kalmaz. Kapsam/tasarım detayları
 henüz netleşmedi (nerede toplanacak — periyot kapanmadan önce mi hatırlatılacak, otomatik cron
 modunda kimse yoksa ne olacak).
+
+## Kullanıcı isteği — Deploy sorunu + Sheet hücre büyümesi (tekrar) + Limit yükseltme akışı (2026-08-16, birebir kaydedildi)
+
+Ekran görüntüsüyle birlikte gönderilen 3 maddelik istek:
+
+- "[Ekran görüntüsü] / sonrası hala gerçek kotalar yok ve gizli yapılan görsel rapor sayısı da
+  yazılmamış, defalarca cmd shift R ile sayfayı yeniledim aam hala eskisi gibi"
+- "google sheets te Rapor metni hücresi hala aşağı doğru uzun formatta, daha önce bunu ayarla
+  dediğimde hallettiğini söylemiştin, ben bütün tablonun hücre yüksekliklerinin sabit kalmasını
+  istiyorum."
+- "Bu Ayki Kullanım bölümündeki kutulara istenildiği zaman limit artırımı yapılabilmesi için bir
+  dropdown ekleyelim ve limiti yükselt seçeneğine tıklanması ile sağlayıcı tarafında yükleme
+  yapacakları linke gidiliebilsin ve kart bilgileri ile yükleme yapılıp limit güncellenerek
+  /'tan sonraki limit otomatik olarak artsın."
+
+**Durum güncellemesi (aynı gün) yakında eklenecek.**

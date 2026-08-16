@@ -59,7 +59,7 @@ describe('kullanimKaydi', () => {
 		expect(ozet.adresBulma.aylikLimit).toBe(10000);
 		expect(ozet.rakipArama.kullanilan).toBe(1);
 		expect(ozet.icerikStrateji.kullanilan).toBe(0);
-		expect(ozet.icerikStrateji.aylikLimit).toBeNull();
+		expect(ozet.icerikStrateji.aylikLimit).toBe(12);
 	});
 
 	it('excludes events logged in a previous month', async () => {

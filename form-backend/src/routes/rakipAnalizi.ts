@@ -270,6 +270,15 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	const kaynakBelgeler = Array.isArray(body.kaynakBelgeler) ? body.kaynakBelgeler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 	const kaynakPdfler = Array.isArray(body.kaynakPdfler) ? body.kaynakPdfler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 
+	await ensureKullanimKaydiTab(env);
+	if (await kotaDolduMu(env, 'icerikStrateji')) {
+		return json(
+			{ error: 'Bu ayki Görsel/Video Stratejisi kotası doldu. Ay başında sıfırlanır.', limitUrl: ANTHROPIC_BILLING_URL },
+			request,
+			{ status: 402 },
+		);
+	}
+
 	await ensureRakipAnaliziTab(env);
 	const rakipler = await getAllRakipAnalizRows(env);
 	const rakipOzet = rakipOzetOlustur(rakipler, rakipIds, parametreler);
@@ -290,7 +299,6 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 		}
 		return errorResponse(request, 502, 'Rapor şu an üretilemedi, lütfen tekrar dene.', err);
 	}
-	await ensureKullanimKaydiTab(env);
 	await logKullanim(env, 'icerikStrateji', istek.slice(0, 200));
 
 	// Kullanıcı kararı (2026-08-15): raporlar artık RakipAnalizi sekmesine satır olarak
@@ -333,6 +341,13 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const kaynakBelgeler = Array.isArray(body.kaynakBelgeler) ? body.kaynakBelgeler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 	const kaynakPdfler = Array.isArray(body.kaynakPdfler) ? body.kaynakPdfler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 
+	await ensureKullanimKaydiTab(env);
+	if (await kotaDolduMu(env, 'aksiyonAnaliz')) {
+		return json({ error: 'Bu ayki Aksiyon/Hedef Analizi kotası doldu. Ay başında sıfırlanır.', limitUrl: ANTHROPIC_BILLING_URL }, request, {
+			status: 402,
+		});
+	}
+
 	const bookingRows = await getAllRows(env);
 	const aktifRandevu = bookingRows.filter(({ row }) => !row.cancelledAt).length;
 	const iptalRandevu = bookingRows.filter(({ row }) => row.cancelledAt).length;
@@ -361,7 +376,6 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 		}
 		return errorResponse(request, 502, 'Analiz şu an üretilemedi, lütfen tekrar dene.', err);
 	}
-	await ensureKullanimKaydiTab(env);
 	await logKullanim(env, 'aksiyonAnaliz', yorum.slice(0, 200));
 
 	// Kullanıcı kararı (2026-08-15) — bkz. handleIcerikStrateji'deki aynı not: raporlar artık

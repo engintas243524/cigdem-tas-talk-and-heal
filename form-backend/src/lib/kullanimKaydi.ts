@@ -1,8 +1,22 @@
-import { KULLANIM_KAYDI_TAB_NAME, KULLANIM_KAYDI_COLUMNS, KULLANIM_KAYDI_COLUMN_LABELS, KULLANIM_KATEGORILERI, type KullanimKategori } from '../config';
+import {
+	KULLANIM_KAYDI_TAB_NAME,
+	KULLANIM_KAYDI_COLUMNS,
+	KULLANIM_KAYDI_COLUMN_LABELS,
+	KULLANIM_KATEGORILERI,
+	type KullanimKategori,
+} from '../config';
 import { columnLetter, sheetsFetch } from './sheets';
 import type { Env } from '../types';
 
 type KullanimKaydiRow = Record<(typeof KULLANIM_KAYDI_COLUMNS)[number], string>;
+
+// kotaDolduMu true dönünce çağıran route bunu yakalayıp 402 döndürür (bkz. routes/rakipAnalizi.ts,
+// routes/rakipTakip.ts) — Google kategorilerindeki aynı desen, Anthropic kategorileri için de.
+export class KotaDolduError extends Error {
+	constructor(public readonly kategori: KullanimKategori) {
+		super(`Kota doldu: ${kategori}`);
+	}
+}
 
 // RakipAnalizi'nin ensureRakipAnaliziTab'ıyla aynı desen — tab yoksa oluştur, varsa kolon
 // sayısını genişlet, header'ı her seferinde yeniden yaz (kendini onaran).
@@ -105,8 +119,8 @@ export async function getKullanimOzet(env: Env): Promise<Record<KullanimKategori
 	return ozet;
 }
 
-// Bir kategori bu ay için kotasını doldurmuş mu? aylikLimit=null olan kategoriler (Anthropic
-// çağrıları) burada hiç sınırlanmaz — onların "dolması" Anthropic'in kendi hata dönüşüyle anlaşılır.
+// Bir kategori bu ay için kotasını doldurmuş mu? aylikLimit=null olan bir kategori (şu an yok,
+// ama gelecekte eklenebilir) burada hiç sınırlanmaz.
 export async function kotaDolduMu(env: Env, kategori: KullanimKategori): Promise<boolean> {
 	const limit = KULLANIM_KATEGORILERI[kategori].aylikLimit;
 	if (limit === null) return false;

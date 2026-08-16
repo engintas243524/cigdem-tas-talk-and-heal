@@ -161,6 +161,49 @@ describe('POST /panel/rakip-analizi/rakip-takip/uret', () => {
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(401);
 	});
+
+	it("rejects with 402 once this month's aksiyonAnaliz quota (13) is full, without calling Claude", async () => {
+		const { tabRows, fetchMock } = stubApis([]);
+		const now = new Date().toISOString();
+		const kk = new Map<number, string[]>();
+		for (let i = 0; i < 13; i++) kk.set(i + 2, [`k${i}`, now, 'aksiyonAnaliz', 'önceki adım']);
+		tabRows.set('KullanimKaydi', kk);
+
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/uret', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik' }),
+		});
+		expect(response.status).toBe(402);
+		const data = (await response.json()) as { error: string };
+		expect(data.error).toContain('Aksiyon/Hedef Analizi kotası doldu');
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
+	});
+
+	it('logs the Görsel/Video Stratejisi report generation under icerikStrateji, not just aksiyonAnaliz', async () => {
+		const { tabRows } = stubApis([]);
+		await authedRequest('/panel/rakip-analizi/rakip-takip/uret', { method: 'POST', body: JSON.stringify({ periyotTuru: 'haftalik' }) });
+
+		const kullanimRows = [...(tabRows.get('KullanimKaydi')?.values() ?? [])];
+		expect(kullanimRows.some((r) => r[2] === 'icerikStrateji')).toBe(true);
+		expect(kullanimRows.some((r) => r[2] === 'aksiyonAnaliz')).toBe(true);
+	});
+
+	it("still completes the Aksiyon/Hedef step when this month's icerikStrateji quota is full, with a placeholder içerik report", async () => {
+		const { tabRows } = stubApis([]);
+		const now = new Date().toISOString();
+		const kk = new Map<number, string[]>();
+		for (let i = 0; i < 12; i++) kk.set(i + 2, [`k${i}`, now, 'icerikStrateji', 'önceki rapor']);
+		tabRows.set('KullanimKaydi', kk);
+
+		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/uret', {
+			method: 'POST',
+			body: JSON.stringify({ periyotTuru: 'haftalik' }),
+		});
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { asama: string; icerikRaporu: string };
+		expect(data.asama).toBe('yeniDonem');
+		expect(data.icerikRaporu).toContain('kotası dolu');
+	});
 });
 
 describe('POST /panel/rakip-analizi/rakip-takip/ayar', () => {
@@ -241,6 +284,18 @@ describe('runRakipTakipSweep (cron)', () => {
 		fetchMock.mockClear();
 
 		await runRakipTakipSweep(env); // 2. tick, hemen sonra — hiçbir dönemin süresi dolmamış olmalı
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
+	});
+
+	it('when aksiyonAnaliz quota is already full, skips every period without throwing (per-period try/catch)', async () => {
+		const { tabRows, fetchMock } = stubApis([]);
+		await authedRequest('/panel/rakip-analizi/rakip-takip/ayar', { method: 'POST', body: JSON.stringify({ acik: true }) });
+		const now = new Date().toISOString();
+		const kk = new Map<number, string[]>();
+		for (let i = 0; i < 13; i++) kk.set(i + 2, [`k${i}`, now, 'aksiyonAnaliz', 'önceki adım']);
+		tabRows.set('KullanimKaydi', kk);
+
+		await expect(runRakipTakipSweep(env)).resolves.not.toThrow();
 		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
 	});
 });

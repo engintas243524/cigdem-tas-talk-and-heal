@@ -324,6 +324,21 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		const docBlock = anthropicBody.messages[0].content.find((b: { type: string }) => b.type === 'document');
 		expect(docBlock.source).toEqual({ type: 'base64', media_type: 'application/pdf', data: 'ZmFrZS1wZGYtYnl0ZXM=' });
 	});
+
+	it("rejects with 402 once this month's icerikStrateji quota (12) is full, without calling Claude", async () => {
+		const { sheetsAppended, fetchMock } = stubApis();
+		const now = new Date().toISOString();
+		for (let i = 0; i < 12; i++) sheetsAppended.push([`k${i}`, now, 'icerikStrateji', 'önceki rapor']);
+
+		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum' }),
+		});
+		expect(response.status).toBe(402);
+		const data = (await response.json()) as { error: string };
+		expect(data.error).toContain('Görsel/Video Stratejisi kotası doldu');
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
+	});
 });
 
 describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
@@ -363,6 +378,21 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).not.toContain('Seçilen rakip verisi');
+	});
+
+	it("rejects with 402 once this month's aksiyonAnaliz quota (13) is full, without calling Claude", async () => {
+		const { sheetsAppended, fetchMock } = stubApis();
+		const now = new Date().toISOString();
+		for (let i = 0; i < 13; i++) sheetsAppended.push([`k${i}`, now, 'aksiyonAnaliz', 'önceki rapor']);
+
+		const response = await authedRequest('/panel/rakip-analizi/aksiyon-analiz', {
+			method: 'POST',
+			body: JSON.stringify({ yorum: 'Bu ay randevular azaldı' }),
+		});
+		expect(response.status).toBe(402);
+		const data = (await response.json()) as { error: string };
+		expect(data.error).toContain('Aksiyon/Hedef Analizi kotası doldu');
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('api.anthropic.com'))).toBe(false);
 	});
 });
 

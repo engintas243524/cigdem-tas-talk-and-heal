@@ -295,14 +295,22 @@ export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[
 	aramaRadiusMeters: 'Arama Yarıçapı (m)',
 };
 
-// Rakip Analizi ekranının kullanım kotası/sayaç sistemi (2026-08-15). Her API çağrısı burada bir
-// "kategori" olarak loglanır — hem Sheet'te insan-okunur bir kayıt (hangi tarihte hangi işlem)
-// hem de aylık kota kontrolü için tek kaynak. aylikLimit olan kategoriler (Google Places/
-// Geocoding — Google ücretsiz kotayı aşınca engellemez, sessizce faturalandırmaya başlar, o
-// yüzden BİZİM kendi sayacımızla sert durdurmamız gerekiyor) aşılınca istek reddedilir.
-// aylikLimit=null olan kategoriler (Anthropic/Claude çağrıları) sayılır ama sayıyla
-// engellenmez — Anthropic'in kendi bakiyesi bittiğinde zaten kendisi reddediyor
-// (bkz. lib/claude.ts InsufficientCreditError), o an yakalanıp aynı şekilde engellenmiş gösterilir.
+// Rakip Analizi ekranının kullanım kotası/sayaç sistemi (2026-08-15, icerikStrateji/aksiyonAnaliz
+// limitleri 2026-08-16 eklendi). Her API çağrısı burada bir "kategori" olarak loglanır — hem
+// Sheet'te insan-okunur bir kayıt (hangi tarihte hangi işlem) hem de aylık kota kontrolü için tek
+// kaynak. Tüm kategorilerde aylikLimit aşılınca istek reddedilir (bkz. kotaDolduMu).
+// - adresBulma/rakipArama (Google Places/Geocoding): Google ücretsiz kotayı aşınca engellemiyor,
+//   sessizce faturalandırmaya başlıyor — limit BİZİM kendi güvenlik sınırımız.
+// - icerikStrateji/aksiyonAnaliz (Anthropic/Claude rapor üretimi): bu projenin Anthropic API
+//   key'ine ayrılan aylık bütçe $5 (kullanıcı teyidi, 2026-08-16). Rapor başına maliyet ek
+//   kaynak/PDF yokken ~$0.03-0.05, İçe Aktar ile eklenen metin kaynaklarının üst sınırında
+//   (10 belge × 20.000 karakter) ~$0.15-0.17'ye çıkıyor (Sonnet 5: $2/M girdi, $10/M çıktı,
+//   4096 token çıktı varsayımıyla) — PDF ekleri bunun da üstüne çıkabilir (sayfa sayısı
+//   sınırlanmadığı için üst sınırı yok), o yüzden limit metin-ekli en kötü senaryo baz alınarak
+//   ($0.20/rapor) hesaplandı: $5 / $0.20 ≈ 25 rapor, iki kategori arasında ~yarı yarıya
+//   paylaştırıldı. Anthropic'in kendi bakiyesi (InsufficientCreditError) zaten son çare olarak
+//   duruyor, bu limit ondan ÖNCE devreye giren ek bir güvenlik katmanı. Kullanım artarsa ya da
+//   bütçe değişirse bu iki sayı elle güncellenmeli — otomatik/dinamik hesaplama yok.
 export const KULLANIM_KAYDI_TAB_NAME = 'KullanimKaydi';
 
 export const KULLANIM_KAYDI_COLUMNS = ['id', 'tarihUtc', 'kategori', 'detay'] as const;
@@ -317,8 +325,8 @@ export const KULLANIM_KAYDI_COLUMN_LABELS: Record<(typeof KULLANIM_KAYDI_COLUMNS
 export const KULLANIM_KATEGORILERI = {
 	adresBulma: { etiket: 'Adres Bulma', aylikLimit: 10000 as number | null },
 	rakipArama: { etiket: 'Rakip Arama', aylikLimit: 5000 as number | null },
-	icerikStrateji: { etiket: 'Görsel/Video Stratejisi', aylikLimit: null as number | null },
-	aksiyonAnaliz: { etiket: 'Aksiyon/Hedef Analizi', aylikLimit: null as number | null },
+	icerikStrateji: { etiket: 'Görsel/Video Stratejisi', aylikLimit: 12 as number | null },
+	aksiyonAnaliz: { etiket: 'Aksiyon/Hedef Analizi', aylikLimit: 13 as number | null },
 } as const;
 
 export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;

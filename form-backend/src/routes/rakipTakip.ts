@@ -11,7 +11,7 @@ import {
 import { parametreSkorlariUret } from '../lib/rakipParametreSkor';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
 import { errorResponse, json } from '../lib/http';
-import { ensureKullanimKaydiTab, logKullanim } from '../lib/kullanimKaydi';
+import { ensureKullanimKaydiTab, logKullanim, kotaDolduMu, KotaDolduError } from '../lib/kullanimKaydi';
 import {
 	rakipOzetOlustur,
 	AKSIYON_ANALIZ_SYSTEM_PROMPT,
@@ -113,6 +113,11 @@ export async function rakipTakipAdimUygula(
 ): Promise<RakipTakipAdimSonucu> {
 	await ensureRakipTakipTab(env);
 	await ensureRakipAnaliziTab(env);
+	await ensureKullanimKaydiTab(env);
+	// Bu döngünün her adımı en az bir Aksiyon/Hedef Analizi çağrısı yapar (aşağıdaki 3 dal) — kota
+	// dolmuşsa Claude'a hiç gitmeden en baştan durur (manuel tetikleme 402 döner, cron sweep
+	// kendi try/catch'inde yakalayıp bu periyodu sessizce atlar, bkz. scheduled.ts).
+	if (await kotaDolduMu(env, 'aksiyonAnaliz')) throw new KotaDolduError('aksiyonAnaliz');
 	const durum = await getRakipTakipDurumu(env, periyotTuru);
 	if (!durum) throw new Error(`RakipTakip satırı bulunamadı: ${periyotTuru}`);
 	const { rowNumber, row } = durum;
@@ -177,19 +182,25 @@ export async function rakipTakipAdimUygula(
 
 	// Görsel/Video Stratejisi (küratif) — aynı rakip setiyle, RakipTakip satırına yazılmıyor
 	// (kaydetmiyoruz, bkz. INTEGRASYON_TODO.md "Sheet büyümesi" kararı), sadece sonuçla dönüyor.
-	// Başarısız olsa bile Aksiyon/Hedef tarafındaki asıl döngü adımını geçersiz kılmaz.
+	// Başarısız olsa bile Aksiyon/Hedef tarafındaki asıl döngü adımını geçersiz kılmaz. Kendi
+	// kotasını da (icerikStrateji) diğer üretim yollarıyla aynı şekilde tüketir/loglar — önceden
+	// bu çağrı hiç loglanmıyordu, kota sayacı gerçek harcamayı eksik gösteriyordu (2026-08-16 fix).
 	let icerikRaporu = '';
-	try {
-		const icerikPrompt = `Periyot türü: ${periyotTuru}\n\nToplanan rakip verisi:\n${rakipOzet}\n\nBu periyot için küratif içerik/güncel trend önerisi üret.`;
-		icerikRaporu = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, icerikPrompt);
-	} catch (err) {
-		icerikRaporu =
-			err instanceof InsufficientCreditError
-				? '(Anthropic bakiyesi yetersiz, içerik raporu üretilemedi.)'
-				: '(İçerik raporu şu an üretilemedi.)';
+	if (await kotaDolduMu(env, 'icerikStrateji')) {
+		icerikRaporu = '(Bu ayki Görsel/Video Stratejisi kotası dolu, içerik raporu üretilemedi.)';
+	} else {
+		try {
+			const icerikPrompt = `Periyot türü: ${periyotTuru}\n\nToplanan rakip verisi:\n${rakipOzet}\n\nBu periyot için küratif içerik/güncel trend önerisi üret.`;
+			icerikRaporu = await generateReport(env, ICERIK_STRATEJI_SYSTEM_PROMPT, icerikPrompt);
+			await logKullanim(env, 'icerikStrateji', `RakipTakip ${periyotTuru}: ${asama}`);
+		} catch (err) {
+			icerikRaporu =
+				err instanceof InsufficientCreditError
+					? '(Anthropic bakiyesi yetersiz, içerik raporu üretilemedi.)'
+					: '(İçerik raporu şu an üretilemedi.)';
+		}
 	}
 
-	await ensureKullanimKaydiTab(env);
 	await logKullanim(env, 'aksiyonAnaliz', `RakipTakip ${periyotTuru}: ${asama}`);
 
 	return { asama, mesaj, aksiyonRaporu, icerikRaporu };
@@ -226,6 +237,13 @@ export async function handleRakipTakipUret(request: Request, env: Env): Promise<
 		if (err instanceof InsufficientCreditError) {
 			return json(
 				{ error: 'Anthropic bakiyeniz bitti. Devam etmek için kredi yüklemeniz gerekiyor.', limitUrl: ANTHROPIC_BILLING_URL },
+				request,
+				{ status: 402 },
+			);
+		}
+		if (err instanceof KotaDolduError) {
+			return json(
+				{ error: 'Bu ayki Aksiyon/Hedef Analizi kotası doldu. Ay başında sıfırlanır.', limitUrl: ANTHROPIC_BILLING_URL },
 				request,
 				{ status: 402 },
 			);
