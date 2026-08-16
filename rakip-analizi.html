@@ -731,11 +731,22 @@
     var status = document.createElement('div');
     status.className = 'status';
 
+    // Anthropic'in yükleme-tamamlandı bildirimi/bakiye API'si yok (araştırıldı, doğrulandı) — bu
+    // form TAMAMEN beyana dayalı, girilen tutar sorgulanmadan doğrudan limite çevriliyor. Deneme/
+    // yanlışlıkla girilen bir tutar limiti gerçek dışı şişirir (2026-08-16'da tam bu yaşandı, elle
+    // düzeltildi) — confirm() burada son bir engel, otomatik doğrulama değil.
     submitBtn.addEventListener('click', function () {
       var paraBirimi = (select.value === 'DIGER' ? digerInput.value : select.value).trim().toUpperCase();
       var tutar = Number(tutarInput.value);
       if (!/^[A-Z]{3}$/.test(paraBirimi)) { setStatus(status, 'Geçerli bir 3 harfli para birimi kodu gir (ör. TRY, USD, EUR, GBP).', 'err'); return; }
       if (!tutar || tutar <= 0) { setStatus(status, 'Geçerli bir tutar gir.', 'err'); return; }
+      var onay = confirm(
+        tutar + ' ' + paraBirimi + " tutarını GERÇEKTEN sağlayıcıya (Anthropic) yüklediğinden emin misin?\n\n" +
+        'Bu bir deneme/test değilse ve ödeme gerçekten yapıldıysa devam et. Yanlış ya da deneme amaçlı bir tutar ' +
+        'girmek limiti gerçek dışı yükseltir — bunu düzeltmenin tek yolu Google Sheet\'teki KullanimLimitleri ' +
+        "sekmesinde ilgili satırın Limit sütununu elle düzeltmek."
+      );
+      if (!onay) return;
       submitBtn.disabled = true;
       setStatus(status, 'Güncelleniyor…', '');
       authFetch('/panel/rakip-analizi/kullanim-limit-arttir', {
@@ -748,7 +759,13 @@
         }).catch(function () { submitBtn.disabled = false; setStatus(status, 'Güncellenemedi, tekrar dene.', 'err'); });
     });
 
-    form.appendChild(link); form.appendChild(row); form.appendChild(submitBtn); form.appendChild(status);
+    var uyariNot = document.createElement('p');
+    uyariNot.className = 'muted';
+    uyariNot.style.fontSize = '0.72rem';
+    uyariNot.style.margin = '0.3rem 0 0';
+    uyariNot.textContent = 'Yalnızca gerçekten ödediğin tutarı gir — girilen tutar doğrulanmıyor. Yanlış girdiysen, Google Sheet\'teki KullanimLimitleri sekmesinden elle düzeltebilirsin.';
+
+    form.appendChild(link); form.appendChild(row); form.appendChild(submitBtn); form.appendChild(status); form.appendChild(uyariNot);
     toggleBtn.addEventListener('click', function () { form.classList.toggle('hidden'); });
     wrap.appendChild(toggleBtn); wrap.appendChild(form);
     return wrap;

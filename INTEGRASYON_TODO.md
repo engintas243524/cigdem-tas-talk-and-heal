@@ -1499,3 +1499,23 @@ teki ilgili sayfa satır ve sütunda değişsin."
 Testler: 256/256 geçti (yeni testler: harita satırının artık düzenlenebilmesi, kaynak değiştirme,
 nasılBulundu→aramaSorgu eşlemesi, tarih doğrulama, link'in sadece açıkça gönderildiğinde
 güncellenmesi — inline-edit formunda link alanı olmadığı için sessizce silinmemeli).
+
+## Kullanıcı bildirimi — Limit Yükselt'e gerçek olmayan test tutarı girildi (2026-08-16)
+
+Kullanıcı Görsel/Video Stratejisi sayacında "gerçekte yüklemediğim 300 TL" girip Limiti Güncelle'ye
+bastığını bildirdi, limit 0/12'den 0/32'ye çıktı. İstek: (1) gerçek değere (0/12) geri getir, (2)
+bu sınıf hatayı önlemek/telafi etmek için bir şey yapılsın — gerekirse yükleme kanıtı bir link ile
+alınsın ya da otomatik doğrulama yapılsın.
+
+**Durum güncellemesi (aynı gün, tamamlandı):**
+- Anthropic'in yükleme-tamamlandı webhook'u/bakiye API'si zaten yok (daha önce araştırılmıştı) —
+  otomatik doğrulama hâlâ mümkün değil. Bir "kanıt linki" de gerçek doğrulama sağlamıyor (backend
+  Çiğdem'in kimlik doğrulamalı Anthropic sayfasına erişemez, link sadece kozmetik olurdu).
+- Anlık düzeltme: geçici bir _debug route ile (kullanılıp hemen kaldırıldı, kod tabanında iz yok)
+  KullanimLimitleri'ndeki icerikStrateji limiti gerçek değeri olan 12'ye, GiderTakibi'ndeki hatalı
+  harcama kaydı da net sıfıra (gerçek olmayan +200 TRY girişi + doğru -200 TRY telafisi) düzeltildi.
+- Kalıcı önlem: "Limiti Güncelle" butonuna artık bir `confirm()` onayı eklendi — tutarın GERÇEKTEN
+  ödendiğini teyit ettiriyor ve yanlış girilirse KullanimLimitleri sekmesinden elle
+  düzeltilebileceğini hatırlatıyor. Formda kalıcı bir uyarı notu da var (confirm'e gerek kalmadan
+  görünür). Otomatik doğrulama yerine bilinçli beyan + kolay elle düzeltme yolu tercih edildi —
+  tek gerçekçi seçenek buydu.
