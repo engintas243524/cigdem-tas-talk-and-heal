@@ -276,7 +276,7 @@ describe('POST /panel/rakip-analizi/rakip-sil', () => {
 });
 
 describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
-	it('updates isim/adres/not in place for a manuel row, without changing its id or adding a row', async () => {
+	it('updates isim/adres/kaynak/not in place, without changing its id or adding a row', async () => {
 		stubApis();
 		const created = await authedRequest('/panel/rakip-analizi/rakip', {
 			method: 'POST',
@@ -286,7 +286,7 @@ describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
 
 		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
 			method: 'POST',
-			body: JSON.stringify({ id, isim: 'Yeni İsim', adres: 'Yeni Adres', not: 'Yeni not' }),
+			body: JSON.stringify({ id, isim: 'Yeni İsim', adres: 'Yeni Adres', kaynak: 'manuel', not: 'Yeni not' }),
 		});
 		expect(response.status).toBe(200);
 
@@ -296,7 +296,9 @@ describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
 		expect(listData.rakipler[0]).toMatchObject({ id, isim: 'Yeni İsim', adres: 'Yeni Adres', not: 'Yeni not' });
 	});
 
-	it('rejects editing a harita-sourced row', async () => {
+	// Kullanıcı geri bildirimi (2026-08-16, ikinci tur): "listedeki HER rakibin ... tüm başlıklara
+	// ait düzenleme yapılabilsin" — ilk sürümdeki "sadece manuel" kısıtı burada kasıtlı kaldırıldı.
+	it('allows editing a harita-sourced row too (no longer manuel-only)', async () => {
 		stubApis();
 		const created = await authedRequest('/panel/rakip-analizi/rakip', {
 			method: 'POST',
@@ -306,16 +308,128 @@ describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
 
 		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
 			method: 'POST',
-			body: JSON.stringify({ id, isim: 'Değiştirilmeye Çalışıldı' }),
+			body: JSON.stringify({ id, isim: 'Düzeltildi', kaynak: 'harita', adres: 'X' }),
+		});
+		expect(response.status).toBe(200);
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as { rakipler: { isim: string }[] };
+		expect(listData.rakipler[0].isim).toBe('Düzeltildi');
+	});
+
+	it('allows switching kaynak between manuel/harita', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'X', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'X', kaynak: 'harita' }),
+		});
+		expect(response.status).toBe(200);
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as { rakipler: { kaynak: string }[] };
+		expect(listData.rakipler[0].kaynak).toBe('harita');
+	});
+
+	it('rejects an invalid kaynak', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'X', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'X', kaynak: 'bilinmeyen' }),
 		});
 		expect(response.status).toBe(400);
+	});
+
+	// nasilBulundu tek bir Sheet sütunu değil — düzenlenince ham metin aramaSorgu'ya yazılıp
+	// aramaAdres/aramaRadiusMeters temizleniyor (bkz. handler yorumu).
+	it('writes an edited nasilBulundu into aramaSorgu and clears aramaAdres/aramaRadiusMeters', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({
+				isim: 'X',
+				kaynak: 'harita',
+				aramaAdres: 'kadıköy',
+				aramaSorgu: 'psikolog',
+				aramaRadiusMeters: '2000',
+			}),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'X', kaynak: 'harita', nasilBulundu: 'bir tanıdıktan duyuldu' }),
+		});
+		expect(response.status).toBe(200);
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as { rakipler: { aramaSorgu: string; aramaAdres: string; aramaRadiusMeters: string }[] };
+		expect(listData.rakipler[0].aramaSorgu).toBe('bir tanıdıktan duyuldu');
+		expect(listData.rakipler[0].aramaAdres).toBe('');
+		expect(listData.rakipler[0].aramaRadiusMeters).toBe('');
+	});
+
+	it('updates the creation date (tarih) when a valid date is given, rejects an invalid one', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'X', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+
+		const kotu = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'X', kaynak: 'manuel', tarih: 'gecersiz-tarih' }),
+		});
+		expect(kotu.status).toBe(400);
+
+		const iyi = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'X', kaynak: 'manuel', tarih: '2026-01-01T00:00:00.000Z' }),
+		});
+		expect(iyi.status).toBe(200);
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as { rakipler: { createdAtUtc: string }[] };
+		expect(listData.rakipler[0].createdAtUtc).toBe('2026-01-01T00:00:00.000Z');
+	});
+
+	// link opsiyonel — Kayıtlı Rakipler tablosunun inline-edit formunda link alanı yok, o path
+	// link göndermez ve mevcut değeri SİLMEMELİ (Rakip Ekle'nin ara-ve-düzenle akışı gönderiyor).
+	it('only updates link when the field is explicitly sent, never clears it implicitly', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'X', kaynak: 'manuel', link: 'https://eski-link.example' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+
+		await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'X güncellendi', kaynak: 'manuel' }), // link YOK
+		});
+		let listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		let listData = (await listResponse.json()) as { rakipler: { link: string }[] };
+		expect(listData.rakipler[0].link).toBe('https://eski-link.example');
+
+		await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'X güncellendi', kaynak: 'manuel', link: 'https://yeni-link.example' }),
+		});
+		listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		listData = (await listResponse.json()) as { rakipler: { link: string }[] };
+		expect(listData.rakipler[0].link).toBe('https://yeni-link.example');
 	});
 
 	it('rejects an unknown id', async () => {
 		stubApis();
 		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
 			method: 'POST',
-			body: JSON.stringify({ id: 'olmayan-id', isim: 'X' }),
+			body: JSON.stringify({ id: 'olmayan-id', isim: 'X', kaynak: 'manuel' }),
 		});
 		expect(response.status).toBe(404);
 	});
@@ -327,7 +441,10 @@ describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
 			body: JSON.stringify({ isim: 'X', kaynak: 'manuel' }),
 		});
 		const id = ((await created.json()) as { id: string }).id;
-		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', { method: 'POST', body: JSON.stringify({ id, isim: '' }) });
+		const response = await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: '', kaynak: 'manuel' }),
+		});
 		expect(response.status).toBe(400);
 	});
 
@@ -335,7 +452,7 @@ describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
 		stubApis();
 		const request = new Request('http://localhost/panel/rakip-analizi/rakip-duzelt', {
 			method: 'POST',
-			body: JSON.stringify({ id: 'x', isim: 'Y' }),
+			body: JSON.stringify({ id: 'x', isim: 'Y', kaynak: 'manuel' }),
 		});
 		const ctx = createExecutionContext();
 		const response = await worker.fetch(request, testEnv, ctx);

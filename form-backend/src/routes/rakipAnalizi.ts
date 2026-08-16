@@ -6,6 +6,7 @@ import {
 	ensureRakipAnaliziTab,
 	deleteRakipAnalizRows,
 	updateRakipAnalizRow,
+	type RakipAnalizRow,
 } from '../lib/rakipSheets';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
 import { searchCompetitors } from '../lib/places';
@@ -130,13 +131,28 @@ export async function handleRakipSil(request: Request, env: Env): Promise<Respon
 	return json({ deleted: rowNumbers.length }, request);
 }
 
-// POST /panel/rakip-analizi/rakip-duzelt { id, isim, adres?, not? } — Kayıtlı Rakipler tablosunda
-// satır içi "Düzelt" akışı (2026-08-16, kullanıcı isteği): sadece kaynak='manuel' satırlar
-// düzenlenebilir (haritadan bulunan satırların kimliği arama sonucundan geliyor, bilerek kapsam
-// dışı). Sadece İsim/Adres/Not güncellenir — Kaynak/Tarih/Nasıl Bulundu (arama* alanları) sabit
-// kalır, id/rowNumber değişmediği için Sheet'teki AYNI satır yerinde güncellenir (append değil).
+// POST /panel/rakip-analizi/rakip-duzelt { id, isim, adres?, kaynak?, nasilBulundu?, tarih?, not?,
+// link? } — Kayıtlı Rakipler tablosunda satır içi "Düzenle" akışı VE Rakip Ekle'deki ara-ve-
+// düzenle akışı (2026-08-16, kullanıcı isteği — ikinci/üçüncü geri bildirim: "listedeki HER
+// rakibin ... tüm başlıklara ait düzenleme yapılabilsin" — ilk sürümdeki "sadece kaynak='manuel'"
+// ve "sadece İsim/Adres/Not" kısıtları burada kaldırıldı). id/rowNumber değişmediği için
+// Sheet'teki AYNI satır yerinde güncellenir (append değil). link/nasilBulundu opsiyonel — sadece
+// body'de VARSA güncellenir (Kayıtlı Rakipler tablosunun inline-edit formunda link alanı yok,
+// gönderilmeyince mevcut değeri SİLMEMESİ gerekiyor). nasilBulundu: bu, Sheet'te tek bir sütun
+// değil (aramaSorgu/aramaAdres/aramaRadiusMeters'tan hesaplanan bir görüntü metni) — elle
+// düzenlenirse ham metin aramaSorgu'ya yazılır, aramaAdres/aramaRadiusMeters temizlenir (aksi
+// halde eski yapılandırılmış parçalarla düzenlenmiş metin karışıp tutarsız bir görüntü oluşurdu).
 export async function handleRakipDuzelt(request: Request, env: Env): Promise<Response> {
-	let body: { id?: unknown; isim?: unknown; adres?: unknown; not?: unknown };
+	let body: {
+		id?: unknown;
+		isim?: unknown;
+		adres?: unknown;
+		kaynak?: unknown;
+		nasilBulundu?: unknown;
+		tarih?: unknown;
+		not?: unknown;
+		link?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -147,19 +163,34 @@ export async function handleRakipDuzelt(request: Request, env: Env): Promise<Res
 	if (!id) return errorResponse(request, 400, 'Rakip id gerekli.');
 	if (!isim) return errorResponse(request, 400, 'Rakip ismi gerekli.');
 
+	const kaynak = String(body.kaynak ?? '');
+	if (kaynak !== 'manuel' && kaynak !== 'harita') return errorResponse(request, 400, 'Geçersiz kaynak.');
+
+	let createdAtUtc: string | undefined;
+	if (body.tarih !== undefined && body.tarih !== null && String(body.tarih).trim()) {
+		const parsed = new Date(String(body.tarih));
+		if (Number.isNaN(parsed.getTime())) return errorResponse(request, 400, 'Geçersiz tarih.');
+		createdAtUtc = parsed.toISOString();
+	}
+
 	await ensureRakipAnaliziTab(env);
 	const rows = await getAllRakipAnalizRows(env);
 	const bulunan = rows.find(({ row }) => row.id === id);
 	if (!bulunan) return errorResponse(request, 404, 'Rakip bulunamadı.');
-	if (bulunan.row.kaynak !== 'manuel') {
-		return errorResponse(request, 400, 'Sadece manuel eklenen rakipler tablo üzerinden düzenlenebilir.');
-	}
 
 	const adres = String(body.adres ?? '').trim();
 	const not = String(body.not ?? '')
 		.trim()
 		.slice(0, NOTE_MAX_LENGTH);
-	await updateRakipAnalizRow(env, bulunan.rowNumber, bulunan.row, { isim, adres, not });
+	const patch: Partial<RakipAnalizRow> = { isim, adres, kaynak, not };
+	if (createdAtUtc) patch.createdAtUtc = createdAtUtc;
+	if (body.link !== undefined) patch.link = String(body.link).trim();
+	if (body.nasilBulundu !== undefined) {
+		patch.aramaSorgu = String(body.nasilBulundu).trim();
+		patch.aramaAdres = '';
+		patch.aramaRadiusMeters = '';
+	}
+	await updateRakipAnalizRow(env, bulunan.rowNumber, bulunan.row, patch);
 	return json({ id }, request);
 }
 

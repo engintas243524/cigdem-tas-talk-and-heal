@@ -1467,3 +1467,35 @@ Ekran görüntüsüyle birlikte gönderilen 3 maddelik istek:
 
 Testler: 238/238 geçti (6 yeni test `kullanimLimit.spec.ts` + satır yüksekliği testleri
 `rakipSheets.spec.ts`/`rakipTakipGecmisSheets.spec.ts`/`kullanimKaydi.spec.ts`'e eklendi).
+
+## Kullanıcı isteği — Kayıtlı Rakipler arama/filtre/tam düzenleme (2026-08-16, birebir kaydedildi)
+
+"rakip ekle kısmna olmasını istememin nedeni şu; aşağıdaki liste çok kalabalık olursa Rakip ismi
+çerçevesindeki dropdown daki İsim Adres Kaynak Nasıl Bulundu Tarih Not seçenekleri ile arama
+yapılıp istene rakibe daha hızlı ulaşılarak düzenleme yapılabilir
+ayrıca bu düzeltme kayıtlı rakipler tablosunda İsim Adres Kaynak Nasıl Bulundu Tarih Not
+başlıklarının yanına filtreler eklenerek de yapılabilir
+Ayrıca listedki her rakibin en solunda değil en sağında Düzenle butonu olsun ki istenen rakibe
+ait not dahil olmak üzere tüm başıklara ait düzenleye yapılabilsin ve her düzenleme google sheet
+teki ilgili sayfa satır ve sütunda değişsin."
+
+**Durum güncellemesi (2026-08-16, üçü de tamamlandı):**
+- Madde 1 (Rakip Ekle'de ara-ve-düzenle): "Rakip ismi" alanının sağında bir arama kutusu —
+  İsim/Adres/Kaynak/Nasıl Bulundu/Tarih/Not'a göre (client-side, zaten yüklü listede) eşleşen
+  rakipleri gösterir, seçilince form (İsim/Link/Not) doldurulur ve "Rakip Ekle" butonu o kayıt
+  için "Düzenlemeyi Kaydet"e dönüşür.
+- Madde 2 (tablo filtreleri): Kayıtlı Rakipler'in üstünde İsim/Adres/Nasıl Bulundu/Tarih/Not için
+  metin filtreleri + Kaynak için bir dropdown — hepsi aynı anda (VE mantığıyla) uygulanıyor,
+  sayfalama filtrelenmiş sonuç üzerinden çalışıyor.
+- Madde 3 (Düzenle sağda + tüm başlıklar): Düzenle butonu artık her satırın SOLUNDA değil
+  SAĞINDA, ve artık SADECE manuel değil HER rakip (harita dahil) düzenlenebiliyor — İsim, Adres,
+  Kaynak (dropdown), Nasıl Bulundu, Tarih (datetime-local), Not dahil TÜM başlıklar. Backend
+  `rakip-duzelt` da buna göre genişletildi (Kaynak/Nasıl Bulundu/Tarih artık gerçekten Sheet'e
+  yazılıyor — Nasıl Bulundu ham metin aramaSorgu'ya yazılıp aramaAdres/aramaRadiusMeters
+  temizleniyor, çünkü Sheet'te tek bir "nasıl bulundu" sütunu yok). Her düzenleme (hangi yoldan
+  yapılırsa yapılsın) `updateRakipAnalizRow` ile RakipAnalizi sekmesindeki AYNI satırı yerinde
+  günceller (append değil) — istek buydu ("google sheetteki ilgili sayfa satır/sütunda değişsin").
+
+Testler: 256/256 geçti (yeni testler: harita satırının artık düzenlenebilmesi, kaynak değiştirme,
+nasılBulundu→aramaSorgu eşlemesi, tarih doğrulama, link'in sadece açıkça gönderildiğinde
+güncellenmesi — inline-edit formunda link alanı olmadığı için sessizce silinmemeli).
