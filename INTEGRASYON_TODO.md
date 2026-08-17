@@ -1789,3 +1789,44 @@ altına eklendi), (4) arama yarıçapı kadar yanıp sönen çember eklendi, (5)
 ölçek cetveli + sağda özel dikey zoom scroll eklendi. Yol boyunca iki gerçek bug bulunup çözüldü:
 sayfalama Cloudflare Worker'ın subrequest sınırını aştırdı (BE-77, kota kontrolü tek okumaya
 indirilerek çözüldü) — hepsi hata günlüğünde (BE-77). Commit'ler: `9755649`, `d48a35f`.
+
+## Kullanıcı isteği — İki katmanlı parametre seti mimarisi (rakip BULMA + rakip ANALİZ) + Görsel/Video Stratejisi'ne aynı mimari (2026-08-17, sıraya alındı, birebir kayıt, KULLANICI "AŞIRI ÖNEMLİ" diye işaretledi — Sparrow premium ürün temeli)
+
+Kullanıcının mesajı (birebir, 2 ana madde ama her biri çok parçalı):
+
+> - tek seferde maksimum arama sınırını arttırabildiğimiz kadar arttıralım(ama bunun rakipler
+>   hakkında istediğimiz veriden daha çok ortalama veri üretilmesine yakınsayacağını(istatistik
+>   olarak bu söylediğimin doğru olup olmadığını da araştır değilse bana söyle ve bu doğru ise ve
+>   hem bizim hem kullanıcının dezavantajına ise bir uyarı olarak kendisine haritanın altında
+>   verelim, tabi bunun doğruluğu aşağıda yapacağımız derin araştırmada bulacağımzı kriterlerin bu
+>   önermemizi destekleyeip desteklemeyeceğine bağlı))
+> - 1-10 sıralama formülünü ve ağırlıklandırmayı tasarlamak için daha çok akademik makale oku ve
+>   saahada kullannılan, işletmelerin gerçek rakiplerinin hangileri olduğunu belirlemek için hangi
+>   kriterleri kullandıklarını(bu kısım 1-10 sıralama formülü ve ağırllıklandırması aslında) ve bu
+>   rakipleri analiz ederken hangi kriterleri(parametreleri) rakip analizi değerlendirmelerinde
+>   kullandıklarını(bı kısım da rakibi(leri) analiz edip kendilerine rapor, projeksiyon, hedef,
+>   realizasyon, vs çıkartacakları formül ve ağırlıklandırma aslında ve bu ikinci parametre
+>   seti(formül) tek rakip için yapılan analiz için de çoklu rakip için yapılan analiz için de
+>   kullanılabilir, sadece tekli çoklu değerlendirmesinde parametre setini kendi içinde
+>   gruplandırmak gerekir(bunu da not al), ayrıca çoklu rakip değerlendirmesinde de rakipleri kendi
+>   içinde sıralama-ağırlıklandırma için 1-10 sıralama formülünü kullanıp bu ikinci katmanda da
+>   birinci katmandan faydalanmış oluruz) kullandığımız parametre seti iki ayrı parametre seti
+>   olarak belirleyelim. Bu mimariyi anlayıp anlamadığını önce söyle, sonra kendi fikrini ve
+>   değerlendirmeni ver. Ardından 2 farklı parametre setini oluşturalım, az kalsın unutuyordum aynı
+>   2li parametre setini Görsel/Video Stratejisi için de çok sıkı bir şekilde gerek google, gerek
+>   görsel ile ilgili en ciddi platform-uygulama-yapay zeka-github- youtube- akademik makalleler
+>   incelenerek oluşturmamız lazım. Bu konu AŞIRI ÖNEMLİ. Çünkü bu 2 ayrı 2'li parametre setini ben
+>   Sparrow tarafında satış yapacağım ürünler için kullanacağım ve ürünlerimin kesinlikle premium
+>   ürünler olması için bu konu ÇOK ÖNEMLİ!!!!!!!!!!!!!
+
+Notlar: Mimari özeti — Parametre Seti 1 = "rakip BULMA/sıralama" formülü (adayları 1-10 sıralayıp
+en güçlü N'i seçmek için, hem Rakip Analizi'nin 5+5 yerel/genel seçiminde hem de çoklu-rakip
+değerlendirmesinin İKİNCİ katmanında yeniden kullanılacak). Parametre Seti 2 = "rakip ANALİZ"
+formülü (bulunan rakib(ler)i inceleyip rapor/projeksiyon/hedef/realizasyon üretmek için) — tek
+rakip ve çoklu rakip için AYNI parametre seti ama çoklu modda kendi içinde gruplandırılmalı. Bu
+ikili mimari SONRADAN Görsel/Video Stratejisi özelliğine de (Google/görsel-platform/YZ/GitHub/
+YouTube/akademik kaynaklarla) uygulanacak — kullanıcı bunu "AŞIRI ÖNEMLİ" olarak işaretledi çünkü
+Sparrow'da satılacak premium ürünlerin temeli bu. Sıra: önce mimariyi doğrula + değerlendirme ver,
+sonra Rakip Analizi için 2 parametre setini derin araştırmayla oluştur, SONRA aynı yöntemi Görsel/
+Video Stratejisi'ne uygula (ayrı bir derinlemesine araştırma turu gerektirir, aynı mesajda
+istenmedi — "az kalsın unutuyordum" ile eklendi, sıralı iş olarak okunmalı).
