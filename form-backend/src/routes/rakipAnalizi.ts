@@ -429,17 +429,25 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 				.slice(0, 5)
 		: [];
 
+	// BE-77/BE-81 (hata günlüğü) — kotaDolduMu'yu BİRDEN FAZLA kez çağırmak her seferinde
+	// getKullanimOzet'in TÜM kategoriler için Sheets çağrısı zincirini tekrar çalıştırıyor,
+	// "Too many subrequests" hatasına düşürüyor. İki kategori (icerikStrateji + konuTrendBulma)
+	// kontrolü için TEK getKullanimOzet çağrısı, sonucu ikisi için de reuse ediyoruz.
 	await ensureKullanimKaydiTab(env);
-	if (await kotaDolduMu(env, 'icerikStrateji')) {
+	const kullanimOzet = await getKullanimOzet(env);
+	const icerikStratejiOzet = kullanimOzet.icerikStrateji;
+	if (icerikStratejiOzet.aylikLimit !== null && icerikStratejiOzet.kullanilan >= icerikStratejiOzet.aylikLimit) {
 		return json(
 			{ error: 'Bu ayki Görsel/Video Stratejisi kotası doldu. Ay başında sıfırlanır.', limitUrl: ANTHROPIC_BILLING_URL },
 			request,
 			{ status: 402 },
 		);
 	}
+	const konuTrendBulmaOzet = kullanimOzet.konuTrendBulma;
+	const konuTrendKotaDolu = konuTrendBulmaOzet.aylikLimit !== null && konuTrendBulmaOzet.kullanilan >= konuTrendBulmaOzet.aylikLimit;
 
 	let konuTrendleri: KonuTrendSonucu[] = [];
-	if (konular.length && !(await kotaDolduMu(env, 'konuTrendBulma'))) {
+	if (konular.length && !konuTrendKotaDolu) {
 		try {
 			konuTrendleri = await konuHavuzunuSirala(env, konular);
 			await logKullanim(env, 'konuTrendBulma', konular.join(', ').slice(0, 200));
