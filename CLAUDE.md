@@ -158,11 +158,19 @@ even though the developer/user are in Turkey.
   creates against the existing $5/month Anthropic cap in `config.ts`'s `KULLANIM_KATEGORILERI`.
 - `CIGDEM_AYLIK_YILLIK_GIDERLER.md` (2026-08-16) — the same cost data, reformatted as a simple
   itemized monthly/annual table for Çiğdem (non-technical reader) to review.
-- `RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md` (2026-08-17) — research report (not code) for the
-  still-unbuilt "Faz 3" (5 local + 5 general auto-classified competitors, see `INTEGRASYON_TODO.md`):
-  how Google Text Search's 60-result cap actually ranks results, WASK/academic sourcing for
-  measurable local-vs-general competitor criteria, and the Turkish psychologist/psychiatrist
-  advertising-ethics constraint that limits which "general" signals are even legitimate to score.
+- `RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md` (2026-08-17) — research report for the still-unbuilt
+  "Faz 3" (5 local + 5 general auto-classified competitors, see `INTEGRASYON_TODO.md`): how Google
+  Text Search's 60-result cap actually ranks results, WASK/academic sourcing for measurable
+  local-vs-general competitor criteria, the Turkish psychologist/psychiatrist advertising-ethics
+  constraint, and the two-layer "Parameter Set 1 (find/rank) + Parameter Set 2 (analyze/report)"
+  architecture — Set 1 is now implemented in `lib/rakipBulmaSiralama.ts` (grid search in
+  `lib/places.ts`), Set 2's 4 groups are wired into `AKSIYON_ANALIZ_SYSTEM_PROMPT`.
+- `GORSEL_VIDEO_STRATEJISI_KRITERLERI_ARASTIRMASI.md` (2026-08-17) — the same two-layer
+  architecture applied to Görsel/Video Stratejisi (icerikStrateji): research only, not yet coded —
+  Set 1 (content/trend find-rank) can't be a real numeric formula until YouTube Data API is
+  integrated (confirmed $0 cost, not yet built), so it's proposed as a prompt-guide for now; Set 2's
+  4 groups include a hard pre-publish ethics gate with concrete banned-phrase examples for the
+  Turkish psychologist/psychiatrist advertising-ethics constraint.
 
 ## Mimari Yaklaşım Notu (2026-08-09 analizi — herhangi bir yeni aşama/entegrasyona geçmeden önce oku)
 
