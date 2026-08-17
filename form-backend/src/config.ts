@@ -568,3 +568,44 @@ export const RAPORLAR_COLUMN_LABELS: Record<(typeof RAPORLAR_COLUMNS)[number], s
 	baglam: 'Bağlam',
 	metin: 'Rapor Metni',
 };
+
+// Yayın-öncesi etik/yasal gate — Faz 1 (2026-08-17, "sektör/branş/mesleğe göre yapılandırılabilir
+// kural seti" gereksinimi, bkz. plan `~/.claude-hesap2/plans/harmonic-tumbling-toast.md`). Bugün tek
+// girişli (sadece Çiğdem) ama INTEGRASYON_TODO.md'de Çiğdem'in yanına başka psikoterapist/psikolog
+// ekleyeceği zaten planlı — bu yüzden baştan bir DİZİ olarak kuruldu, tek bir kişiye hardcode değil.
+// `rejimler`, o yayıncının içeriğine hangi ETIK_REJIM anahtarlarının uygulanacağını belirler (bkz.
+// lib/etikGate.ts, Faz 2). Rejim seçimi DİLE göre değil — BACP_INGILTERE_MEVZUAT_ARASTIRMASI.md
+// Bölüm 1'de netleştirildiği gibi 'bacp' üyelik şartı olduğu için dilden bağımsız her zaman aktif,
+// 'tpdTtb' ise sadece Türkiye-hedefli içerik için ek olarak devreye giriyor (içerik üretilirken hangi
+// hedef kitleye yazıldığı ayrıca belirtilmeli — bu Faz 4'te prompt/parametre düzeyinde ele alınacak).
+export const ETIK_REJIMLERI = ['bacp', 'tpdTtb'] as const;
+export type EtikRejimi = (typeof ETIK_REJIMLERI)[number];
+
+export interface YayinciProfili {
+	id: string;
+	adSoyad: string;
+	unvan: string; // ör. 'psikoterapist', 'psikolog', 'psikiyatrist', 'danışman/koç'
+	rejimler: EtikRejimi[];
+}
+
+export const YAYINCI_PROFILLERI: YayinciProfili[] = [
+	{ id: 'cigdem', adSoyad: 'Çiğdem Taş', unvan: 'psikoterapist', rejimler: ['bacp', 'tpdTtb'] },
+];
+
+// Sürekli mevzuat takibi — Faz 3 (2026-08-17, plan Faz 3 tasarım kararı: AYRI bir cron trigger/
+// dosya yerine mevcut 15-dk cron'a "süresi doldu mu" kontrolü + Sheets append-only log — bkz.
+// RakipTakip/GiderTakibi sweep'leriyle AYNI desen, lib/scheduled.ts#runMevzuatTakipSweep). Worker
+// runtime'ı dosya sistemine yazamadığı için (stateless) bir .md dosyasına otomatik yazmak teknik
+// olarak mümkün değil — Sheets zaten bağlı tek kalıcı-yazma yolu.
+export const MEVZUAT_TAKIP_TAB_NAME = 'MevzuatTakip';
+
+export const MEVZUAT_TAKIP_ARALIK_GUN = 30;
+
+export const MEVZUAT_TAKIP_COLUMNS = ['id', 'tarihUtc', 'degisiklikVarMi', 'ozet'] as const;
+
+export const MEVZUAT_TAKIP_COLUMN_LABELS: Record<(typeof MEVZUAT_TAKIP_COLUMNS)[number], string> = {
+	id: 'ID',
+	tarihUtc: 'Tarih (UTC)',
+	degisiklikVarMi: 'Değişiklik Var mı',
+	ozet: 'Özet',
+};

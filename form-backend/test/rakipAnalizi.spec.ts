@@ -16,7 +16,7 @@ const testEnv = {
 	GOOGLE_PLACES_API_KEY: 'test-key',
 } as typeof env;
 
-function stubApis() {
+function stubApis(opts: { anthropicText?: string } = {}) {
 	const sheetsAppended: string[][] = [];
 	const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 		const url = String(input);
@@ -77,7 +77,9 @@ function stubApis() {
 			});
 		}
 		if (url.includes('api.anthropic.com')) {
-			return new Response(JSON.stringify({ content: [{ type: 'text', text: 'Üretilen rapor metni.' }] }), { status: 200 });
+			return new Response(JSON.stringify({ content: [{ type: 'text', text: opts.anthropicText ?? 'Üretilen rapor metni.' }] }), {
+				status: 200,
+			});
 		}
 		throw new Error(`Unexpected fetch in test: ${method} ${url}`);
 	});
@@ -513,6 +515,26 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(data.rapor).toBe('Üretilen rapor metni.');
 	});
 
+	it('returns an empty etikBayraklari for a clean report', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Bu ay için Instagram içerik önerisi istiyorum' }),
+		});
+		const data = (await response.json()) as { etikBayraklari: unknown[] };
+		expect(data.etikBayraklari).toEqual([]);
+	});
+
+	it('flags a report containing a banned pattern via the deterministic ethics gate', async () => {
+		stubApis({ anthropicText: 'Garantili iyileşme sunuyoruz, hemen randevu al!' });
+		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum' }),
+		});
+		const data = (await response.json()) as { etikBayraklari: { kuralId: string }[] };
+		expect(data.etikBayraklari.map((b) => b.kuralId)).toContain('tr-garanti-iyilesme');
+	});
+
 	it('only includes the selected competitor(s) in the prompt, not unselected ones', async () => {
 		const { fetchMock } = stubApis();
 		const secilecek = await authedRequest('/panel/rakip-analizi/rakip', {
@@ -586,6 +608,16 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as { rapor: string };
 		expect(data.rapor).toBe('Üretilen rapor metni.');
+	});
+
+	it('flags a report containing a BACP-regime banned pattern via the deterministic ethics gate', async () => {
+		stubApis({ anthropicText: 'We guarantee a full recovery in 6 sessions.' });
+		const response = await authedRequest('/panel/rakip-analizi/aksiyon-analiz', {
+			method: 'POST',
+			body: JSON.stringify({ yorum: 'Bu ay randevular azaldı' }),
+		});
+		const data = (await response.json()) as { etikBayraklari: { kuralId: string; rejim: string }[] };
+		expect(data.etikBayraklari.map((b) => b.kuralId)).toContain('bacp-guarantee-outcome');
 	});
 
 	it('includes selected competitor data in the prompt when rakipIds is given', async () => {

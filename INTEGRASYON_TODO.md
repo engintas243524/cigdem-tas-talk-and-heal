@@ -1863,3 +1863,35 @@ entegrasyonu (ayrı karar, maliyeti $0 doğrulandı) gerekiyor. Türkiye etik-k�
 işlendi (somut yasaklı ifade kalıpları bulundu, ör. "X seansta çözdük" / "...aşıyoruz" riskli vs
 "...sürecinde çalışıyoruz" güvenli) — Set 1'e HARD GATE, Set 2'nin Grup C'sine yayın-öncesi denetim
 adımı olarak işlendi.
+
+## Kullanıcı bildirimi — Paralel oturum uyarısı + YouTube/Instagram API entegrasyonu + Set 2 kodlama sıralaması + hata günlüğü/compact kararı (2026-08-17, sıraya alındı, birebir kayıt)
+
+Kullanıcının mesajı (birebir, 5 madde):
+
+> 1-Bir şeye dikkatini çekeyim: Paralelde talk and heal ile ilgili yine bir oturum var orada. Bir
+>   işlem başlatmıştım ama burada karışıklık olabileceği nedeniyle orayı durdurdum. Artık orada bir
+>   ilerleme olmayacak. Bir hata varsa onu ayıkla.
+> 2-Kritik fark, Rakip Analizi'nden: görsel taraftaki veri kaynağı olan YouTube Data API
+>   entegrasyonunu yapalım, beni linkler dahil adım adım yönlendirirsin, bu iş için asıl kaynak
+>   instagram diye biliyorum o kanal için de ne yapmamız gerekiyorsa yapalım.
+> 3-Set 2 (4 grup: Format&Sunum / Platform-Algoritma / Mesaj-Ton&Meslek-Etiği / Zamanlama-Trend)
+>   direkt kodlanabilir: bu konuda zaten sparrow tarafında müşterilerimizin bu tür sorunları
+>   yaşamamaları için riskli metin, görsel,video ve paylaşım ve reklamları onlar adına yöneteceğimiz
+>   ve sorumluluğu üstlendiğimiz konusunda bir taahhütümüğz var, o nedenle sektör-branş ve mesleğe
+>   özel riskli metin, görsel,video ve paylaşım ve reklamları risksiz hale getirecek- güncel yasal
+>   mevzuatı sürekli takip edip gerekli bilgileri çekip alacak- filrelemeler kullanmak zorundayız.
+>   Bu talk and Heal tarafı için nekadar önemli ise Sparrow tarafı için EN AZ OKADAR ÖNEMLİ. O
+>   nedenle yayın-öncesi denetim gate vurgun çok isabetli, teşekkür ederim.
+> 4-Sıradaki karar senin: bu promptu öncelik sıralamasına sok > Hata günlüğü + compact > Set 2 +
+>   etik-gate'i şimdi ICERIK_STRATEJI_SYSTEM_PROMPT'a kodlama, YouTube API entegrasyonu ve dediğim
+>   gibi instagram API entegrasyonu(asıl kaynaklardan biris çünkü) kararını da birlikte konuşalım,
+>   sonra da alttaki ve üstteki istemler
+> 5-Hata günlüğü + compact: hata günlüğü güncellemesi(paralelede talk and heal için 5 dakika önce
+>   bir hata günlüğü güncellemsi yapıldı o nedenle gerek yok dersen compact ile devam edip etmemek
+>   konusunda fikrini söyle bağlam penceresini bir toparlayıp compact ile öyle devam edelim.
+
+Notlar: Madde 1, `fa58f48` commit'inin ("Close out Rakip Analizi live-test open item: 3 bugs found
+and fixed BE-78/79/80") kaynağını açıklıyor — paralel bir Claude oturumu, kullanıcı tarafından
+durduruldu. Madde 3, Sparrow'un müşterilere verdiği bir TAAHHÜT olarak kayda geçti: sektöre/
+branşa/mesleğe özel riskli içerik filtreleme + güncel yasal mevzuat takibi — bu, Set 2 Grup C'nin
+(yayın-öncesi denetim gate) Sparrow tarafında da AYNI derecede kritik olduğunu doğruluyor.

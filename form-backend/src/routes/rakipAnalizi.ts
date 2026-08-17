@@ -25,8 +25,16 @@ import {
 	gecerliGrafikPeriyotTuru,
 	gecerliGrafikKaynaklari,
 } from '../lib/grafikVerisi';
-import { GRAFIK_PERIYOT_GUN_SAYISI, ANTHROPIC_BILLING_URL } from '../config';
+import { GRAFIK_PERIYOT_GUN_SAYISI, ANTHROPIC_BILLING_URL, YAYINCI_PROFILLERI, type EtikRejimi } from '../config';
+import { etikDenetimYap, type EtikBayrak } from '../lib/etikGate';
 import type { Env } from '../types';
+
+// Yayın-öncesi etik/yasal gate — Faz 4 (2026-08-17). Bugün TEK yayıncı var (Çiğdem) — çoklu-
+// pratisyen senaryosu geldiğinde bu, ilgili raporun HANGİ pratisyen için üretildiğine göre
+// YAYINCI_PROFILLERI içinden seçim yapan bir parametreye dönüşecek (bkz. config.ts Faz 1 notu).
+function aktifYayinciRejimleri(): EtikRejimi[] {
+	return YAYINCI_PROFILLERI[0]?.rejimler ?? [];
+}
 
 // Rapor PDF şablonu (rakip-analizi.html#raporPdfOlustur, 2026-08-16) bu yapıyı güvenle parse
 // edebilmek için Claude'dan tutarlı, hafif bir markdown biçimi istiyor — düz metnin PDF'te
@@ -295,6 +303,20 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 	}
 }
 
+// Yayın-öncesi etik/yasal gate — Set 2 Grup C (2026-08-17, bkz.
+// GORSEL_VIDEO_STRATEJISI_KRITERLERI_ARASTIRMASI.md Bölüm 4/6 madde 1). Bu, PROMPT-seviyesindeki
+// talimat katmanı — lib/etikGate.ts'in DETERMİNİSTİK denetimiyle birlikte çalışır (bkz.
+// handleIcerikStrateji), tek başına yeterli değil (LLM'in "hatırlamasına" güvenilmez).
+const ICERIK_ETIK_UYARI_METNI = `
+Önerdiğin HİÇBİR içerik şu kalıplardan hiçbirini içermesin: sonuç/garanti dili ("garantili
+iyileşme", "X seansta çözdük"), örtük sonuç garantisi ima eden fiiller ("...aşıyoruz" yerine
+"...sürecinde çalışıyoruz" gibi süreç odaklı dil kullan), tanı koyar nitelikte ifadeler (DM/yorum
+yanıtı önerisi olsa bile), diğer terapist/yaklaşımları karalayan/karşılaştıran dil, danışan
+teşviki amacıyla duygusal baskı/aciliyet yaratan dil. Bu kısıt İngiltere'de BACP Ethical Framework +
+ASA CAP Code'dan (guarantee/100% effective/proven-to-cure iddiaları, rakip denigrasyonu, sahte
+"accredited" iddiası), Türkiye'de TPD etik ilkeleri + TTB/Sağlık Bakanlığı mevzuatından geliyor —
+psikiyatrist unvanlı içerik için kısıt psikologdan daha sıkı.`;
+
 // Görsel/video stratejisi için sistem talimatı — rakip içeriği KOPYALANMAZ, sadece stratejiden
 // (format/sıklık/platform) ilham alınır; küratif yaklaşımın kod-seviyesindeki karşılığı bu.
 // Kullanıcı kararı (2026-08-15): rakip seçimi bu dalda da mümkün ama seçilen rakiplerin
@@ -314,7 +336,7 @@ tarihine göre) görsel/video içerik trendlerini (ör. hangi format/platform ö
 türü daha çok etkileşim alıyor) araştırmak için 2-4 hedefli arama yap. Aramaları verimli kullan
 (aynı şeyi tekrar tekrar arama), bulduğun somut/güncel bilgiyi öneriler içinde açıkça belirt (ör.
 "son aylarda X formatı öne çıkıyor" gibi). Hiçbir güncel sonuç bulamazsan bunu belirtip genel
-bilginle devam et, ama önce mutlaka aramayı dene.${RAPOR_YAPISI_TALIMATI}`;
+bilginle devam et, ama önce mutlaka aramayı dene.${ICERIK_ETIK_UYARI_METNI}${RAPOR_YAPISI_TALIMATI}`;
 
 export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
@@ -450,7 +472,11 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	} catch (err) {
 		console.error('Rapor arşive kaydedilemedi (icerikStrateji)', err);
 	}
-	return json({ rapor }, request);
+
+	// Yayın-öncesi etik/yasal gate — Faz 4 (2026-08-17). Bu, prompt talimatının (ICERIK_ETIK_UYARI_METNI)
+	// ÜSTÜNE eklenen deterministik katman — sessizce bloklamaz, kullanıcıya görünür bir uyarı döner.
+	const etikBayraklari: EtikBayrak[] = etikDenetimYap(rapor, aktifYayinciRejimleri());
+	return json({ rapor, etikBayraklari }, request);
 }
 
 // Kullanıcı kararı (2026-08-15): İçerik Stratejisi'nin aksine, burada seçilen rakiplerin TAM
@@ -608,7 +634,12 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	} catch (err) {
 		console.error('Rapor arşive kaydedilemedi (aksiyonAnaliz)', err);
 	}
-	return json({ rapor, grafikVerileri }, request);
+
+	// Yayın-öncesi etik/yasal gate — Faz 4 (2026-08-17). handleIcerikStrateji'deki AYNI desen —
+	// RAKIP_ANALIZ_PARAMETRE_GRUPLARI'nin prompt-seviyesindeki notunun ÜSTÜNE eklenen deterministik
+	// katman.
+	const etikBayraklari: EtikBayrak[] = etikDenetimYap(rapor, aktifYayinciRejimleri());
+	return json({ rapor, grafikVerileri, etikBayraklari }, request);
 }
 
 // POST /panel/rakip-analizi/ice-aktar { tur: 'dosya' | 'link', dosyaAdi?, uzanti?, veri?(base64),

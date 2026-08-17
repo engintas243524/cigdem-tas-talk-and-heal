@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=19">
+<link rel="stylesheet" href="panel.css?v=20">
 </head>
 <body>
 <div class="panel-wrap">
@@ -218,6 +218,7 @@
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
       <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
+      <div id="dalEtikUyari" class="etik-uyari hidden"></div>
       <div id="dalGrafikler"></div>
       <div class="actions hidden" id="dalRaporAksiyonlar">
         <button class="btn-secondary" id="dalIndirBtn" type="button">İndir (PDF)</button>
@@ -549,6 +550,32 @@
 
       doc.save(dosyaAdi);
     });
+  }
+
+  // Yayın-öncesi etik/yasal gate — Faz 4 (2026-08-17). Backend'in etikBayraklari'nı (lib/etikGate.ts)
+  // görünür ama BLOKLAMAYAN bir uyarı kutusuna çizer — kullanıcı raporu yine de kullanabilir, kararı
+  // kendisi verir (bkz. plan Faz 2 tasarım kararı: regex tabanlı denetim yanlış-pozitif üretebilir).
+  function etikUyariGoster(container, bayraklar) {
+    container.innerHTML = '';
+    if (!bayraklar || !bayraklar.length) { container.classList.add('hidden'); return; }
+    var baslik = document.createElement('strong');
+    baslik.textContent = '⚠️ Yayın öncesi gözden geçir (' + bayraklar.length + ' bulgu):';
+    container.appendChild(baslik);
+    var liste = document.createElement('ul');
+    bayraklar.forEach(function (b) {
+      var li = document.createElement('li');
+      var etiket = document.createElement('strong');
+      etiket.textContent = '[' + (b.seviye === 'yasak' ? 'YASAK' : 'Riskli') + ', ' + b.rejim + '] ';
+      li.appendChild(etiket);
+      li.appendChild(document.createTextNode('"' + b.eslesenMetin + '" — ' + b.gerekce));
+      li.appendChild(document.createElement('br'));
+      var oneri = document.createElement('em');
+      oneri.textContent = 'Öneri: ' + b.guvenliAlternatif;
+      li.appendChild(oneri);
+      liste.appendChild(li);
+    });
+    container.appendChild(liste);
+    container.classList.remove('hidden');
   }
 
   var GRAFIK_RENKLER = ['#7C9C4A', '#C97452', '#5B7FA6', '#B08BBB', '#D4A94B'];
@@ -2072,6 +2099,7 @@
     if (!istek) { setStatus(el('dalStatus'), 'İstek metni gerekli.', 'err'); return; }
     setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
     el('dalRaporAksiyonlar').classList.add('hidden');
+    etikUyariGoster(el('dalEtikUyari'), null);
     el('dalGrafikler').innerHTML = '';
     dalChartlar.forEach(function (c) { c.destroy(); });
     dalChartlar = [];
@@ -2109,6 +2137,7 @@
       setStatus(el('dalStatus'), '', '');
       sonRaporMetni = res.data.rapor;
       el('dalRapor').textContent = sonRaporMetni;
+      etikUyariGoster(el('dalEtikUyari'), res.data.etikBayraklari);
       if (grafikKaynaklariSecili.length) {
         dalGrafikCanvasBilgileri = grafikVerileriRender(el('dalGrafikler'), res.data.grafikVerileri, el('dalGrafikTuru').value, dalChartlar);
       }

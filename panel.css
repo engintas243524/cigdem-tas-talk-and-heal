@@ -68,6 +68,10 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .status { font-size: 0.9rem; margin-top: var(--space-2); min-height: 1.2em; }
 .status.err { color: var(--brand-deep); }
 .status.ok { color: var(--sage); }
+/* Yayın-öncesi etik/yasal gate uyarı kutusu (Faz 4, 2026-08-17) — görünür ama bloklamayan uyarı. */
+.etik-uyari { border: 1px solid var(--brand-deep); border-left-width: 4px; border-radius: var(--radius-xs); background: var(--surface); padding: 0.75rem 1rem; margin-top: var(--space-2); font-size: 0.85rem; }
+.etik-uyari ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+.etik-uyari li { margin-bottom: 0.5rem; }
 /* Client picker (panel.html) */
 .picker { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); margin-top: var(--space-2); }
 .picker-list { max-height: 320px; overflow-y: auto; }

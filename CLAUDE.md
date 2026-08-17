@@ -171,6 +171,15 @@ even though the developer/user are in Turkey.
   integrated (confirmed $0 cost, not yet built), so it's proposed as a prompt-guide for now; Set 2's
   4 groups include a hard pre-publish ethics gate with concrete banned-phrase examples for the
   Turkish psychologist/psychiatrist advertising-ethics constraint.
+- `BACP_INGILTERE_MEVZUAT_ARASTIRMASI.md` (2026-08-17) — Faz 0 of the full "sector/branch/profession
+  ethics gate" roadmap (plan file: see `~/.claude-hesap2/plans/harmonic-tumbling-toast.md` for the
+  full phased plan). Researches the UK regime (BACP Ethical Framework + CAP Code) since `index.html`
+  advertises Çiğdem as "BACP Registered Psychotherapist" but prior ethics research only covered
+  Turkish TPD/TTB rules. Key correction: BACP/CAP applies to ALL of Çiğdem's content regardless of
+  language (membership condition), TPD/TTB applies additionally only for Turkey-targeted content —
+  NOT a simple EN/TR language split as originally assumed. Includes concrete banned-phrase table
+  (outcome-guarantee claims, false accreditation-status claims — real 2025 ASA precedent, competitor
+  denigration) feeding Faz 1 (`YAYINCI_PROFILLERI` config) and Faz 2 (deterministic `etikGate.ts`).
 
 ## Mimari Yaklaşım Notu (2026-08-09 analizi — herhangi bir yeni aşama/entegrasyona geçmeden önce oku)
 

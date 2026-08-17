@@ -8,6 +8,9 @@ import { getRakipTakipAyar } from './lib/rakipTakipAyarSheets';
 import { rakipTakipAdimUygula, gecerliPeriyotTuru } from './routes/rakipTakip';
 import { ensureKullanimKaydiTab, getKullanimOzet } from './lib/kullanimKaydi';
 import { ensureGiderTakipTab, upsertAylikKullanimKaydi } from './lib/giderTakipSheets';
+import { sonMevzuatTakipTarihiGetir, appendMevzuatTakipKaydi } from './lib/mevzuatTakipSheets';
+import { mevzuatTakipYap } from './lib/mevzuatTakip';
+import { MEVZUAT_TAKIP_ARALIK_GUN } from './config';
 import type { Env, SheetRow } from './types';
 
 // Çiğdem's fixed local timezone (Madde 5 design assumption) — the "end of the session's own day" a
@@ -156,5 +159,24 @@ export async function runGiderTakipAylikOzetSweep(env: Env, now: Date = new Date
 		} catch (err) {
 			console.error(`Gider Takibi aylık özet sweep başarısız oldu, kategori=${kategori}`, err);
 		}
+	}
+}
+
+// Yayın-öncesi etik/yasal gate — Faz 3 sürekli mevzuat takibi (2026-08-17). AYRI bir cron trigger
+// YERİNE mevcut 15-dk cron'un içinde çalışır — kendi "süresi doldu mu" kontrolünü yapar (RakipTakip
+// sweep'iyle AYNI desen, bkz. runRakipTakipSweep). Ayda ~1 kez gerçekten Anthropic'e web-arama
+// çağrısı yapar (maliyeti ölçülü, bkz. MALIYET_ANALIZI_GORSEL_VIDEO_STRATEJISI.md), diğer 15-dk
+// tiklerinde sadece MevzuatTakip'in son kaydını okuyup hemen çıkar. Kural listesini (lib/
+// etikKurallari.ts) OTOMATİK değiştirmez — sadece bulguyu kaydeder, insan onayı bekler.
+export async function runMevzuatTakipSweep(env: Env, now: Date = new Date()): Promise<void> {
+	const sonTarih = await sonMevzuatTakipTarihiGetir(env);
+	const suresiDoldu = !sonTarih || now.getTime() - sonTarih.getTime() >= MEVZUAT_TAKIP_ARALIK_GUN * 24 * 60 * 60 * 1000;
+	if (!suresiDoldu) return;
+
+	try {
+		const { degisiklikVar, metin } = await mevzuatTakipYap(env, sonTarih);
+		await appendMevzuatTakipKaydi(env, degisiklikVar, metin);
+	} catch (err) {
+		console.error('Mevzuat takip sweep başarısız oldu', err);
 	}
 }
