@@ -1896,7 +1896,7 @@ durduruldu. Madde 3, Sparrow'un müşterilere verdiği bir TAAHHÜT olarak kayda
 branşa/mesleğe özel riskli içerik filtreleme + güncel yasal mevzuat takibi — bu, Set 2 Grup C'nin
 (yayın-öncesi denetim gate) Sparrow tarafında da AYNI derecede kritik olduğunu doğruluyor.
 
-## Rakip Analizi — 6 maddelik bekleyen düzeltme/geliştirme isteği (2026-08-17, paralel oturumdan bu oturuma taşındı, birebir kayıt)
+## Rakip Analizi — 7 maddelik bekleyen düzeltme/geliştirme isteği (2026-08-17 6 madde + 2026-08-18 7. madde, birebir kayıt)
 
 Not: bu istek başlangıçta AYNI repo üzerindeki PARALEL bir Claude Code oturumuna (farklı hesap)
 verilmişti; o oturum "bu oturum (`id:2e06b4b0-...`) günlerce/haftalarca aktif kalacak" diye
@@ -1929,5 +1929,13 @@ Kullanıcının mesajı (birebir, 6 madde):
 >    tasarım ve planlamamız olmadı, onları da yapalım.
 > 6- Ayrıca seçilen rakip ve rakip ile alakalı yaptığım rapor dahil hiçbir veri Google'da
 >    işlenmedi.
+
+7. madde olarak eklendi (2026-08-18, birebir kayıt):
+
+> Görsel/Video Stratejisi için oluşturulan stratejide görsel için öneride görselin neresine ne
+> fontta, ne renkte ve nasıl bir tasarım yapması gerektiği gibi (diğer detayları da sen bulup
+> ekle), video tarafında da önerdiği videonun akışını okuyabileceği bir video metni önersin,
+> kullanıcı o metni okuyarak videosunun konuşma kısmını oluşturmuş olsun ve bu metin elde edilen
+> verilerde optimal video (reels ya da uzun video) süresi ile örtüşecek uzunlukta bir metin olsun.
 
 Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada.

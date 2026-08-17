@@ -618,7 +618,7 @@
         };
       });
       var chart = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
+        type: grafikTuru,
         data: { labels: paramKeys, datasets: datasets },
         options: { scales: { y: { min: 0, max: 10 } }, plugins: { legend: { position: 'bottom' } } },
       });
@@ -2157,7 +2157,13 @@
         konuTrendEl.classList.add('hidden');
       }
       if (grafikKaynaklariSecili.length) {
-        dalGrafikCanvasBilgileri = grafikVerileriRender(el('dalGrafikler'), res.data.grafikVerileri, el('dalGrafikTuru').value, dalChartlar);
+        // Grafik çizimi rapor metninden AYRI bir hata yüzeyi — biri patlarsa diğerini
+        // (ve aşağıdaki indir/paylaş butonlarını) gizlememeli (bkz. INTEGRASYON_TODO.md Madde 3).
+        try {
+          dalGrafikCanvasBilgileri = grafikVerileriRender(el('dalGrafikler'), res.data.grafikVerileri, el('dalGrafikTuru').value, dalChartlar);
+        } catch (grafikHata) {
+          el('dalGrafikler').textContent = 'Grafik çizilemedi, ama rapor metni geçerli (yukarıda).';
+        }
       }
       el('dalRaporAksiyonlar').classList.remove('hidden');
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('dalStatus'), 'Rapor şu an üretilemedi, lütfen tekrar dene.', 'err'); });
