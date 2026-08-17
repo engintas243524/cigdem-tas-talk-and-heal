@@ -119,8 +119,17 @@ function attachVoiceInput(config) {
     };
     r.onerror = function (e) {
       if (mySession !== currentSession) return;
-      var fatal = { 'not-allowed': 1, 'audio-capture': 1, 'service-not-allowed': 1 };
-      if (fatal[e.error]) { stoppedByUser = true; micHintEl.textContent = 'Mikrofon hatası. İzin verildiğinden emin olun.'; }
+      // 'no-speech' is the normal "user paused talking" case — onend will silently restart
+      // the next utterance, same as always. Every OTHER error (network, aborted, etc.) used
+      // to fall through unhandled: onend still fired, stoppedByUser was still false, so
+      // beginSession() ran again, hit the same error again, and looped silently forever —
+      // mic showed as "listening" with zero feedback and zero transcription ever appearing.
+      if (e.error === 'no-speech') return;
+      var permission = { 'not-allowed': 1, 'service-not-allowed': 1 };
+      stoppedByUser = true;
+      micHintEl.textContent = permission[e.error]
+        ? 'Mikrofon hatası. İzin verildiğinden emin olun.'
+        : 'Ses tanıma hatası (' + e.error + '). Lütfen tekrar deneyin.';
     };
     r.onend = function () {
       if (mySession !== currentSession) return;
@@ -155,6 +164,16 @@ function attachVoiceInput(config) {
     stoppedByUser = false;
     var pos = textareaEl.selectionStart != null ? textareaEl.selectionStart : textareaEl.value.length;
     beginSession(textareaEl.value.slice(0, pos), textareaEl.value.slice(pos), micLang === 'en' ? 'en-GB' : 'tr-TR');
-    if (!volMonitor) { startVolumeMonitor(onVolLow, onVolOk).then(function (m) { volMonitor = m; }).catch(function () {}); }
+    // beginSession() already bumped currentSession, so this is the session the monitor
+    // belongs to. If the user hits stop before getUserMedia resolves, currentSession moves
+    // on and volMonitor is never assigned here — without this check the just-created stream
+    // would keep running (mic never released) with nothing left holding a reference to stop it.
+    var monitorSession = currentSession;
+    if (!volMonitor) {
+      startVolumeMonitor(onVolLow, onVolOk).then(function (m) {
+        if (monitorSession !== currentSession) { m.stop(); return; }
+        volMonitor = m;
+      }).catch(function () {});
+    }
   });
 }
