@@ -141,7 +141,17 @@ function attachVoiceInput(config) {
   }
 
   micBtnEl.addEventListener('click', function () {
-    if (recognizing) { stoppedByUser = true; if (activeRecog) activeRecog.stop(); return; }
+    if (recognizing) {
+      stoppedByUser = true;
+      currentSession++; // stray late onresult/onend'lerin bu oturumu artık "eski" görüp bailout etmesi için — stop()/abort() sonrası bazı Chrome sürümlerinde onend hiç ateşlenmeyebiliyor, o yüzden UI/state'i ASENKRON onend'i beklemeden burada, tıklama anında hemen sıfırlıyoruz (ikinci tıkta "kapanmıyor" şikayetinin kök nedeni: buton state'i onend'e bağımlıydı).
+      if (activeRecog) { try { activeRecog.stop(); } catch (e) {} try { activeRecog.abort(); } catch (e) {} }
+      recognizing = false;
+      micBtnEl.classList.remove('recording');
+      micHintEl.textContent = '';
+      if (volMonitor) { volMonitor.stop(); volMonitor = null; }
+      isQuiet = false;
+      return;
+    }
     stoppedByUser = false;
     var pos = textareaEl.selectionStart != null ? textareaEl.selectionStart : textareaEl.value.length;
     beginSession(textareaEl.value.slice(0, pos), textareaEl.value.slice(pos), micLang === 'en' ? 'en-GB' : 'tr-TR');

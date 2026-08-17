@@ -1896,7 +1896,7 @@ durduruldu. Madde 3, Sparrow'un müşterilere verdiği bir TAAHHÜT olarak kayda
 branşa/mesleğe özel riskli içerik filtreleme + güncel yasal mevzuat takibi — bu, Set 2 Grup C'nin
 (yayın-öncesi denetim gate) Sparrow tarafında da AYNI derecede kritik olduğunu doğruluyor.
 
-## Rakip Analizi — 10 maddelik bekleyen düzeltme/geliştirme isteği (2026-08-17 6 madde + 2026-08-18 7-10. madde + Madde 5 eki, birebir kayıt)
+## Rakip Analizi — 11 maddelik bekleyen düzeltme/geliştirme isteği (2026-08-17 6 madde + 2026-08-18 7-11. madde + Madde 5 eki, birebir kayıt)
 
 Not: bu istek başlangıçta AYNI repo üzerindeki PARALEL bir Claude Code oturumuna (farklı hesap)
 verilmişti; o oturum "bu oturum (`id:2e06b4b0-...`) günlerce/haftalarca aktif kalacak" diye
@@ -1977,5 +1977,14 @@ Rapor Üret akışıyla uçtan uca TIKLANARAK henüz denenmedi (kota tüketmemek
 > kullanıcının manuel olarak NotebookLM'e yönlendirileceği 4 buton daha koyalım, onlara
 > tıkladıklarında NotebookLM'de raporlarını bu formatlara dönüştürebilsinler.
 
-Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 3 kısmen çözüldü, Madde 5
-eki (çok formatlı indirme) yapıldı (yukarı bakınız), kalanlar (Madde 1, 2, 4, 6, 7, 8, 9, 10) sırada.
+11. madde olarak eklendi (2026-08-18, birebir kayıt):
+
+> Oluşturulan raporların anlaşılır dilde özetlerinin verilmesi için rapor üreten iki bölüme de
+> gerekli eklemeyi yap. Bu özet kullanıcı tarafından okunduğunda rahatlıkla anlaşılır olmakla
+> birlikte kesinlikle özetin özeti gibi bağlamından kopuk ve kısa özetle değil — zamandan tasarruf
+> etmek ve konuyu genel çerçevesiyle anlamak için olsun, bunun dışında bir amaca hizmet etmeyecek.
+
+Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1 YAPILDI VE CANLIDA
+DOĞRULANDI (2026-08-18, haritada arama merkezine Google'ın varsayılan pin'i eklendi). Madde 3
+kısmen çözüldü, Madde 5 eki (çok formatlı indirme) yapıldı (yukarı bakınız), kalanlar (Madde 2, 4,
+6, 7, 8, 9, 10, 11) sırada.
