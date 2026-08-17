@@ -1233,11 +1233,17 @@ deploy edildi. Git commit sırası: `a5de68c`→`5d4f5f8` (form-backend + panel.
   görünmüyor" şikayetlerinde önce `git log origin/main..HEAD` ile push edilmemiş commit var mı
   kontrol et).
 
-**Henüz teyit edilmemiş (bir sonraki oturumda ilk iş):** kullanıcı canlıda uçtan uca testi
-(rakip ekleme → Sheet'te RakipAnalizi sekmesinin doğru yazıldığını kontrol, konum+yarıçap arama,
-her iki dal için gerçek Claude raporu üretme) henüz TEYİT ETMEDİ — plan dosyasının Task 9/Step 4'ü
-teknik olarak yapıldı (deploy + route canlı, 401 doğrulandı) ama fonksiyonel doğrulama kullanıcı
-tarafından onaylanmadı. Sorulacak: "rakip ekleme/arama/rapor üretme test edildi mi, çalışıyor mu?"
+**Canlıda uçtan uca test edildi (2026-08-15/17), 3 gerçek hata bulunup düzeltildi:**
+1. Production `GOOGLE_SHEET_ID` hâlâ eski test sheet'ine işaret ediyordu — Çiğdem'in gerçek
+   sheet'ine (`13W3GtiBW1kdcFadVxbdsVMVuENg1VTU0jBDTigWuuPM`) geçiş hiç yapılmamıştı, düzeltildi.
+2. Google Places Text Search'e yanlış konum kısıtlama şekli (`circle` yerine `rectangle`
+   gerekiyordu) gönderiliyordu, her arama sessizce sıfır sonuç dönüyordu — düzeltildi.
+3. İlk sürümdeki sabit kategori filtresi (`psychotherapist`/`counselor` vb.) Türkiye'deki
+   işletmelerde karşılıksız kaldığı için hiç sonuç getirmiyordu — serbest arama terimine
+   (kullanıcının kendi yazdığı "psikolog"/"avukat" vb.) geçirildi.
+
+Tam teknik detay + evrensel dersler: `talk-and-heal-hata-gunlugu/05-Backend-Entegrasyon/
+05-backend-entegrasyon.md` içinde **BE-78, BE-79, BE-80**.
 
 **Kapsam dışı bırakılan (ayrı, küçük takip görevi):** Google Maps JavaScript API ile gerçek harita
 render'ı (pin gösterimi) — şu an sonuç listesi haritasız, tam işlevsel metin listesi olarak
@@ -1831,13 +1837,29 @@ sonra Rakip Analizi için 2 parametre setini derin araştırmayla oluştur, SONR
 Video Stratejisi'ne uygula (ayrı bir derinlemesine araştırma turu gerektirir, aynı mesajda
 istenmedi — "az kalsın unutuyordum" ile eklendi, sıralı iş olarak okunmalı).
 
-**Durum (2026-08-17): Rakip Analizi kısmı TAMAMLANDI (araştırma+tasarım, kod DEĞİL).**
+**Durum (2026-08-17): Rakip Analizi kısmı TAMAMLANDI — araştırma VE ilk kod entegrasyonu.**
 `RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md`'nin Bölüm 8-12'sinde: (8) arama limiti artırmanın
 gerçekten "precision dilution" + pazar-tanımı-hatası riski taşıdığı doğrulandı, harita altı uyarı
 metni taslağı verildi; (9) Parametre Seti 1 — dahil-etme filtreleri + yerel/genel için farklı
-mesafe/erişim bileşenli 1-10 sıralama formülü (kalibrasyonu Çiğdem'in mevcut manuel rakip
-listesiyle önerildi, sektörde de evrensel formül olmadığı dürüstçe not edildi); (10) Parametre
-Seti 2 — 4 gruplu (Hizmet Profili/Dijital Varlık/Yerel Erişim&İtibar/Değişim-Trend) rakip analiz
-çerçevesi, tek/çoklu modda aynı set farklı sunum; (11) iki setin çoklu-rakip raporunda nasıl
-birleşeceği (Set 1 skoru = sıralama + özet-cümle ağırlıklandırması, Set 2 = detay). Görsel/Video
-Stratejisi kısmı HENÜZ YAPILMADI — ayrı bir tur.
+mesafe/erişim bileşenli 1-10 sıralama formülü; (10) Parametre Seti 2 — 4 gruplu (Hizmet Profili/
+Dijital Varlık/Yerel Erişim&İtibar/Değişim-Trend) rakip analiz çerçevesi; (11) iki setin çoklu-rakip
+raporunda birleşimi. **Kod tarafı da yapıldı:** `lib/places.ts` optimal yarıçap (3000m) üstü
+aramaları NxN grid ile tarıyor + `rating`/`userRatingCount`/`businessStatus`/`websiteUri` field
+mask'e eklendi; `lib/rakipBulmaSiralama.ts` (yeni) Set 1 formülünü uyguluyor; `AKSIYON_ANALIZ_
+SYSTEM_PROMPT`'a Set 2'nin 4 grubu + Türkiye etik-kısıt hatırlatması işlendi; frontend'e optimal
+yarıçap bilgisi + grid-arama uyarısı eklendi.
+
+**Görsel/Video Stratejisi kısmı: araştırma TAMAMLANDI (kod DEĞİL, ayrı bir tur).**
+`GORSEL_VIDEO_STRATEJISI_KRITERLERI_ARASTIRMASI.md` — YouTube'un resmi sinyalleri (Viewer
+Personalization/Content Performance, 2026'da "satisfaction" ham izlenme süresinin üstünde),
+VidIQ/TubeBuddy'nin gerçek "Fırsat Skoru" mantığı, Google Trends'in oran-bazlı normalizasyonu,
+GitHub'ın velocity-vs-baseline mantığı + açık kaynak `trend-pulse` projesinin disclosed ağırlıklı
+formülü araştırıldı. Set 1 (İçerik/Trend Bulma-Sıralama, 3 bileşenli: ilgi oranı/doygunluk
+tersi/format uygunluğu) ve Set 2 (4 grup: Format&Sunum/Platform-Algoritma/Mesaj-Ton&Etik-Gate/
+Zamanlama-Trend) taslakları kuruldu. **Kritik mimari fark:** Rakip Analizi'nin aksine burada
+structured bir veri kaynağı (YouTube Data API) henüz entegre değil — Set 1 şu an gerçek sayısal
+formül DEĞİL, bir prompt-rehberi olarak uygulanabilir; gerçek formül için önce YouTube API
+entegrasyonu (ayrı karar, maliyeti $0 doğrulandı) gerekiyor. Türkiye etik-kısıtı burada DAHA KATI
+işlendi (somut yasaklı ifade kalıpları bulundu, ör. "X seansta çözdük" / "...aşıyoruz" riskli vs
+"...sürecinde çalışıyoruz" güvenli) — Set 1'e HARD GATE, Set 2'nin Grup C'sine yayın-öncesi denetim
+adımı olarak işlendi.
