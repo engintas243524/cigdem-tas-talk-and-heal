@@ -226,7 +226,8 @@
       <p class="muted hidden" id="dalKonuTrendSonuc"></p>
       <div id="dalGrafikler"></div>
       <div class="actions hidden" id="dalRaporAksiyonlar">
-        <button class="btn-secondary" id="dalIndirBtn" type="button">İndir (PDF)</button>
+        <select id="dalIndirFormat" title="İndirme formatı"></select>
+        <button class="btn-secondary" id="dalIndirBtn" type="button">İndir</button>
         <button class="btn-secondary" id="dalWhatsappBtn" type="button">WhatsApp'ta Paylaş</button>
         <button class="btn-secondary" id="dalEpostaBtn" type="button">E-posta ile Paylaş</button>
         <button class="btn-secondary hidden" id="dalPaylasBtn" type="button">Paylaş</button>
@@ -282,7 +283,8 @@
       <div class="status" id="rakipTakipStatus"></div>
       <div id="rakipTakipSonuc" class="muted" style="white-space:pre-wrap;"></div>
       <div class="actions hidden" id="rakipTakipRaporAksiyonlar">
-        <button class="btn-secondary" id="rakipTakipIndirBtn" type="button">İndir (PDF)</button>
+        <select id="rakipTakipIndirFormat" title="İndirme formatı"></select>
+        <button class="btn-secondary" id="rakipTakipIndirBtn" type="button">İndir</button>
       </div>
 
       <!-- Zaman İçi Karşılaştırma Raporu: RakipTakipGecmis'teki (son 12 periyot, rotasyonlu)
@@ -373,6 +375,15 @@
 <!-- Rapor PDF indirme için — açık kaynak, ücretsiz, build adımı gerektirmiyor (bkz. daha önceki
      Chart.js kararıyla aynı gerekçe: CDN script, sıfır bağımlılık kurulumu). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Çok formatlı rapor indirme (DOCX/EPUB) için — DOCX/EPUB birer zip konteyner, JSZip bunu
+     tarayıcıda üretiyor. Açık kaynak, ücretsiz, sıfır bağımlılık kurulumu (aynı jsPDF/Chart.js
+     kararı, kullanıcı isteği 2026-08-18: "PDF, TXT, MD, DOCX, CSV, PPTX, EPUB + kod/yapılandırma
+     dosyaları" indirebilme). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- PPTX üretimi için — .pptx'in kendi OOXML iskeletini (slaytlar/layout/master/tema) elle
+     yazmak yerine bu küçük, tek amaçlı, açık kaynak kütüphane kullanılıyor (elle yazılmış hatalı
+     bir iskelet PowerPoint'in dosyayı "bozuk" diye reddetmesine yol açabilir). -->
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <!-- Zaman içi karşılaştırma grafiği için — açık kaynak, ücretsiz, build adımı gerektirmiyor. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script>
@@ -555,6 +566,197 @@
 
       doc.save(dosyaAdi);
     });
+  }
+
+  // Çok formatlı rapor indirme (2026-08-18, kullanıcı isteği) — PDF dışında TXT/MD/DOCX/CSV/
+  // PPTX/EPUB + kod/yapılandırma dosyaları (JSON/PY/JS/TS/HTML/CSS/YAML/XML/SH/SQL) olarak da
+  // indirilebilsin. Kod/yapılandırma uzantıları için rapor İÇERİĞİ değişmiyor — sadece o uzantıyla
+  // kaydediliyor (bu formatlar burada "geçerli kod" üretmek için değil, kullanıcının o dosya
+  // türünü bekleyen bir editöre/araca aktarabilmesi için isteniyor).
+  var RAPOR_INDIR_FORMATLARI = [
+    { deger: 'pdf', etiket: 'PDF' },
+    { deger: 'txt', etiket: 'TXT' },
+    { deger: 'md', etiket: 'MD' },
+    { deger: 'docx', etiket: 'DOCX' },
+    { deger: 'csv', etiket: 'CSV' },
+    { deger: 'pptx', etiket: 'PPTX' },
+    { deger: 'epub', etiket: 'EPUB' },
+    { deger: 'json', etiket: 'JSON' },
+    { deger: 'py', etiket: 'PY' },
+    { deger: 'js', etiket: 'JS' },
+    { deger: 'ts', etiket: 'TS' },
+    { deger: 'html', etiket: 'HTML' },
+    { deger: 'css', etiket: 'CSS' },
+    { deger: 'yaml', etiket: 'YAML' },
+    { deger: 'xml', etiket: 'XML' },
+    { deger: 'sh', etiket: 'SH' },
+    { deger: 'sql', etiket: 'SQL' },
+  ];
+
+  function raporIndirFormatSeciciDoldur(selectEl) {
+    RAPOR_INDIR_FORMATLARI.forEach(function (f) {
+      var opt = document.createElement('option');
+      opt.value = f.deger; opt.textContent = f.etiket;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function raporDosyaIndir(blob, dosyaAdi) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = dosyaAdi;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function raporXmlEscape(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // TXT/MD ve kod-uzantıları AYNI düz metni paylaşıyor — sadece dosya uzantısı değişiyor.
+  function raporDuzMetinIcerik(baslik, altBaslikMetin, govdeMetin) {
+    return baslik + (altBaslikMetin ? '\n' + altBaslikMetin : '') + '\n\n' + (govdeMetin || '');
+  }
+
+  function raporCsvIcerik(baslik, govdeMetin) {
+    var satir = function (s) { return '"' + String(s).replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"'; };
+    var rows = ['"Bölüm"', satir(baslik)];
+    (govdeMetin || '').split('\n').forEach(function (s) { if (s.trim()) rows.push(satir(s)); });
+    return rows.join('\r\n');
+  }
+
+  function raporJsonIcerik(baslik, altBaslikMetin, govdeMetin) {
+    return JSON.stringify({ baslik: baslik, tarih: altBaslikMetin || null, icerik: govdeMetin || '' }, null, 2);
+  }
+
+  // Minimal ama GEÇERLİ bir .docx — Word/Google Docs bunu stilsiz (styles.xml'siz) de açar, her
+  // paragrafın kendi doğrudan çalıştırma (run) özellikleri (kalın/punto/renk) var.
+  function raporDocxOlustur(dosyaAdi, baslik, altBaslikMetin, govdeMetin) {
+    if (!window.JSZip) return;
+    var zip = new window.JSZip();
+    zip.file('[Content_Types].xml',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '</Types>');
+    zip.file('_rels/.rels',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      '</Relationships>');
+    var body = '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t xml:space="preserve">' + raporXmlEscape(baslik) + '</w:t></w:r></w:p>';
+    if (altBaslikMetin) body += '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="888888"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">' + raporXmlEscape(altBaslikMetin) + '</w:t></w:r></w:p>';
+    body += '<w:p/>';
+    (govdeMetin || '').split('\n').forEach(function (satir) {
+      var t = satir.trim();
+      if (!t) { body += '<w:p/>'; return; }
+      if (t.indexOf('## ') === 0) {
+        body += '<w:p><w:r><w:rPr><w:b/><w:sz w:val="26"/><w:color w:val="7C9C4A"/></w:rPr><w:t xml:space="preserve">' + raporXmlEscape(t.slice(3).trim()) + '</w:t></w:r></w:p>';
+      } else if (t.indexOf('- ') === 0) {
+        body += '<w:p><w:pPr><w:ind w:left="360"/></w:pPr><w:r><w:t xml:space="preserve">• ' + raporXmlEscape(t.slice(2).trim()) + '</w:t></w:r></w:p>';
+      } else {
+        body += '<w:p><w:r><w:t xml:space="preserve">' + raporXmlEscape(t) + '</w:t></w:r></w:p>';
+      }
+    });
+    var docXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + body + '<w:sectPr/></w:body></w:document>';
+    zip.file('word/document.xml', docXml);
+    zip.generateAsync({ type: 'blob' }).then(function (blob) { raporDosyaIndir(blob, dosyaAdi); });
+  }
+
+  // Minimal ama GEÇERLİ bir EPUB2/3 karışımı (toc.ncx dahil — eski okuyucularla da uyumlu olsun
+  // diye). mimetype dosyası zip içinde SIKIŞTIRILMADAN (STORE) durmalı, EPUB spesifikasyonu bunu
+  // şart koşuyor.
+  function raporEpubOlustur(dosyaAdi, baslik, altBaslikMetin, govdeMetin) {
+    if (!window.JSZip) return;
+    var zip = new window.JSZip();
+    zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+    zip.file('META-INF/container.xml',
+      '<?xml version="1.0" encoding="UTF-8"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">' +
+      '<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
+    var govdeHtml = '<h1>' + raporXmlEscape(baslik) + '</h1>';
+    if (altBaslikMetin) govdeHtml += '<p><em>' + raporXmlEscape(altBaslikMetin) + '</em></p>';
+    var listeAcik = false;
+    (govdeMetin || '').split('\n').forEach(function (satir) {
+      var t = satir.trim();
+      if (!t) return;
+      if (t.indexOf('## ') === 0) {
+        if (listeAcik) { govdeHtml += '</ul>'; listeAcik = false; }
+        govdeHtml += '<h2>' + raporXmlEscape(t.slice(3).trim()) + '</h2>';
+      } else if (t.indexOf('- ') === 0) {
+        if (!listeAcik) { govdeHtml += '<ul>'; listeAcik = true; }
+        govdeHtml += '<li>' + raporXmlEscape(t.slice(2).trim()) + '</li>';
+      } else {
+        if (listeAcik) { govdeHtml += '</ul>'; listeAcik = false; }
+        govdeHtml += '<p>' + raporXmlEscape(t) + '</p>';
+      }
+    });
+    if (listeAcik) govdeHtml += '</ul>';
+    zip.file('OEBPS/content.xhtml',
+      '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml"><head><title>' +
+      raporXmlEscape(baslik) + '</title></head><body>' + govdeHtml + '</body></html>');
+    zip.file('OEBPS/toc.ncx',
+      '<?xml version="1.0" encoding="UTF-8"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">' +
+      '<head><meta name="dtb:uid" content="talkandheal-rapor"/></head><docTitle><text>' + raporXmlEscape(baslik) + '</text></docTitle>' +
+      '<navMap><navPoint id="p1" playOrder="1"><navLabel><text>' + raporXmlEscape(baslik) + '</text></navLabel><content src="content.xhtml"/></navPoint></navMap></ncx>');
+    zip.file('OEBPS/content.opf',
+      '<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid">' +
+      '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">talkandheal-' + Date.now() + '</dc:identifier>' +
+      '<dc:title>' + raporXmlEscape(baslik) + '</dc:title><dc:language>tr</dc:language></metadata>' +
+      '<manifest><item id="content" href="content.xhtml" media-type="application/xhtml+xml"/>' +
+      '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/></manifest>' +
+      '<spine toc="ncx"><itemref idref="content"/></spine></package>');
+    zip.generateAsync({ type: 'blob' }).then(function (blob) { raporDosyaIndir(blob, dosyaAdi); });
+  }
+
+  // PptxGenJS ile: "## " her biri kendi slaydı, altındaki "- " maddeleri o slaydın gövdesi.
+  // Hiç "## " yoksa (nadiren) tüm metin tek slaytta düz paragraf olarak durur.
+  function raporPptxOlustur(dosyaAdi, baslik, altBaslikMetin, govdeMetin) {
+    if (!window.PptxGenJS) return;
+    var pptx = new window.PptxGenJS();
+    var kapak = pptx.addSlide();
+    kapak.addText(baslik, { x: 0.5, y: 1.8, w: 9, h: 1.2, fontSize: 28, bold: true, color: '7C9C4A', align: 'center' });
+    if (altBaslikMetin) kapak.addText(altBaslikMetin, { x: 0.5, y: 3, w: 9, h: 0.5, fontSize: 12, color: '888888', align: 'center' });
+
+    var mevcutSlayt = null, mevcutMaddeler = [];
+    function slaydiKapat() {
+      if (mevcutSlayt && mevcutMaddeler.length) {
+        mevcutSlayt.addText(mevcutMaddeler.map(function (m) { return { text: m, options: { bullet: true, breakLine: true } }; }), { x: 0.5, y: 1.3, w: 9, h: 5.5, fontSize: 14, valign: 'top' });
+      }
+    }
+    (govdeMetin || '').split('\n').forEach(function (satir) {
+      var t = satir.trim();
+      if (!t) return;
+      if (t.indexOf('## ') === 0) {
+        slaydiKapat();
+        mevcutSlayt = pptx.addSlide();
+        mevcutSlayt.addText(t.slice(3).trim(), { x: 0.5, y: 0.4, w: 9, h: 0.7, fontSize: 20, bold: true, color: '7C9C4A' });
+        mevcutMaddeler = [];
+      } else if (t.indexOf('- ') === 0) {
+        if (!mevcutSlayt) { mevcutSlayt = pptx.addSlide(); mevcutMaddeler = []; }
+        mevcutMaddeler.push(t.slice(2).trim());
+      } else {
+        if (!mevcutSlayt) { mevcutSlayt = pptx.addSlide(); mevcutMaddeler = []; }
+        mevcutMaddeler.push(t);
+      }
+    });
+    slaydiKapat();
+    pptx.writeFile({ fileName: dosyaAdi });
+  }
+
+  // Tüm formatlar için tek giriş noktası — düğmeyi dinleyen kod formatı bilmeden sadece bunu
+  // çağırır. PDF zaten var olan raporPdfOlustur'u (grafik gömme dahil) kullanmaya devam ediyor;
+  // diğer tüm formatlar grafiği İÇERMEZ (sadece metin) — PDF grafik içeren tek format.
+  function raporIndir(format, dosyaAdiTaban, baslik, altBaslikMetin, govdeMetin, grafikler) {
+    if (format === 'pdf') { raporPdfOlustur(dosyaAdiTaban + '.pdf', baslik, altBaslikMetin, govdeMetin, grafikler); return; }
+    if (format === 'docx') { raporDocxOlustur(dosyaAdiTaban + '.docx', baslik, altBaslikMetin, govdeMetin); return; }
+    if (format === 'epub') { raporEpubOlustur(dosyaAdiTaban + '.epub', baslik, altBaslikMetin, govdeMetin); return; }
+    if (format === 'pptx') { raporPptxOlustur(dosyaAdiTaban + '.pptx', baslik, altBaslikMetin, govdeMetin); return; }
+    if (format === 'csv') { raporDosyaIndir(new Blob([raporCsvIcerik(baslik, govdeMetin)], { type: 'text/csv;charset=utf-8' }), dosyaAdiTaban + '.csv'); return; }
+    if (format === 'json') { raporDosyaIndir(new Blob([raporJsonIcerik(baslik, altBaslikMetin, govdeMetin)], { type: 'application/json;charset=utf-8' }), dosyaAdiTaban + '.json'); return; }
+    // txt/md/py/js/ts/html/css/yaml/xml/sh/sql — hepsi aynı düz metin, sadece uzantı değişiyor.
+    raporDosyaIndir(new Blob([raporDuzMetinIcerik(baslik, altBaslikMetin, govdeMetin)], { type: 'text/plain;charset=utf-8' }), dosyaAdiTaban + '.' + format);
   }
 
   // Yayın-öncesi etik/yasal gate — Faz 4 (2026-08-17). Backend'in etikBayraklari'nı (lib/etikGate.ts)
@@ -1276,11 +1478,12 @@
       }).catch(function (e) { btn.disabled = false; if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Üretilemedi, tekrar dene.', 'err'); });
   }
 
+  raporIndirFormatSeciciDoldur(el('rakipTakipIndirFormat'));
   el('rakipTakipIndirBtn').addEventListener('click', function () {
     if (!sonRakipTakipVerisi) return;
     var govde = '## Aksiyon/Hedef\n' + sonRakipTakipVerisi.aksiyonRaporu + '\n\n## Görsel/Video (küratif)\n' + sonRakipTakipVerisi.icerikRaporu;
-    var dosyaAdi = 'rakip-takip-' + sonRakipTakipVerisi.periyotTuru + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
-    raporPdfOlustur(dosyaAdi, 'Otomatik Rakip Takibi Raporu', new Date().toLocaleDateString('tr-TR'), govde, []);
+    var dosyaAdiTaban = 'rakip-takip-' + sonRakipTakipVerisi.periyotTuru + '-' + new Date().toISOString().slice(0, 10);
+    raporIndir(el('rakipTakipIndirFormat').value, dosyaAdiTaban, 'Otomatik Rakip Takibi Raporu', new Date().toLocaleDateString('tr-TR'), govde, []);
   });
 
   // Zaman İçi Karşılaştırma Raporu — RakipTakipGecmis'teki geçmişten Talk and Heal'i seçilen
@@ -2171,14 +2374,15 @@
 
   // Rapor indirme/paylaşma — hem Görsel/Video Stratejisi hem Aksiyon/Hedef Analizi raporları
   // için aynı butonlar (sonRaporMetni, hangi dal üretildiyse onu tutuyor).
-  function raporDosyaAdi() {
-    return (currentDal === 'icerikStrateji' ? 'gorsel-video-stratejisi' : 'aksiyon-hedef-analizi') + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
+  raporIndirFormatSeciciDoldur(el('dalIndirFormat'));
+  function raporDosyaAdiTaban() {
+    return (currentDal === 'icerikStrateji' ? 'gorsel-video-stratejisi' : 'aksiyon-hedef-analizi') + '-' + new Date().toISOString().slice(0, 10);
   }
 
   el('dalIndirBtn').addEventListener('click', function () {
     if (!sonRaporMetni) return;
     var baslik = currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu';
-    raporPdfOlustur(raporDosyaAdi(), baslik, new Date().toLocaleDateString('tr-TR'), sonRaporMetni, dalGrafikCanvasBilgileri);
+    raporIndir(el('dalIndirFormat').value, raporDosyaAdiTaban(), baslik, new Date().toLocaleDateString('tr-TR'), sonRaporMetni, dalGrafikCanvasBilgileri);
   });
 
   el('dalWhatsappBtn').addEventListener('click', function () {

@@ -1896,7 +1896,7 @@ durduruldu. Madde 3, Sparrow'un müşterilere verdiği bir TAAHHÜT olarak kayda
 branşa/mesleğe özel riskli içerik filtreleme + güncel yasal mevzuat takibi — bu, Set 2 Grup C'nin
 (yayın-öncesi denetim gate) Sparrow tarafında da AYNI derecede kritik olduğunu doğruluyor.
 
-## Rakip Analizi — 7 maddelik bekleyen düzeltme/geliştirme isteği (2026-08-17 6 madde + 2026-08-18 7. madde, birebir kayıt)
+## Rakip Analizi — 10 maddelik bekleyen düzeltme/geliştirme isteği (2026-08-17 6 madde + 2026-08-18 7-10. madde + Madde 5 eki, birebir kayıt)
 
 Not: bu istek başlangıçta AYNI repo üzerindeki PARALEL bir Claude Code oturumuna (farklı hesap)
 verilmişti; o oturum "bu oturum (`id:2e06b4b0-...`) günlerce/haftalarca aktif kalacak" diye
@@ -1938,4 +1938,44 @@ Kullanıcının mesajı (birebir, 6 madde):
 > kullanıcı o metni okuyarak videosunun konuşma kısmını oluşturmuş olsun ve bu metin elde edilen
 > verilerde optimal video (reels ya da uzun video) süresi ile örtüşecek uzunlukta bir metin olsun.
 
-Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada.
+Madde 3 durumu (2026-08-18): DÜZELTİLDİ VE CANLIDA DOĞRULANDI — grafik çizim hatası artık rapor
+metnini/indir-paylaş butonlarını gizlemiyor (ayrı try/catch'e alındı, bkz. commit 31289cd). Ancak
+canlı testte grafiğin KENDİSİ hâlâ çizilmiyor (muhtemelen seçilen rakibin 20 kriterin çoğunda veri
+olmaması) — bu, aşağıdaki 8. madde olarak ayrıca kaydedildi.
+
+8. madde olarak eklendi (2026-08-18, bugünkü Madde 3 doğrulamasından çıkan yeni bulgu):
+
+> Aksiyon/Hedef Analizi raporunda "20 parametre karşılaştırması" grafiği, rapor metni ve
+> indir/paylaş butonları artık doğru görünse de grafiğin kendisi hâlâ çizilmiyor ("Grafik
+> çizilemedi, ama rapor metni geçerli (yukarıda)." mesajı çıkıyor). Kullanıcının teorisi: seçilen
+> rakip hakkında yeterli veri olmadığı için (20 kriterin çoğu boş) grafik verisi oluşmuyor olabilir
+> — bu teori doğrulanmalı, kök neden netleştirilip düzeltilmeli.
+
+Ayrıca Madde 5'e (dışa aktarım mimarisi) ek, birebir kayıt (2026-08-18):
+
+> Bu arada indirme seçeneklerinde pdf, ve diğer bilinen (PDF, TXT, MD, DOCX, CSV, PPTX, EPUB +
+> kod/yapılandırma dosyaları (JSON, PY, JS, TS, HTML, CSS, YAML, XML, SH, SQL)) dosya türlerinde de
+> indirebilme seçenekleri olsun. Bu özellik Otomatik Rakip Takibinde üretilen raporlar için de
+> geçerli olsun.
+
+Madde 5 eki durumu (2026-08-18): YAPILDI VE YAPISAL OLARAK DOĞRULANDI — `dalIndirBtn` (Görsel/Video
+Stratejisi + Aksiyon/Hedef Analizi) ve `rakipTakipIndirBtn` (Otomatik Rakip Takibi) yanına format
+seçici (17 format) eklendi; DOCX/EPUB/PPTX JSZip/PptxGenJS ile tarayıcıda üretiliyor, gerçek Türkçe
+karakterli örnek metinle blob yapısı (zip imzası, dosya listesi, içerik) doğrulandı — canlı
+Rapor Üret akışıyla uçtan uca TIKLANARAK henüz denenmedi (kota tüketmemek için).
+
+9. madde olarak eklendi (2026-08-18, birebir kayıt):
+
+> Rakip ekle ve kayıtlı rakipler tablolarının aşağı yukarı kayıp listelenen rakiplerin ilk 3 rakip
+> listesi boyutundayken de görünür olabilmesi için hem mousun aşağı yukarı hareketiyle aşağı yukarı
+> kayması hem de tabloların yanında bir scroll ile aşağı yukarı kayabilmesi özelliği.
+
+10. madde olarak eklendi (2026-08-18, birebir kayıt):
+
+> Hem Aksiyon/Hedef Analizi hem de Otomatik Rakip Takibi tarafında oluşturulan raporların pptx yani
+> power point sunumu, videolu özet, veri tablosu ya da sesli dosya olarak yapılabilmesi için
+> kullanıcının manuel olarak NotebookLM'e yönlendirileceği 4 buton daha koyalım, onlara
+> tıkladıklarında NotebookLM'de raporlarını bu formatlara dönüştürebilsinler.
+
+Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 3 kısmen çözüldü, Madde 5
+eki (çok formatlı indirme) yapıldı (yukarı bakınız), kalanlar (Madde 1, 2, 4, 6, 7, 8, 9, 10) sırada.
