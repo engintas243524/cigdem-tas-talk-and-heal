@@ -47,6 +47,13 @@ function attachVoiceInput(config) {
       audio: { autoGainControl: false, noiseSuppression: false, echoCancellation: false }
     }).then(function (stream) {
       var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Created inside an async getUserMedia().then() — by the time this callback runs
+      // (permission prompt + resolution can take a moment), Chrome may no longer count it
+      // as still inside the original click's user-gesture window and leaves the context
+      // 'suspended'. A suspended context produces no real audio data (silence, so RMS stays
+      // near-zero forever) even though the mic itself is capturing fine — this is why the
+      // "speak louder" warning could fire nonstop regardless of actual volume.
+      if (ctx.state === 'suspended') ctx.resume();
       var source = ctx.createMediaStreamSource(stream);
       var analyser = ctx.createAnalyser();
       analyser.fftSize = 512;
@@ -104,12 +111,14 @@ function attachVoiceInput(config) {
 
     r.onstart = function () {
       if (mySession !== currentSession) return;
+      console.log('[mic] onstart, session', mySession);
       recognizing = true;
       micBtnEl.classList.add('recording');
       micHintEl.textContent = LISTENING_TEXT;
     };
     r.onresult = function (e) {
       if (mySession !== currentSession) return;
+      console.log('[mic] onresult, resultIndex', e.resultIndex, 'results.length', e.results.length);
       var interim = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var t = e.results[i][0].transcript;
@@ -118,6 +127,7 @@ function attachVoiceInput(config) {
       textareaEl.value = before + committed + interim + after;
     };
     r.onerror = function (e) {
+      console.log('[mic] onerror', e.error, 'session', mySession, 'current', currentSession);
       if (mySession !== currentSession) return;
       // 'no-speech' is the normal "user paused talking" case — onend will silently restart
       // the next utterance, same as always. Every OTHER error (network, aborted, etc.) used
@@ -132,6 +142,7 @@ function attachVoiceInput(config) {
         : 'Ses tanıma hatası (' + e.error + '). Lütfen tekrar deneyin.';
     };
     r.onend = function () {
+      console.log('[mic] onend, session', mySession, 'current', currentSession, 'stoppedByUser', stoppedByUser);
       if (mySession !== currentSession) return;
       recognizing = false;
       micBtnEl.classList.remove('recording');
