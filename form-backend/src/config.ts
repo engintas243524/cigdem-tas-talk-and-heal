@@ -330,6 +330,13 @@ export const KULLANIM_KATEGORILERI = {
 	rakipArama: { etiket: 'Rakip Arama', aylikLimit: 5000 as number | null },
 	icerikStrateji: { etiket: 'Görsel/Video Stratejisi', aylikLimit: 12 as number | null },
 	aksiyonAnaliz: { etiket: 'Aksiyon/Hedef Analizi', aylikLimit: 13 as number | null },
+	// Görsel/Video Stratejisi Set 1 (2026-08-17) — YouTube Data API v3. adresBulma/rakipArama ile
+	// AYNI mantık: Google'ın kendi 10.000 ünite/gün ücretsiz kotasına karşı BİZİM koyduğumuz kendi
+	// güvenlik sınırımız (Anthropic kredi bakiyesiyle ilgisi yok, bu yüzden
+	// KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER'e dahil değil). Bir "konu skorlama" işlemi 2
+	// search.list (200 ünite) + 1 videos.list (~2 ünite) çağrısı yapıyor — 1000/ay ≈ 202.000 ünite,
+	// günlük 10.000 ünitelik büdçenin aylık (300.000) toplamının altında, cömert ama sınırsız değil.
+	konuTrendBulma: { etiket: 'Konu/Trend Bulma (YouTube)', aylikLimit: 1000 as number | null },
 } as const;
 
 export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;

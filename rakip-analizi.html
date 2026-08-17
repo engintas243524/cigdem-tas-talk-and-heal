@@ -213,12 +213,17 @@
         </button>
       </div>
       <p class="muted" id="dalMicHint"></p>
+      <div class="hidden" id="dalKonuSkorlaField">
+        <input type="text" id="dalKonuSkorla" placeholder="Konu/trend skorla (opsiyonel) — virgülle ayır, ör: kaygı yönetimi, ilişki iletişimi">
+        <p class="muted">Düşündüğün 1-5 konuyu yazarsan gerçek YouTube verisiyle (şu an ne kadar "trend"/az işlenmiş) skorlanıp rapora eklenir. Boş bırakırsan hiçbir şey değişmez.</p>
+      </div>
       <p class="muted hidden" id="dalKarsilastirmaLink"><a href="#rakipTakipField">Zaman içi karşılaştırma raporu (grafikli) mi istiyorsun? →</a></p>
       <button class="btn-secondary" id="dalIceAktarBtn" type="button">Dosya Yükle</button>
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
       <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
       <div id="dalEtikUyari" class="etik-uyari hidden"></div>
+      <p class="muted hidden" id="dalKonuTrendSonuc"></p>
       <div id="dalGrafikler"></div>
       <div class="actions hidden" id="dalRaporAksiyonlar">
         <button class="btn-secondary" id="dalIndirBtn" type="button">İndir (PDF)</button>
@@ -1945,6 +1950,9 @@
     // #dalParametreler artık #dalGrafikVerisi'nin İÇİNDE (bkz. yukarıdaki HTML notu) — ayrı toggle
     // gerekmiyor, üst blok gizlenince o da gizlenir.
     el('dalGrafikVerisi').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
+    // Konu/trend YouTube skorlaması sadece Görsel/Video Stratejisi'nde anlamlı (Set 1 — içerik
+    // fikri bulma), Aksiyon/Hedef Analizi doğrudan rakip karşılaştırması yapıyor.
+    el('dalKonuSkorlaField').classList.toggle('hidden', dal !== 'icerikStrateji');
     // Zaman içi karşılaştırma raporu ayrı bir periyot-bazlı akış (Otomatik Rakip Takibi bölümü) —
     // burada tekrar inşa etmek yerine sadece Aksiyon/Hedef Analizi'ndeyken oraya bir link gösterir
     // (kullanıcı isteği: "bu rapor türü Rapor üret butonuyla ürettiğim raporda da olsun").
@@ -2100,6 +2108,7 @@
     setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
     el('dalRaporAksiyonlar').classList.add('hidden');
     etikUyariGoster(el('dalEtikUyari'), null);
+    el('dalKonuTrendSonuc').classList.add('hidden');
     el('dalGrafikler').innerHTML = '';
     dalChartlar.forEach(function (c) { c.destroy(); });
     dalChartlar = [];
@@ -2115,7 +2124,8 @@
     var payload;
     var grafikKaynaklariSecili = [];
     if (currentDal === 'icerikStrateji') {
-      payload = { istek: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler };
+      var konular = el('dalKonuSkorla').value.split(',').map(function (k) { return k.trim(); }).filter(function (k) { return k; });
+      payload = { istek: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler, konular: konular };
     } else {
       // #dalGrafikParametre20/#dalGrafikRandevuTrendi/#dalGrafikRakipTakipGecmisi tek tek — genel
       // "#dalGrafikVerisi input[type=checkbox]:checked" seçici artık içindeki #dalParametreler'in
@@ -2138,6 +2148,14 @@
       sonRaporMetni = res.data.rapor;
       el('dalRapor').textContent = sonRaporMetni;
       etikUyariGoster(el('dalEtikUyari'), res.data.etikBayraklari);
+      var konuTrendEl = el('dalKonuTrendSonuc');
+      if (res.data.konuTrendleri && res.data.konuTrendleri.length) {
+        konuTrendEl.textContent = 'Konu/trend skorları (1-10, YouTube verisiyle): ' + res.data.konuTrendleri.map(function (k) { return k.konu + ': ' + k.skor; }).join(' · ');
+        konuTrendEl.classList.remove('hidden');
+      } else {
+        konuTrendEl.textContent = '';
+        konuTrendEl.classList.add('hidden');
+      }
       if (grafikKaynaklariSecili.length) {
         dalGrafikCanvasBilgileri = grafikVerileriRender(el('dalGrafikler'), res.data.grafikVerileri, el('dalGrafikTuru').value, dalChartlar);
       }

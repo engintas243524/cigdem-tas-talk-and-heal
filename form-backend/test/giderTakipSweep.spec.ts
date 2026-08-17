@@ -70,11 +70,11 @@ describe('runGiderTakipAylikOzetSweep', () => {
 
 		const giderRows = [...(tabRows.get('GiderTakibi')?.values() ?? [])];
 		const aylik = giderRows.filter((r) => r[2] === 'aylikKullanim');
-		expect(aylik).toHaveLength(4); // adresBulma, rakipArama, icerikStrateji, aksiyonAnaliz
+		expect(aylik).toHaveLength(5); // adresBulma, rakipArama, icerikStrateji, aksiyonAnaliz, konuTrendBulma
 		aylik.forEach((r) => expect(r[1]).toBe('2026-08-01T00:00:00.000Z'));
 	});
 
-	it('re-running within the same month updates the same 4 rows in place, not appending more', async () => {
+	it('re-running within the same month updates the same 5 rows in place, not appending more', async () => {
 		const { tabRows } = stubSheetsApi();
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date('2026-08-16T12:00:00.000Z'));
@@ -83,6 +83,6 @@ describe('runGiderTakipAylikOzetSweep', () => {
 		await runGiderTakipAylikOzetSweep(env);
 
 		const giderRows = [...(tabRows.get('GiderTakibi')?.values() ?? [])];
-		expect(giderRows.filter((r) => r[2] === 'aylikKullanim')).toHaveLength(4);
+		expect(giderRows.filter((r) => r[2] === 'aylikKullanim')).toHaveLength(5);
 	});
 });

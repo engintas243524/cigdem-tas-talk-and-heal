@@ -14,6 +14,7 @@ const testEnv = {
 	PANEL_TOKEN_SECRET: 'panel-test-secret',
 	ANTHROPIC_API_KEY: 'test-key',
 	GOOGLE_PLACES_API_KEY: 'test-key',
+	YOUTUBE_API_KEY: 'test-key',
 } as typeof env;
 
 function stubApis(opts: { anthropicText?: string } = {}) {
@@ -75,6 +76,24 @@ function stubApis(opts: { anthropicText?: string } = {}) {
 			return new Response(JSON.stringify({ status: 'OK', results: [{ geometry: { location: { lat: 51.5, lng: -0.1 } } }] }), {
 				status: 200,
 			});
+		}
+		if (url.includes('youtube/v3/search')) {
+			return new Response(JSON.stringify({ items: [{ id: { videoId: 'yv1' } }], pageInfo: { totalResults: 100 } }), { status: 200 });
+		}
+		if (url.includes('youtube/v3/videos')) {
+			return new Response(
+				JSON.stringify({
+					items: [
+						{
+							id: 'yv1',
+							snippet: { title: 'Test Video', publishedAt: '2026-08-10T00:00:00Z' },
+							statistics: { viewCount: '5000' },
+							contentDetails: { duration: 'PT90S' },
+						},
+					],
+				}),
+				{ status: 200 },
+			);
 		}
 		if (url.includes('api.anthropic.com')) {
 			return new Response(JSON.stringify({ content: [{ type: 'text', text: opts.anthropicText ?? 'Üretilen rapor metni.' }] }), {
@@ -533,6 +552,31 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		});
 		const data = (await response.json()) as { etikBayraklari: { kuralId: string }[] };
 		expect(data.etikBayraklari.map((b) => b.kuralId)).toContain('tr-garanti-iyilesme');
+	});
+
+	it('konular verilmezse hiçbir YouTube çağrısı yapmaz, konuTrendleri boş döner', async () => {
+		const { fetchMock } = stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum' }),
+		});
+		const data = (await response.json()) as { konuTrendleri: unknown[] };
+		expect(data.konuTrendleri).toEqual([]);
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('youtube'))).toBe(false);
+	});
+
+	it('konular verilirse YouTube ile skorlar ve prompta ekler', async () => {
+		const { fetchMock } = stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', konular: ['kaygı yönetimi', 'ilişki iletişimi'] }),
+		});
+		const data = (await response.json()) as { konuTrendleri: { konu: string; skor: number }[] };
+		expect(data.konuTrendleri).toHaveLength(2);
+		expect(data.konuTrendleri.map((k) => k.konu).sort()).toEqual(['ilişki iletişimi', 'kaygı yönetimi']);
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).toContain('kaygı yönetimi');
 	});
 
 	it('only includes the selected competitor(s) in the prompt, not unselected ones', async () => {

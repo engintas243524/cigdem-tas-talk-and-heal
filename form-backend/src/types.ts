@@ -23,6 +23,8 @@ export interface Env {
 	// bazlı rakip arama). Her ikisi de yalnızca /panel/rakip-analizi/* route'larında kullanılır.
 	ANTHROPIC_API_KEY: string;
 	GOOGLE_PLACES_API_KEY: string;
+	// Görsel/Video Stratejisi Set 1 (2026-08-17): YouTube Data API v3, konu/trend bulma-sıralama.
+	YOUTUBE_API_KEY: string;
 	// Workers AI binding — summarizes the client's free-text note (lib/summarize.ts).
 	AI: Ai;
 }

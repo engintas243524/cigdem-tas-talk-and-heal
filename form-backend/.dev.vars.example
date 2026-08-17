@@ -22,3 +22,7 @@ PANEL_TOKEN_SECRET=dummy-panel-token-secret
 # Rakip Analizi: Anthropic Messages API (claude-sonnet-5) + Google Places Nearby Search (New).
 ANTHROPIC_API_KEY=sk-ant-dummy
 GOOGLE_PLACES_API_KEY=dummy-places-key
+# Görsel/Video Stratejisi Set 1 (2026-08-17) — YouTube Data API v3, aynı GCP projesi ("My First
+# Project"), sadece bu API'ye kısıtlanmış anahtar (Application restrictions: None — sunucu tarafı
+# çağrı, HTTP referrer kısıtlaması BE-76'daki gibi kırar).
+YOUTUBE_API_KEY=dummy-youtube-key

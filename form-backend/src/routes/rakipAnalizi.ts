@@ -27,6 +27,7 @@ import {
 } from '../lib/grafikVerisi';
 import { GRAFIK_PERIYOT_GUN_SAYISI, ANTHROPIC_BILLING_URL, YAYINCI_PROFILLERI, type EtikRejimi } from '../config';
 import { etikDenetimYap, type EtikBayrak } from '../lib/etikGate';
+import { konuHavuzunuSirala, type KonuTrendSonucu } from '../lib/gorselVideoBulmaSiralama';
 import type { Env } from '../types';
 
 // Yayın-öncesi etik/yasal gate — Faz 4 (2026-08-17). Bugün TEK yayıncı var (Çiğdem) — çoklu-
@@ -396,7 +397,14 @@ export function iceAktarPromptEki(kaynakBelgeler: string[]): string {
 // boşsa tüm) rakip verisi + Çiğdem'in serbest metin/ses isteği Claude'a gönderilir, küratif öneri
 // raporu üretilir ve kaydedilir.
 export async function handleIcerikStrateji(request: Request, env: Env): Promise<Response> {
-	let body: { istek?: unknown; rakipIds?: unknown; parametreler?: unknown; kaynakBelgeler?: unknown; kaynakPdfler?: unknown };
+	let body: {
+		istek?: unknown;
+		rakipIds?: unknown;
+		parametreler?: unknown;
+		kaynakBelgeler?: unknown;
+		kaynakPdfler?: unknown;
+		konular?: unknown;
+	};
 	try {
 		body = (await request.json()) as typeof body;
 	} catch {
@@ -409,6 +417,17 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	const parametreler = Array.isArray(body.parametreler) ? body.parametreler.map((x) => String(x)) : [];
 	const kaynakBelgeler = Array.isArray(body.kaynakBelgeler) ? body.kaynakBelgeler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
 	const kaynakPdfler = Array.isArray(body.kaynakPdfler) ? body.kaynakPdfler.map((x) => String(x)).slice(0, ICE_AKTAR_MAX_ADET) : [];
+	// Görsel/Video Stratejisi Set 1 (2026-08-17, Faz 5) — OPT-IN: Çiğdem düşündüğü 1-5 konuyu
+	// yazarsa gerçek YouTube verisiyle skorlanır (bkz. lib/gorselVideoBulmaSiralama.ts). Yazmazsa
+	// bu adım tamamen atlanır, mevcut davranış (sadece Claude'un web araması) aynen çalışır. Üst
+	// sınır 5 — hem YouTube ünite bütçesini hem rapor üretim süresini (her konu 2 arama çağrısı)
+	// makul tutmak için.
+	const konular = Array.isArray(body.konular)
+		? body.konular
+				.map((x) => String(x).trim())
+				.filter((x) => x)
+				.slice(0, 5)
+		: [];
 
 	await ensureKullanimKaydiTab(env);
 	if (await kotaDolduMu(env, 'icerikStrateji')) {
@@ -418,6 +437,22 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 			{ status: 402 },
 		);
 	}
+
+	let konuTrendleri: KonuTrendSonucu[] = [];
+	if (konular.length && !(await kotaDolduMu(env, 'konuTrendBulma'))) {
+		try {
+			konuTrendleri = await konuHavuzunuSirala(env, konular);
+			await logKullanim(env, 'konuTrendBulma', konular.join(', ').slice(0, 200));
+		} catch (err) {
+			// YouTube çağrısı başarısız olsa bile rapor üretimi durmaz — bu bir zenginleştirme,
+			// zorunlu bir bağımlılık değil (grafikVerisi hesaplamasındaki AYNI tasarım kararı).
+			console.error('Konu/trend skorlaması başarısız oldu (icerikStrateji)', err);
+		}
+	}
+	const konuTrendEki = konuTrendleri.length
+		? `\n\nYouTube'dan gerçek veriyle skorlanmış konu/trend sıralaması (1-10, yüksek = şu an
+denemeye değer): ${JSON.stringify(konuTrendleri.map((k) => ({ konu: k.konu, skor: k.skor })))}`
+		: '';
 
 	await ensureRakipAnaliziTab(env);
 	const rakipler = await getAllRakipAnalizRows(env);
@@ -441,7 +476,8 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	}
 
 	const userPrompt =
-		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}\n\nÇiğdem'in isteği: ${istek}` + iceAktarPromptEki(kaynakBelgeler);
+		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}${konuTrendEki}\n\nÇiğdem'in isteği: ${istek}` +
+		iceAktarPromptEki(kaynakBelgeler);
 
 	let rapor: string;
 	try {
@@ -476,7 +512,7 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 	// Yayın-öncesi etik/yasal gate — Faz 4 (2026-08-17). Bu, prompt talimatının (ICERIK_ETIK_UYARI_METNI)
 	// ÜSTÜNE eklenen deterministik katman — sessizce bloklamaz, kullanıcıya görünür bir uyarı döner.
 	const etikBayraklari: EtikBayrak[] = etikDenetimYap(rapor, aktifYayinciRejimleri());
-	return json({ rapor, etikBayraklari }, request);
+	return json({ rapor, etikBayraklari, konuTrendleri }, request);
 }
 
 // Kullanıcı kararı (2026-08-15): İçerik Stratejisi'nin aksine, burada seçilen rakiplerin TAM
