@@ -1808,6 +1808,10 @@
   var haritaInfoWindow = null;
   var haritaYaricapCemberi = null; // google.maps.Circle — arama yarıçapını gösteren yanıp sönen çember
   var haritaYaricapPulseTimer = null;
+  var haritaMerkezMarker = null; // google.maps.Marker — arama merkezini (girilen adres) işaretleyen sabit pin; yanıp sönen çemberin/yarıçapın merkezi HER ZAMAN bununla aynı nokta olmalı (kullanıcı isteği, Madde 1)
+  // Standart "konum" pin path'i (Material Design "place" ikonu, 24x24 viewBox) — rakip
+  // markerlarından (numaralı, düz daire) bilinçli olarak farklı bir şekil, karıştırılmasın.
+  var HARITA_MERKEZ_PIN_PATH = 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z';
   var haritaZoomSlider = null; // sağdaki dikey zoom scroll (input[type=range])
 
   // Koyu/fütüristik tema — Google Maps'in standart açık paletini kapatıp lacivert/siyah zemin +
@@ -1910,12 +1914,23 @@
   function haritaYaricapCemberiCiz() {
     if (haritaYaricapPulseTimer) { clearInterval(haritaYaricapPulseTimer); haritaYaricapPulseTimer = null; }
     if (haritaYaricapCemberi) { haritaYaricapCemberi.setMap(null); haritaYaricapCemberi = null; }
+    if (haritaMerkezMarker) { haritaMerkezMarker.setMap(null); haritaMerkezMarker = null; }
     var merkez = rakipAramaBaglam && rakipAramaBaglam.merkez;
     var yaricap = rakipAramaBaglam && Number(rakipAramaBaglam.radius);
     if (!merkez || !yaricap) return;
+    var merkezPos = { lat: merkez.lat, lng: merkez.lng };
     haritaYaricapCemberi = new google.maps.Circle({
-      map: haritaObj, center: { lat: merkez.lat, lng: merkez.lng }, radius: yaricap, clickable: false,
+      map: haritaObj, center: merkezPos, radius: yaricap, clickable: false,
       strokeColor: '#22d3ee', strokeWeight: 2, fillColor: '#22d3ee', fillOpacity: 0.12,
+    });
+    // Çemberin/yarıçapın merkezini GÖRÜNÜR kılan sabit pin — çemberin center'ıyla birebir aynı
+    // koordinat kullanılıyor (merkezPos), o yüzden ikisi asla ayrışamaz.
+    haritaMerkezMarker = new google.maps.Marker({
+      position: merkezPos, map: haritaObj, zIndex: 999, clickable: false,
+      icon: {
+        path: HARITA_MERKEZ_PIN_PATH, scale: 1.6, anchor: new google.maps.Point(12, 22),
+        fillColor: '#F59E0B', fillOpacity: 1, strokeColor: '#78350F', strokeWeight: 1.5,
+      },
     });
     var acik = false;
     haritaYaricapPulseTimer = setInterval(function () {
@@ -1969,6 +1984,10 @@
       Object.keys(haritaMarkerlar).forEach(function (k) { haritaMarkerlar[k].setMap(null); });
       haritaMarkerlar = {};
       var bounds = new google.maps.LatLngBounds();
+      // Arama merkezini de kadraja dahil et — sadece rakiplere göre fitBounds yapılırsa (eski
+      // davranış) rakipler merkeze göre tek yöne toplanmışsa merkez pin görünüm dışında kalabilir.
+      var merkezBounds = rakipAramaBaglam && rakipAramaBaglam.merkez;
+      if (merkezBounds) bounds.extend({ lat: merkezBounds.lat, lng: merkezBounds.lng });
       places.forEach(function (p, i) {
         if (!p.lat || !p.lng) return;
         var pos = { lat: p.lat, lng: p.lng };
