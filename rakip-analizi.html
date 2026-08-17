@@ -1922,10 +1922,11 @@
     });
     // Çemberin/yarıçapın merkezini GÖRÜNÜR kılan sabit pin — çemberin center'ıyla birebir aynı
     // koordinat kullanılıyor (merkezPos), o yüzden ikisi asla ayrışamaz.
+    // Google'ın varsayılan (kırmızı damla) pin'i — rakip markerlarından (düz renkli daire) zaten
+    // şekil olarak tamamen farklı, özel ikon riskine girmeden en garanti çözüm.
     haritaMerkezMarker = new google.maps.Marker({
-      position: merkezPos, map: haritaObj, zIndex: 999, clickable: false,
-      label: { text: '★', color: '#78350F', fontWeight: '700', fontSize: '16px' },
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: '#F59E0B', fillOpacity: 1, strokeColor: '#78350F', strokeWeight: 2 },
+      position: merkezPos, map: haritaObj, zIndex: 999,
+      title: 'Arama merkezi' + (rakipAramaBaglam.adres ? ': ' + rakipAramaBaglam.adres : ''),
     });
     var acik = false;
     haritaYaricapPulseTimer = setInterval(function () {
