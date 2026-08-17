@@ -158,6 +158,11 @@ even though the developer/user are in Turkey.
   creates against the existing $5/month Anthropic cap in `config.ts`'s `KULLANIM_KATEGORILERI`.
 - `CIGDEM_AYLIK_YILLIK_GIDERLER.md` (2026-08-16) — the same cost data, reformatted as a simple
   itemized monthly/annual table for Çiğdem (non-technical reader) to review.
+- `RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md` (2026-08-17) — research report (not code) for the
+  still-unbuilt "Faz 3" (5 local + 5 general auto-classified competitors, see `INTEGRASYON_TODO.md`):
+  how Google Text Search's 60-result cap actually ranks results, WASK/academic sourcing for
+  measurable local-vs-general competitor criteria, and the Turkish psychologist/psychiatrist
+  advertising-ethics constraint that limits which "general" signals are even legitimate to score.
 
 ## Mimari Yaklaşım Notu (2026-08-09 analizi — herhangi bir yeni aşama/entegrasyona geçmeden önce oku)
 

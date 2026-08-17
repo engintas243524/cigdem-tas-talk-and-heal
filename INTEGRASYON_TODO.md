@@ -1432,6 +1432,12 @@ yapabileceğimiz bir imkanımız var mı? Notion ı altyapıda ücretsiz kullana
 **Henüz yapılmadı (Faz 3-4'ün geri kalanı, ayrı bir konu):** otomatik 5 yerel + 5 genel rakip
 sınıflandırması (bkz. yukarıki "Otomatik 10 rakip takibi" bölümü).
 
+**Araştırma yapıldı (2026-08-17):** "5 yerel/5 genel nasıl seçilecek" açık sorusuna cevap aranarak
+`RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md` yazıldı — Google'ın 60 sonuç seçim mekanizması (relevance,
+kısmen kara kutu), WASK incelemesi, akademik/sektör kaynakları ve Türkiye'deki psikolog/psikiyatrist
+reklam-etiği kısıtları dahil, somut/ölçülebilir kriter önerileriyle. Henüz ağırlıklandırma/formül/kod
+yok — sadece kriter envanteri.
+
 **Fikir notu (2026-08-16, henüz uygulanmadı):** yukarıdaki "Bilinen sınır"ı çözmek için —
 periyodik döngüye (RakipTakip'in "kapatildi" adımı) Çiğdem'in kendi serbest metin/ses yorumunu
 toplayan bir alan eklenebilir (mevcut Aksiyon/Hedef Analizi'ndeki "yorum" alanına benzer), böylece
