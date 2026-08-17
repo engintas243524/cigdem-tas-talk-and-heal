@@ -1771,3 +1771,15 @@ Google Text Search'ün gerçek sınırı) — video incelemesi bu sınırın ger
 (ör. sayfalama/pagination ile birden fazla çağrı) netleştirecek. "Kayıtlı rakipler" listesi mevcut
 "seçilenleri ekle" akışıyla aynı listeye mi işaret ediyor yoksa ayrı bir liste mi — koda bakılıp
 netleştirilecek.
+
+**Durum (2026-08-17): TAMAMLANDI, canlıda doğrulandı.** Video incelendi (3:55-5:50 segmenti,
+görsel+transkript) — referans araç Google'ın 20 sonuç sınırını sayfalama YOK, kendi (muhtemelen
+il-geneli grid-tarama) veritabanı + kümeleme (cluster) markerlarla aşıyor; bizim durumumuzda gerçek
+çözüm Google Places Text Search (New)'ün resmi `nextPageToken` sayfalaması (60'a kadar, doğrulandı:
+`developers.google.com/maps/.../text-search`). 5 madde de uygulandı: (1) 20→60 sayfalama ile,
+(2) harita "X sonuç bulundu" ile "Arama Sonuçları" arasına taşındı, (3) haritada tıklama artık
+gerçek backend POST/silme ile Kayıtlı Rakipler'e ekliyor/çıkarıyor (mavi/kırmızı, not haritanın
+altına eklendi), (4) arama yarıçapı kadar yanıp sönen çember eklendi, (5) sol altta Google'ın native
+ölçek cetveli + sağda özel dikey zoom scroll eklendi. Yol boyunca iki gerçek bug bulunup çözüldü:
+sayfalama Cloudflare Worker'ın subrequest sınırını aştırdı (BE-77, kota kontrolü tek okumaya
+indirilerek çözüldü) — hepsi hata günlüğünde (BE-77). Commit'ler: `9755649`, `d48a35f`.
