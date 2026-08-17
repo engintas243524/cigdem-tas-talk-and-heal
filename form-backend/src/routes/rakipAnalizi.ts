@@ -244,7 +244,12 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 	// Google, ücretsiz aylık kotayı (Adres Bulma 10.000 / Rakip Arama 5.000) aşınca isteği
 	// reddetmiyor, sessizce kayıtlı karttan faturalandırmaya başlıyor — bu yüzden çağrıyı hiç
 	// yapmadan ÖNCE kendi sayacımızla kontrol edip durduruyoruz (sürpriz fatura riskini önler).
-	if (await kotaDolduMu(env, 'adresBulma')) {
+	// İKİ AYRI kotaDolduMu çağrısı yerine getKullanimOzet TEK SEFER okunuyor (2026-08-17) — her
+	// kotaDolduMu çağrısı tüm kategoriler için Sheets'e ayrı istekler atıyor, iki kez çağırmak
+	// Cloudflare'in tek-istek subrequest sınırını zorluyordu (sayfalamalı aramalarda 502'ye
+	// sebep oldu, bkz. hata günlüğü BE-77).
+	const kullanimOzeti = await getKullanimOzet(env);
+	if (kullanimOzeti.adresBulma.aylikLimit !== null && kullanimOzeti.adresBulma.kullanilan >= kullanimOzeti.adresBulma.aylikLimit) {
 		return json(
 			{ error: 'Bu ayki ücretsiz Adres Bulma kotası doldu (10.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL },
 			request,
@@ -253,7 +258,7 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 			},
 		);
 	}
-	if (await kotaDolduMu(env, 'rakipArama')) {
+	if (kullanimOzeti.rakipArama.aylikLimit !== null && kullanimOzeti.rakipArama.kullanilan >= kullanimOzeti.rakipArama.aylikLimit) {
 		return json(
 			{ error: 'Bu ayki ücretsiz Rakip Arama kotası doldu (5.000). Ay başında sıfırlanır.', limitUrl: GOOGLE_QUOTA_URL },
 			request,
@@ -267,15 +272,11 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 		const { lat, lng } = await geocodeAddress(env, adres);
 		await logKullanim(env, 'adresBulma', adres);
 		const { places, sayfaSayisi } = await searchCompetitors(env, sorgu, lat, lng, radiusMeters, maxResults);
-		// Google her sayfayı AYRI faturalandırıyor (bkz. lib/places.ts) — kota sayacımız gerçek
-		// tüketimi yansıtsın diye sonuç sayısı yerine gerçekleşen sayfa sayısı kadar logluyoruz.
-		for (let i = 0; i < sayfaSayisi; i++) {
-			await logKullanim(
-				env,
-				'rakipArama',
-				`'${sorgu}' (${radiusMeters}m) — ${adres}` + (sayfaSayisi > 1 ? ` [sayfa ${i + 1}/${sayfaSayisi}]` : ''),
-			);
-		}
+		// Google her sayfayı AYRI faturalandırıyor (bkz. lib/places.ts), gerçek tüketim sayfaSayisi
+		// kadar — ama sayfa başına ayrı logKullanim çağrısı, kotaDolduMu'nun zaten ağır olan
+		// Sheets-okuma zincirini Cloudflare'in tek-istek subrequest sınırına (free plan) itiyordu
+		// (bkz. hata günlüğü). Tek log satırına dönüp gerçek sayfa sayısını detay metnine yazıyoruz.
+		await logKullanim(env, 'rakipArama', `'${sorgu}' (${radiusMeters}m) — ${adres}` + (sayfaSayisi > 1 ? ` [${sayfaSayisi} sayfa]` : ''));
 		return json({ places, merkez: { lat, lng } }, request);
 	} catch (err) {
 		return errorResponse(request, 502, 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', err);
