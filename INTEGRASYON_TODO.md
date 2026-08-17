@@ -1895,3 +1895,39 @@ and fixed BE-78/79/80") kaynağını açıklıyor — paralel bir Claude oturumu
 durduruldu. Madde 3, Sparrow'un müşterilere verdiği bir TAAHHÜT olarak kayda geçti: sektöre/
 branşa/mesleğe özel riskli içerik filtreleme + güncel yasal mevzuat takibi — bu, Set 2 Grup C'nin
 (yayın-öncesi denetim gate) Sparrow tarafında da AYNI derecede kritik olduğunu doğruluyor.
+
+## Rakip Analizi — 6 maddelik bekleyen düzeltme/geliştirme isteği (2026-08-17, paralel oturumdan bu oturuma taşındı, birebir kayıt)
+
+Not: bu istek başlangıçta AYNI repo üzerindeki PARALEL bir Claude Code oturumuna (farklı hesap)
+verilmişti; o oturum "bu oturum (`id:2e06b4b0-...`) günlerce/haftalarca aktif kalacak" diye
+kendini bilinçli olarak dondurup işe hiç başlamadı. Kullanıcı 2026-08-17'de bu oturumun (aktif
+olan taraf) işi devralmasına karar verdi — metin, paralel oturumun memory'sinden birebir taşındı.
+
+Kullanıcının mesajı (birebir, 6 madde):
+
+> 1- Haritada seçilen merkez noktası yani adres bir pin ile işaretlensin. Rakipler etrafta o
+>    şekilde görünsün. Yani o yanıp sönen çemberin merkezinde yarıçapım merkezi, çapın merkezi,
+>    çemberin merkezi olsun.
+> 2- Görsel video stratejisi ve aksiyon hedef analizi altındaki mikrofon ses kaydetmiyor. Bir de
+>    ses kaydederken de bunun anlık olarak dikteyi hemen sesle birlikte aynı anda yazıyor olması
+>    lazım. Onu da ekstra söylemiş olayım. Ayrıca ikinci defa tıklayıp mikrofonu kapatmaya
+>    çalıştığımda kapanmadı da.
+> 3- Tek bir rakip ile alakalı sadece 20 kriterin seçili olduğu bir aksiyon hedef analiz raporu
+>    üretmek istedim ama aşağıda verdiğim uyarıyı vererek ve hatta çizgi grafik seçeneğini
+>    seçerek rapor ürettirmek istedim ama aşağıdaki uyarıyı vererek bir rapor üretmedi aslında.
+>    Sen de en son yapılan şeyi sayfaya girip Google Chrome'la nasıl bir rapor ürettiğini
+>    görebilirsin. ''Rapor şu an üretilemedi, lütfen tekrar dene. Elimizdeki veri çok az olduğu
+>    için önce veri toplamaya odaklanan bir başlangıç planı öneriyorum.''
+> 4- Üretilen rapor için raporun en altında raporu gizle diyerek sadece raporun başlığı görünsün.
+>    Çünkü farklı raporlar oluşturulabilir. En son oluşturulan rapor en üstte görünecek şekilde
+>    ve her oluşturulan raporu böyle en altında gizle olacak şekilde bir butonu olsun ve koca
+>    rapor sayfayı yukarıdan aşağıya kaplamamış olur en azından. İstendiğinde raporu aç butonuna
+>    dönüşür o raporu gizle butonu ve raporu aç gizle şeklinde hem açılır hem kapanmış olur.
+> 5- Ayrıca oluşturulan raporların dışarı aktarımı için söylediğimiz şeyleri ve bununla ilgili
+>    UI/UX tasarımları ve altındaki mimarisi, koduyla alakalı hiçbir şey yapmadık. Hangi
+>    platformlarda paylaşılabileceği, hangi araçların kullanılacağı şeklinde de bir mimari,
+>    tasarım ve planlamamız olmadı, onları da yapalım.
+> 6- Ayrıca seçilen rakip ve rakip ile alakalı yaptığım rapor dahil hiçbir veri Google'da
+>    işlenmedi.
+
+Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada.
