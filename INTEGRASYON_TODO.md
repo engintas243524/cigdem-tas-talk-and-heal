@@ -1830,3 +1830,14 @@ Sparrow'da satılacak premium ürünlerin temeli bu. Sıra: önce mimariyi doğr
 sonra Rakip Analizi için 2 parametre setini derin araştırmayla oluştur, SONRA aynı yöntemi Görsel/
 Video Stratejisi'ne uygula (ayrı bir derinlemesine araştırma turu gerektirir, aynı mesajda
 istenmedi — "az kalsın unutuyordum" ile eklendi, sıralı iş olarak okunmalı).
+
+**Durum (2026-08-17): Rakip Analizi kısmı TAMAMLANDI (araştırma+tasarım, kod DEĞİL).**
+`RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md`'nin Bölüm 8-12'sinde: (8) arama limiti artırmanın
+gerçekten "precision dilution" + pazar-tanımı-hatası riski taşıdığı doğrulandı, harita altı uyarı
+metni taslağı verildi; (9) Parametre Seti 1 — dahil-etme filtreleri + yerel/genel için farklı
+mesafe/erişim bileşenli 1-10 sıralama formülü (kalibrasyonu Çiğdem'in mevcut manuel rakip
+listesiyle önerildi, sektörde de evrensel formül olmadığı dürüstçe not edildi); (10) Parametre
+Seti 2 — 4 gruplu (Hizmet Profili/Dijital Varlık/Yerel Erişim&İtibar/Değişim-Trend) rakip analiz
+çerçevesi, tek/çoklu modda aynı set farklı sunum; (11) iki setin çoklu-rakip raporunda nasıl
+birleşeceği (Set 1 skoru = sıralama + özet-cümle ağırlıklandırması, Set 2 = detay). Görsel/Video
+Stratejisi kısmı HENÜZ YAPILMADI — ayrı bir tur.

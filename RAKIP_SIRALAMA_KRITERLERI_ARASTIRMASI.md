@@ -6,6 +6,13 @@ sınıflandırma, bkz. `INTEGRASYON_TODO.md`) için somut/ölçülebilir kriter 
 uygulaması + akademik/sektör kaynakları + Türkiye'deki meslek-etiği kısıtları dahil. Bu dosya sadece
 **araştırma raporu**dur, kod içermez.
 
+**2026-08-17 güncellemesi (Bölüm 8-12):** Kullanıcı bu araştırmayı iki katmanlı bir mimariye
+genişletti — Parametre Seti 1 ("rakip BULMA/sıralama", 1-10 formül+ağırlıklandırma) ve Parametre
+Seti 2 ("rakip ANALİZ", tek/çoklu rakip raporlaması için gruplu parametre seti). Kullanıcı bunu
+Sparrow'da satılacak premium ürünlerin temeli olarak işaretledi — bu yüzden Bölüm 9-10'daki
+formüller **kalibre edilmesi gereken başlangıç taslakları** olarak sunuluyor, "kesin bilim" olarak
+değil (dürüstlük notu: sektörde de evrensel/kesin bir formül yok, bkz. Bölüm 9.1).
+
 ---
 
 ## 1. Google Text Search (New), 60 sonucu hangi kritere göre seçiyor?
@@ -224,3 +231,183 @@ entegrasyonu (Instagram Graph API vb., yeni bir mimari karar ve muhtemel maliyet
 5. Bu kriterlerin gerçek 1-10 sıralama formülüne (ağırlıklandırma) dönüştürülmesi ve
    `rakipParametreSkor.ts`'e nasıl bağlanacağı — ayrı bir tasarım/plan konuşması gerektirir,
    bu rapor sadece kriterleri belirliyor, ağırlıkları/formülü değil.
+
+---
+
+## 8. Arama limitini artırmak "ortalama veriye yakınsama"ya mı yol açar?
+
+**Kısa cevap: Kullanıcının sezgisi doğru yönde, ama doğru terim "regresyona/ortalamaya yakınsama"
+değil — bu iki AYRI, doğrulanmış kavramın birleşimi: (a) bilgi erişiminde (information retrieval)
+"precision/recall dilution" ve (b) ekonomide "pazar tanımı" (market definition) hatası.**
+
+**(a) Precision/Recall Dilution (bilgi erişimi literatürü):** Dönen aday havuzu (K) büyüdükçe
+recall (gerçek rakipleri yakalama oranı) artar ama precision (dönen sonuçların ne kadarının GERÇEKTEN
+alakalı olduğu) düşer — bu, arama/öneri sistemleri literatüründe iyi belgelenmiş bir örüntü. Güncel
+araştırmalar bunu somut sayılarla gösteriyor: bazı yöntemlerde havuz büyüdükçe doğruluk **%79'a
+kadar** göreceli düşüş gösterebiliyor, ve sabit precision'da recall, havuz büyüklüğüyle
+**log-doğrusal** olarak bozuluyor. Bir çalışma, küçük/kürate edilmiş 200'lük bir havuzun büyük
+havuzlara göre **3,1 kat** daha iyi performans verdiğini bulmuş.
+
+**(b) Pazar Tanımı Hatası (ekonomi/rekabet hukuku literatürü):** Rekabet ekonomisinde "coğrafi pazar
+tanımı" (SSNIP testi mantığı) tam olarak bu soruyu çözmeye çalışır: pazarı çok DAR tanımlarsanız
+gerçek rakipleri kaçırırsınız, çok GENİŞ tanımlarsanız alakasız oyuncuları rakip sayıp **"rekabetin
+durumu hakkında yanlış sonuçlara"** varırsınız (resmi AB Komisyonu kaynağı). Yarıçapı büyütmek,
+tam olarak bu ikinci hataya (pazarı fazla geniş tanımlama) davetiye çıkarır.
+
+**Sonuç — kullanıcının önermesi DOĞRULANDI (farklı terimle):** Arama yarıçapını/sonuç sayısını
+SADECE artırmak (sıralama/filtreleme kriterini iyileştirmeden) gerçek rakip sinyalini
+seyreltir — hem Çiğdem'in (kendi rakip listesini kalabalık, alakasız sonuçlarla doldurur) hem panel
+kullanıcısının (Google'ın "relevance" sıralamasına, Çiğdem'in gerçek ihtiyacıyla birebir
+örtüşmeyen bir sıralamaya, körü körüne güvenmiş olur) dezavantajına. **Bu yüzden harita altına bir
+uyarı eklenmeli.**
+
+**Önerilen uyarı metni (Türkçe, yalın, alarmcı olmayan taslak):**
+> *"Geniş yarıçaplarda sonuç sayısı artar ama bu sonuçların size ne kadar yakın gerçek rakip
+> olduğu değişkenlik gösterebilir — büyük listelerde hizmet türü ve konum uyumuna dikkat ederek
+> seçim yapmanız önerilir."*
+
+Bu uyarının **kesinleşmiş versiyonu**, Bölüm 9'daki Parametre Seti 1 (sıralama/filtreleme formülü)
+gerçekten devreye girdiğinde gözden geçirilmeli — çünkü iyi bir sıralama formülü bu sorunu tamamen
+çözmese de büyük ölçüde azaltır (precision'ı geri kazandırır). Formül olmadan sadece limit artırmak
+riskli; formülle birlikte artırmak, riski kabul edilebilir kılar.
+
+---
+
+## 9. Parametre Seti 1 — "Rakip Bulma/Sıralama" formülü (1-10)
+
+### 9.1 Dürüstlük notu — sektörde bile evrensel bir formül yok
+
+Otelcilik sektörünün onlarca yıllık "competitive set" (rekabet kümesi) seçim metodolojisini
+inceledim — bu, "hangi işletmeler gerçek rakibim" sorusuna en olgun, en yerleşik sektörel cevaptır.
+Sonuç dürüst olmak gerekirse çarpıcı: *"there is no formal scoring system"* — sektör resmi bir
+puanlama formülü kullanmıyor, bunun yerine **bağlamsal ağırlıklandırma** (segment/konum/fiyat
+bandına göre nitel değerlendirme) kullanıyor. Bu, aşağıdaki formülün "kesin bilim" değil,
+**kalibre edilmesi gereken bir başlangıç taslağı** olduğunu doğruluyor.
+
+### 9.2 Aşama 1 — Dahil Etme (Inclusion) filtreleri — SKORLANMAZ, geçer/kalır
+
+Skorlamadan ÖNCE, aday havuzunu daraltan sert filtreler (otel sektöründeki "segment/fiyat bandı
+uyumu" karşılığı):
+
+1. **Hizmet tipi eşleşmesi** — Places `types` alanı arama kategorisiyle örtüşmeli (zaten var).
+2. **İşletme durumu** — `businessStatus !== CLOSED_PERMANENTLY` (kalıcı kapanmışsa havuza hiç
+   girmemeli — bu alan şu an field mask'te yok, eklenmeli, bkz. Bölüm 5.4).
+3. **Coğrafi sınır** — zaten var (`locationRestriction`).
+
+### 9.3 Aşama 2 — Sıralama (Ranking) formülü — 1-10 skor
+
+Yerel SEO sektör ağırlıklarını (Bölüm 3.1: GBP %32, sayfa-içi %19, yorum %16, backlink %15,
+davranışsal %8, citation %7, kişiselleştirme %3) DOĞRUDAN kopyalamadım — onlar "Google'da nasıl
+üst sıraya çıkarım" sorusuna cevap, bizim sorumuz "bu işletme gerçek/güçlü bir rakip mi". Ama
+mantığı uyarladım: puan+yorum ağırlığı yüksek, çünkü rekabet gücünün en doğrudan kanıtı.
+
+**Ortak formül (0-1 normalize edilmiş bileşenler, 10 ile çarpılır):**
+
+```
+Skor(1-10) = 10 × [
+    0.30 × normalize(rating)                          // Google puanı (1-5 → 0-1)
+  + 0.20 × normalize(log(userRatingCount + 1))         // yorum HACMİ, log-ölçek (10 yorum ile
+                                                        //   1000 yorum arasındaki fark doğrusal
+                                                        //   değil, azalan getiri var)
+  + 0.20 × proximity_veya_erisim(tip)                  // bkz. aşağı, tipe göre değişir
+  + 0.15 × profil_tamligi                              // website var mı + GBP alan doluluğu
+  + 0.15 × tip_eslesme_ozguculugu                       // arama kategorisiyle ne kadar TAM eşleşiyor
+                                                        //   (ör. "psikolog" araması "psikolog" type'ı
+                                                        //   ile eşleşen, "genel sağlık merkezi"nden
+                                                        //   daha özgül/yüksek puan alır)
+]
+```
+
+**`proximity_veya_erisim(tip)` — YEREL ve GENEL için FARKLI hesaplanır (mimarinin can alıcı
+noktası):**
+
+- **Yerel tip:** `proximity_veya_erisim = 1 − (mesafe / yarıçap)` — merkeze ne kadar yakınsa o
+  kadar yüksek. Yerel rekabetin doğası zaten mesafeye dayalı.
+- **Genel tip:** `proximity_veya_erisim = erisim_proxy` — mesafe ÖNEMSİZ (genel rakip şehrin öbür
+  ucunda ya da tamamen online olabilir); bunun yerine "genel erişim" sinyali kullanılır: web sitesi
+  var mı (✅ otomatik) + adı geçen birden fazla şube/lokasyon var mı (⚠️ yarı-otomatik, Places'te
+  aynı isim birden fazla kayıt olarak görülebilir) — bu, Bölüm 5.3'teki "çoklu platform/şube
+  kapsamı" kriterinin formüle bağlanmış hali.
+
+**Ağırlıkların kalibrasyonu için somut, ucuz bir yöntem:** Çiğdem'in ELLE eklediği (kaynak=`manuel`)
+mevcut "Kayıtlı Rakipler" satırları zaten var — bunlar onun sezgisel olarak "gerçek rakip" dediği
+işletkeler. Formül devreye girdiğinde, bu formülün Çiğdem'in elle eklediği rakiplere yüksek skor
+verip vermediği kontrol edilerek ağırlıklar kalibre edilebilir (ücretsiz bir "ground truth" seti —
+ayrı bir araştırma/anket gerektirmez).
+
+---
+
+## 10. Parametre Seti 2 — "Rakip Analiz" formülü (rapor/projeksiyon/hedef/realizasyon)
+
+Bu set, Set 1'den TAMAMEN BAĞIMSIZ — zaten "rakip" olarak belirlenmiş bir işletmeyi derinlemesine
+incelemek için. Modern rekabet istihbaratı (CI) pratiği ve SWOT/Porter'ın Beş Gücü çerçevelerinin
+ortak paydası **5 boyut**: rakip araştırması, pazar analizi, kıyaslama (benchmarking), dijital
+görünürlük, SWOT. Bunu Talk & Heal'e uyarlayıp **4 gruba** indirdim (kullanıcının istediği
+"kendi içinde gruplandırma"):
+
+### 10.1 Grup A — Hizmet Profili
+Hizmet çeşitliliği (bireysel/çift/aile terapisi vb.), fiyatlandırma/paket yapısı (biliniyorsa),
+uzmanlık alanları, seans formatı (yüz yüze/online/hibrit).
+
+### 10.2 Grup B — Dijital Varlık
+Web sitesi kalitesi/SEO, sosyal medya varlığı + **etkileşim oranı** (Bölüm 3.2'deki JMIR/PMC
+bulgusu — takipçi sayısı değil), online randevu sistemi var mı.
+**⚠️ Türkiye etik-kısıt hatırlatması (Bölüm 4):** Bu grupta yüksek skor = "güçlü rakip" değil,
+özellikle psikiyatrist rakiplerde yüksek sosyal-medya-agresifliği aynı zamanda **etik/yasal risk
+sinyali** olabilir — Set 2'nin raporunda bu grup asla "taklit edilecek başarı" olarak
+sunulmamalı, nötr bir gözlem olarak sunulmalı.
+
+### 10.3 Grup C — Yerel Erişim & İtibar
+Google puanı/yorum hacmi+kalitesi, GBP profil tamlığı, fiziksel erişilebilirlik, personel
+sayısı/klinik büyüklüğü (manuel).
+
+### 10.4 Grup D — Değişim-Trend Sinyalleri
+`businessStatus` değişimi (kapanma/taşınma tespiti — Faz 3'ün "yedek listeden terfi" tetikleyicisi
+tam burada), yorum hacmindeki artış/azalış hızı (büyüme/küçülme proxy'si), yeni hizmet/paket
+eklenmesi (web sitesi/GBP güncellemesi gözlemlenerek — manuel).
+
+### 10.5 Tek vs Çoklu Rakip Modu — AYNI parametre seti, farklı sunum
+
+- **Tek rakip:** 4 grup da tam anlatı (narrative) olarak işlenir — mevcut İçerik Stratejisi/Aksiyon
+  Analizi rapor formatına birebir uyar.
+- **Çoklu rakip:** Her grup, rakipler ARASI KARŞILAŞTIRMA tablosuna dönüşür (ör. Grup C'de "puan
+  ortalaması", "en yüksek/en düşük" gibi) — kullanıcının notu doğru: parametre seti AYNI kalıyor,
+  sadece gruplama iç sunumu tekil-anlatıdan çoklu-karşılaştırmaya dönüşüyor.
+
+---
+
+## 11. İki setin çoklu-rakip raporunda birleşimi
+
+Kullanıcının tarif ettiği "ikinci katmanda birinci katmandan faydalanma" şöyle işler:
+
+1. **Sıralama (Set 1):** Çoklu-rakip raporundaki rakipler, Set 1 skoruna göre GÜÇLÜDEN ZAYIFA
+   sıralı listelenir (zaten Faz 3'ün 1-10 sıralamasıyla aynı skor, yeniden hesaplamaya gerek yok).
+2. **Ağırlıklı özet (öneri):** Rapor sonundaki "genel eğilim" cümleleri (ör. "yerel rakipleriniz
+   genelde X yapıyor") TÜM rakiplere eşit ağırlık vermemeli — Set 1 skorunu ağırlık olarak
+   kullanarak en güçlü/en alakalı rakiplerin davranışı özet cümlede daha baskın olmalı (zayıf/
+   marjinal bir rakibin tek başına genel eğilimi çarpıtmasını önler — Bölüm 8'deki dilution
+   sorununun rapor-üretim aşamasındaki karşılığı).
+3. **Bireysel + toplu birlikte:** Her rakip Grup A-D detayıyla ayrı ayrı listelenir (Set 2), AMA
+   sıralama sırası ve "genel eğilim" ağırlıklandırması Set 1'den gelir — iki set birbirini
+   TAMAMLAR, biri diğerinin yerine geçmez.
+
+Bu, kod değil kavramsal bir akış önerisidir — gerçek implementasyon ayrı bir tasarım kararı.
+
+---
+
+## 12. Güncellenmiş sıradaki adım (öneri, kod değil)
+
+1. `lib/places.ts` field mask'ine `rating`, `userRatingCount`, `businessStatus`, `websiteUri`
+   ekle (Set 1'in 5 bileşeninden 3'ünün, Set 2 Grup C/D'nin veri temeli — tek değişiklik, çok
+   fazla formülü aynı anda açar).
+2. Set 1 formülünü (Bölüm 9.3) `rakipParametreSkor.ts`'e YENİ bir fonksiyon olarak ekle (mevcut
+   skorlama sistemine dokunmadan) — Çiğdem'in mevcut manuel rakip listesiyle kalibre et
+   (Bölüm 9.3'ün ücretsiz ground-truth önerisi).
+3. Set 2'nin 4 grubunu (Bölüm 10.1-10.4) mevcut rapor prompt'larına (İçerik Stratejisi/Aksiyon
+   Analizi) yapılandırılmış girdi olarak ekle — tek/çoklu ayrımı sadece SUNUM katmanında.
+4. Bölüm 8'deki uyarı metnini, arama limiti gerçekten artırılmadan/Set 1 formülü devreye
+   girmeden ÖNCE haritanın altına ekleme — limit zaten 60'a çıkarıldı (bkz. Bölüm 1), bu yüzden
+   uyarı şimdiden eklenebilir, Set 1 formülü gelince metni güncellemek yeterli.
+5. Görsel/Video Stratejisi için AYNI ikili mimari (Set 1 + Set 2 mantığı) — bu rapor kapsamında
+   DEĞİL, ayrı bir derinlemesine araştırma turu gerektiriyor (kullanıcı bunu ayrı, sonraki bir
+   iş olarak işaretledi).
