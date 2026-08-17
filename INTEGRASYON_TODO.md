@@ -1744,3 +1744,30 @@ belli değil) — uydurma rakam KONULMAYACAK, ilgili satırlar "TBD/muhasebeciye
 işaretlenecek. "Video edit/otomatik sosyal medya/linktree" henüz hiçbir araç/mimari kararı
 verilmemiş planlanan özellikler — somut maliyet yerine Sparrow'un kendi altyapısıyla (self-host,
 ~$0 marjinal) yapılacağı varsayımı NOT edilecek, kesinleşmiş bir rakam gibi sunulmayacak.
+
+## Kullanıcı bildirimi — Konum ile Rakip Ara: 20 sonuç sınırı + harita grafik arayüzü genişletmesi (2026-08-17, sıraya alındı, birebir kayıt)
+
+Kullanıcının mesajı (birebir, 4 ayrı istek):
+
+> - https://www.youtube.com/watch?v=q63nc53rLDs&list=WL&index=78&t=896s  Bu linkte özellikle 3
+>   dakika 55. saniye ve 5 dakika 50. saniye arasındaki süreci hem görsel hem de transkriptten iyice
+>   irdele. Bak, klinik sayısı Google'ın verdiği tek seferde 20 aramanın çok üstünde görünüyor çünkü
+>   biz uyarı olarak kendi haritadan rakip aramamızda kullanıcıya 'Google'ın tek aramada izin
+>   verdiği üst sınır: 20 listeden seç ya da yaz' 20 gibi bir rakam üst sınırı veriyoruz. Bu sorunu
+>   çözelim ve verdiğim linkteki haritanın grafik arayüzünü özellikle incele.
+> - Harita 20 sonuç bulundu ile Arama Sonuçları arasında olsun
+> - Haritada ilk tıkladığımda maviye dönen rakip aynı zamanda Kayıtlı rakipler listesine eklensin,
+>   ikinci tıklamada kırmızıya döndüğünde Kayıtlı Rakipler listesinden silinsin(bu tıklama özelliği
+>   ile bilgilendirme haritanın altına da not olarak eklensin)
+> - haritada, arama yapılırken girilen yarıçap değerinde(100 m ise 100 m, 1311 m ise 1311 m
+>   yarıçapında) yanıp sönen bir çember olsun,
+> - haritanın sol alt kısmında ölçek değerini gösteren bir cetvel olsun zoom in zoom out
+>   yapıldığında bu cetvel ölçeklensin, zoom in/out için sağ tarafta bir scroll olsun ve onunla da
+>   aşağı yukarı yönlü zoom in/out yapılabilsin
+
+Notlar: Kullanıcının mesajında 5 madde var (video analizi bir alt-görev, ardından 4 somut UI/UX
+değişikliği). "20 sonuç" sınırı `rakip-analizi.html`'deki metinde ve backend'de (`maxResults`,
+Google Text Search'ün gerçek sınırı) — video incelemesi bu sınırın gerçekten aşılıp aşılamayacağını
+(ör. sayfalama/pagination ile birden fazla çağrı) netleştirecek. "Kayıtlı rakipler" listesi mevcut
+"seçilenleri ekle" akışıyla aynı listeye mi işaret ediyor yoksa ayrı bir liste mi — koda bakılıp
+netleştirilecek.

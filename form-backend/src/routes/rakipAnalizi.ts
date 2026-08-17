@@ -233,10 +233,12 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 	if (!adres || !sorgu || !Number.isFinite(radiusMeters) || radiusMeters <= 0) {
 		return errorResponse(request, 400, 'Geçersiz adres/arama terimi/yarıçap.');
 	}
-	// Google Text Search en fazla 20 sonuç veriyor (bkz. lib/places.ts), o yüzden bu aralıkla
-	// sıkıştırıyoruz; 1'in altı/eksik/sayı-olmayan bir değer sessizce 20'ye (varsayılan) düşer.
+	// Google Text Search (New) tek sayfada en fazla 20 sonuç veriyor ama 'nextPageToken' ile
+	// sayfalanarak toplamda 60'a kadar alınabiliyor (bkz. lib/places.ts) — üst sınır bu yüzden 60,
+	// eskiden yanlışlıkla 20'de sabitlenmişti (bkz. hata günlüğü). 1'in altı/eksik/sayı-olmayan bir
+	// değer sessizce 20'ye (varsayılan) düşer.
 	const maxResultsInput = Number(url.searchParams.get('maxResults'));
-	const maxResults = Number.isFinite(maxResultsInput) && maxResultsInput >= 1 ? Math.min(20, Math.floor(maxResultsInput)) : 20;
+	const maxResults = Number.isFinite(maxResultsInput) && maxResultsInput >= 1 ? Math.min(60, Math.floor(maxResultsInput)) : 20;
 
 	await ensureKullanimKaydiTab(env);
 	// Google, ücretsiz aylık kotayı (Adres Bulma 10.000 / Rakip Arama 5.000) aşınca isteği
@@ -264,9 +266,17 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 	try {
 		const { lat, lng } = await geocodeAddress(env, adres);
 		await logKullanim(env, 'adresBulma', adres);
-		const places = await searchCompetitors(env, sorgu, lat, lng, radiusMeters, maxResults);
-		await logKullanim(env, 'rakipArama', `'${sorgu}' (${radiusMeters}m) — ${adres}`);
-		return json({ places }, request);
+		const { places, sayfaSayisi } = await searchCompetitors(env, sorgu, lat, lng, radiusMeters, maxResults);
+		// Google her sayfayı AYRI faturalandırıyor (bkz. lib/places.ts) — kota sayacımız gerçek
+		// tüketimi yansıtsın diye sonuç sayısı yerine gerçekleşen sayfa sayısı kadar logluyoruz.
+		for (let i = 0; i < sayfaSayisi; i++) {
+			await logKullanim(
+				env,
+				'rakipArama',
+				`'${sorgu}' (${radiusMeters}m) — ${adres}` + (sayfaSayisi > 1 ? ` [sayfa ${i + 1}/${sayfaSayisi}]` : ''),
+			);
+		}
+		return json({ places, merkez: { lat, lng } }, request);
 	} catch (err) {
 		return errorResponse(request, 502, 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', err);
 	}

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=18">
+<link rel="stylesheet" href="panel.css?v=19">
 </head>
 <body>
 <div class="panel-wrap">
@@ -51,13 +51,24 @@
       <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
       <input type="text" id="rakipSorgu" placeholder="Ne arıyorsun? (örn: psikolog, terapi merkezi, danışmanlık)">
       <input type="number" id="rakipRadius" placeholder="Yarıçap (metre)" value="2000">
-      <label for="rakipMaxSonuc">Kaç sonuç görmek istersin? (Google'ın tek aramada izin verdiği üst sınır: 20 — listeden seç ya da yaz)</label>
-      <input type="number" id="rakipMaxSonuc" list="rakipMaxSonucOnerileri" min="1" max="20" value="20">
+      <label for="rakipMaxSonuc">Kaç sonuç görmek istersin? (Google'ın sayfalamayla izin verdiği üst sınır: 60 — listeden seç ya da yaz)</label>
+      <input type="number" id="rakipMaxSonuc" list="rakipMaxSonucOnerileri" min="1" max="60" value="20">
       <datalist id="rakipMaxSonucOnerileri">
-        <option value="3"><option value="5"><option value="10"><option value="15"><option value="20">
+        <option value="3"><option value="5"><option value="10"><option value="20"><option value="40"><option value="60">
       </datalist>
       <button class="btn-secondary" id="rakipAraBtn" type="button">Ara</button>
       <div class="status" id="rakipAraStatus"></div>
+      <!-- Harita (2026-08-17, 2026-08-15+2026-08-17'de kaydedilen istekler): "X sonuç bulundu" ile
+           "Arama Sonuçları" arasında konumlanır (kullanıcı isteği). Numaralı, tıklanabilir daireler —
+           beyaz (dokunulmamış) → tıklanınca mavi (Kayıtlı Rakipler'e EKLENİR, gerçek backend POST) →
+           tekrar tıklanınca kırmızı (Kayıtlı Rakipler'den ÇIKARILIR, gerçek backend silme) — bkz.
+           haritaCemberTiklandi. Yarıçap kadar yanıp sönen bir çember + sol altta ölçek cetveli + sağda
+           dikey zoom scroll içerir. Google Maps JS script'i lazy-load — kullanıcı hiç arama yapmazsa
+           hiç indirilmiyor (bkz. haritaScriptYukle). -->
+      <div id="rakipHaritaWrap" class="hidden">
+        <div id="rakipHarita" style="height:420px;width:100%;margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden;position:relative;"></div>
+        <p class="muted" id="rakipHaritaNot">Haritada bir noktaya tıklamak o rakibi doğrudan Kayıtlı Rakipler'e ekler (mavi); tekrar tıklamak Kayıtlı Rakipler'den çıkarır (kırmızı). Kesikli daire, girdiğin arama yarıçapını gösterir.</p>
+      </div>
       <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
       <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
       <div class="actions" id="rakipSonuclarToggleWrap"></div>
@@ -68,12 +79,6 @@
       <div class="actions">
         <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
       </div>
-      <!-- Harita (2026-08-17, 2026-08-15'te kaydedilen istek): numaralı, tıklanabilir daireler —
-           beyaz (seçilmemiş) → tıklanınca mavi (kıyaslamaya eklendi, #rakipAramaSecili ile aynı
-           state) → tekrar tıklanınca kırmızı (çıkarıldı). Tablo tarafındaki onay kutusuyla da
-           senkron (bkz. haritaMarkerRengiGuncelle çağrıları). Google Maps JS script'i lazy-load —
-           kullanıcı hiç arama yapmazsa hiç indirilmiyor (bkz. haritaScriptYukle). -->
-      <div id="rakipHarita" class="hidden" style="height:420px;width:100%;margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden;"></div>
     </div>
 
     <div class="field tab-panel tab-ekle" id="rakipEkleField">
@@ -1562,8 +1567,12 @@
   var haritaScriptIstendi = false;
   var haritaObj = null;
   var haritaMarkerlar = {}; // dizideki index -> google.maps.Marker
-  var rakipHaritaRenk = {}; // dizideki index -> 'red' (mavi durumu zaten rakipAramaSecili'de; beyaz = hiç kaydı yok)
+  var rakipHaritaRenk = {}; // dizideki index -> 'blue' | 'red' (beyaz = hiç kaydı yok) — TEK renk kaynağı
+  var haritaEklenenId = {}; // dizideki index -> haritadan tıklanarak Kayıtlı Rakipler'e eklenen rakibin id'si (silmek için gerekli)
   var haritaInfoWindow = null;
+  var haritaYaricapCemberi = null; // google.maps.Circle — arama yarıçapını gösteren yanıp sönen çember
+  var haritaYaricapPulseTimer = null;
+  var haritaZoomSlider = null; // sağdaki dikey zoom scroll (input[type=range])
 
   // Koyu/fütüristik tema — Google Maps'in standart açık paletini kapatıp lacivert/siyah zemin +
   // camgöbeği (cyan) yol/su vurgusuyla değiştiriyor.
@@ -1602,7 +1611,7 @@
   }
 
   function haritaRenginiGetir(i) {
-    if (rakipAramaSecili[i]) return '#3B82F6';
+    if (rakipHaritaRenk[i] === 'blue') return '#3B82F6';
     if (rakipHaritaRenk[i] === 'red') return '#DC2626';
     return '#FFFFFF';
   }
@@ -1615,38 +1624,112 @@
     marker.setIcon(icon);
   }
 
-  // Bir çembere tıklamak, o rakibi arama-sonuçları tablosundaki onay kutusuyla AYNI seçim
-  // state'ine ("Seçilenleri Ekle/Sil" için kullanılan rakipAramaSecili) ekler/çıkarır — harita ve
-  // tablo birbirinin senkronize bir görünümü, ayrı bir "kıyas tablosu" state'i YOK (2026-08-15'teki
-  // istekte ayrıca tarif edilen çok daha büyük sıralanabilir kıyas tablosu henüz yapılmadı, bkz.
-  // INTEGRASYON_TODO.md — o gelene kadar en anlamlı köprü bu).
-  function haritaCemberTiklandi(i) {
-    if (rakipAramaSecili[i]) {
-      delete rakipAramaSecili[i];
-      rakipHaritaRenk[i] = 'red';
-    } else {
-      rakipAramaSecili[i] = true;
-    }
+  // Onay kutusu, checkbox tarafından tetiklenen değişiklikte hâlâ mavi/kırmızıyı sürükler (mevcut
+  // davranış korunuyor) — ama artık ortak renk kaynağı rakipHaritaRenk (haritaCemberTiklandi ile
+  // paylaşılıyor).
+  function checkboxDegisti(i, checked) {
+    if (checked) { rakipAramaSecili[i] = true; rakipHaritaRenk[i] = 'blue'; }
+    else { delete rakipAramaSecili[i]; rakipHaritaRenk[i] = 'red'; }
     updateRakipSonuclarTopluBtn();
     haritaMarkerRengiGuncelle(i);
-    var satirlar = el('rakipSonuclar').querySelectorAll('.rakip-row:not(.head)');
-    var checkbox = satirlar[i] && satirlar[i].querySelector('input[type="checkbox"]');
-    if (checkbox) checkbox.checked = !!rakipAramaSecili[i];
+  }
+
+  // Haritada bir çembere tıklamak (2026-08-17, kullanıcı isteği) GERÇEK bir Kayıtlı Rakipler
+  // ekleme/çıkarma işlemidir — tablodaki onay kutusu/"Seçilenleri Ekle-Sil" ile aynı seçim
+  // state'ini (rakipAramaSecili) KASITLI OLARAK kullanmıyoruz: eğer kullansaydık, haritadan
+  // eklenen bir rakip aynı zamanda "seçili" görünüp sonradan "Seçilenleri Ekle"ye basılınca
+  // backend'e İKİNCİ KEZ POST edilip Kayıtlı Rakipler'de mükerrer satır oluşturabilirdi. Bu yüzden
+  // harita kendi id defterini (haritaEklenenId) tutuyor; checkbox/bulk akışları bundan bağımsız
+  // çalışmaya devam ediyor.
+  function haritaCemberTiklandi(i) {
+    var p = rakipAramaSonuclariCache[i];
+    if (rakipHaritaRenk[i] === 'blue') {
+      rakipHaritaRenk[i] = 'red';
+      haritaMarkerRengiGuncelle(i);
+      var id = haritaEklenenId[i];
+      delete haritaEklenenId[i];
+      if (id) {
+        authFetch('/panel/rakip-analizi/rakip-sil', { method: 'POST', body: JSON.stringify({ ids: [id] }) })
+          .then(function () { loadRakipListe(); })
+          .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'den silinemedi, tekrar dene.", 'err'); });
+      }
+    } else if (p) {
+      rakipHaritaRenk[i] = 'blue';
+      haritaMarkerRengiGuncelle(i);
+      tekRakipEkle(p).then(function (data) {
+        haritaEklenenId[i] = data && data.id;
+        loadRakipListe();
+      }).catch(function (e) {
+        if (e.message !== 'unauthorized') {
+          rakipHaritaRenk[i] = 'red';
+          haritaMarkerRengiGuncelle(i);
+          setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'e eklenemedi, tekrar dene.", 'err');
+        }
+      });
+    }
+  }
+
+  // Arama yarıçapı kadar (girilen metre değeri) yanıp sönen bir çember — arama merkezi backend'in
+  // döndürdüğü geocode sonucu (rakipAramaBaglam.merkez), yarıçap kullanıcının girdiği değer.
+  function haritaYaricapCemberiCiz() {
+    if (haritaYaricapPulseTimer) { clearInterval(haritaYaricapPulseTimer); haritaYaricapPulseTimer = null; }
+    if (haritaYaricapCemberi) { haritaYaricapCemberi.setMap(null); haritaYaricapCemberi = null; }
+    var merkez = rakipAramaBaglam && rakipAramaBaglam.merkez;
+    var yaricap = rakipAramaBaglam && Number(rakipAramaBaglam.radius);
+    if (!merkez || !yaricap) return;
+    haritaYaricapCemberi = new google.maps.Circle({
+      map: haritaObj, center: { lat: merkez.lat, lng: merkez.lng }, radius: yaricap, clickable: false,
+      strokeColor: '#22d3ee', strokeWeight: 2, fillColor: '#22d3ee', fillOpacity: 0.12,
+    });
+    var acik = false;
+    haritaYaricapPulseTimer = setInterval(function () {
+      if (!haritaYaricapCemberi) return;
+      acik = !acik;
+      haritaYaricapCemberi.setOptions({ strokeOpacity: acik ? 0.9 : 0.25, fillOpacity: acik ? 0.22 : 0.06 });
+    }, 700);
+  }
+
+  // Sağda dikey bir zoom scroll (2026-08-17, kullanıcı isteği) — native HTML range input, CSS'te
+  // dikey görünecek şekilde döndürülmüş (webkit) / writing-mode (Firefox). map.setZoom ile
+  // sürükle-bırak yönü doğal hissettirsin diye min/max ters: yukarı = yakınlaştır (max zoom).
+  function haritaZoomSliderKur() {
+    if (haritaZoomSlider) return;
+    haritaZoomSlider = document.createElement('input');
+    haritaZoomSlider.type = 'range';
+    haritaZoomSlider.min = '1';
+    haritaZoomSlider.max = '20';
+    haritaZoomSlider.step = '1';
+    haritaZoomSlider.className = 'harita-zoom-slider';
+    haritaZoomSlider.setAttribute('aria-label', 'Haritayı yakınlaştır/uzaklaştır');
+    haritaZoomSlider.addEventListener('input', function () {
+      if (haritaObj) haritaObj.setZoom(Number(haritaZoomSlider.value));
+    });
+    el('rakipHarita').appendChild(haritaZoomSlider);
   }
 
   // Tam yeniden çizim — arama sonrası, "Seçilenleri Sil"den sonra, "Seçilenleri Ekle" bittikten
   // sonra çağrılır (liste yapısı değiştiği için tek tek marker güncellemek yetmiyor).
   function haritaCiz() {
     var places = rakipAramaSonuclariCache;
-    el('rakipHarita').classList.toggle('hidden', places.length === 0);
-    if (!places.length) return;
+    el('rakipHaritaWrap').classList.toggle('hidden', places.length === 0);
+    if (!places.length) {
+      if (haritaYaricapPulseTimer) { clearInterval(haritaYaricapPulseTimer); haritaYaricapPulseTimer = null; }
+      return;
+    }
     haritaScriptYukle(function () {
       if (!haritaObj) {
         haritaObj = new google.maps.Map(el('rakipHarita'), {
           zoom: 13, styles: HARITA_KOYU_STIL, mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+          zoomControl: false, // yerini sağdaki özel dikey scroll alıyor (kullanıcı isteği)
+          scaleControl: true, scaleControlOptions: { position: google.maps.ControlPosition.LEFT_BOTTOM },
         });
         haritaInfoWindow = new google.maps.InfoWindow();
+        haritaObj.addListener('zoom_changed', function () {
+          if (haritaZoomSlider) haritaZoomSlider.value = String(haritaObj.getZoom());
+        });
       }
+      haritaZoomSliderKur();
+      haritaZoomSlider.value = String(haritaObj.getZoom());
       Object.keys(haritaMarkerlar).forEach(function (k) { haritaMarkerlar[k].setMap(null); });
       haritaMarkerlar = {};
       var bounds = new google.maps.LatLngBounds();
@@ -1667,6 +1750,7 @@
         haritaMarkerlar[i] = marker;
       });
       if (!bounds.isEmpty()) haritaObj.fitBounds(bounds);
+      haritaYaricapCemberiCiz();
     });
   }
 
@@ -1680,7 +1764,7 @@
         isim: p.name, adres: p.address, kaynak: 'harita',
         aramaAdres: rakipAramaBaglam.adres, aramaSorgu: rakipAramaBaglam.sorgu, aramaRadiusMeters: rakipAramaBaglam.radius,
       }),
-    }).then(function () { if (btn) btn.textContent = 'Eklendi'; })
+    }).then(function (r) { return r.json(); }).then(function (data) { if (btn) btn.textContent = 'Eklendi'; return data; })
       .catch(function (e) {
         if (btn && e.message !== 'unauthorized') { btn.disabled = false; btn.textContent = 'Ekle'; }
         throw e;
@@ -1723,11 +1807,7 @@
       var checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = !!rakipAramaSecili[i];
-      checkbox.addEventListener('change', function () {
-        if (checkbox.checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; rakipHaritaRenk[i] = 'red'; }
-        updateRakipSonuclarTopluBtn();
-        haritaMarkerRengiGuncelle(i);
-      });
+      checkbox.addEventListener('change', function () { checkboxDegisti(i, checkbox.checked); });
       var addBtn = document.createElement('button');
       addBtn.type = 'button'; addBtn.className = 'btn-secondary'; addBtn.textContent = 'Ekle';
       addBtn.addEventListener('click', function () {
@@ -1756,6 +1836,7 @@
     indeksler.forEach(function (i) { rakipAramaSonuclariCache.splice(i, 1); });
     rakipAramaSecili = {};
     rakipHaritaRenk = {};
+    haritaEklenenId = {};
     rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
     renderAramaSonuclari();
   });
@@ -1779,6 +1860,7 @@
     Promise.all(istekler).then(function () {
       rakipAramaSecili = {};
       rakipHaritaRenk = {};
+      haritaEklenenId = {};
       loadRakipListe();
       updateRakipSonuclarTopluBtn();
       haritaCiz();
@@ -1787,7 +1869,7 @@
 
   el('rakipAraBtn').addEventListener('click', function () {
     var adres = el('rakipAdres').value.trim(), sorgu = el('rakipSorgu').value.trim(), radius = el('rakipRadius').value;
-    var maxSonuc = Math.min(20, Math.max(1, Number(el('rakipMaxSonuc').value) || 20));
+    var maxSonuc = Math.min(60, Math.max(1, Number(el('rakipMaxSonuc').value) || 20));
     if (!adres || !sorgu || !radius) { setStatus(el('rakipAraStatus'), 'Adres, arama terimi ve yarıçap gerekli.', 'err'); return; }
     setStatus(el('rakipAraStatus'), 'Aranıyor...', '');
     var qs = '?adres=' + encodeURIComponent(adres) + '&sorgu=' + encodeURIComponent(sorgu) + '&radiusMeters=' + encodeURIComponent(radius) + '&maxResults=' + maxSonuc;
@@ -1797,11 +1879,12 @@
       loadKullanimSayaci();
       if (!res.ok) { setStatusLimit(el('rakipAraStatus'), res.data.error || 'Arama başarısız.', res.data.limitUrl); return; }
       var places = res.data.places || [];
-      rakipAramaBaglam = { adres: adres, sorgu: sorgu, radius: radius, zaman: new Date().toLocaleString('tr-TR') };
+      rakipAramaBaglam = { adres: adres, sorgu: sorgu, radius: radius, zaman: new Date().toLocaleString('tr-TR'), merkez: res.data.merkez || null };
       rakipAramaSonuclariCache = places;
       rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
       rakipAramaSecili = {};
       rakipHaritaRenk = {};
+      haritaEklenenId = {};
       renderAramaSonuclari();
       if (!places.length) { setStatus(el('rakipAraStatus'), 'Bu konum/yarıçapta sonuç bulunamadı.', ''); return; }
       setStatus(el('rakipAraStatus'), places.length + ' sonuç bulundu.', 'ok');

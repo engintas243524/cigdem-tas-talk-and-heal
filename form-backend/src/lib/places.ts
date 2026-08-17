@@ -23,6 +23,15 @@ function boundingRectangle(lat: number, lng: number, radiusMeters: number) {
 	};
 }
 
+// Google'ın Text Search (New) tek SAYFA sınırı 20 — ama resmi dokümantasyona göre 'nextPageToken'
+// ile sayfalayarak toplamda 60'a kadar sonuç almak mümkün (her sayfa ayrı faturalanan ayrı bir
+// istek). Önceden tek sayfayla sınırlıydık ve kullanıcıya "Google'ın izin verdiği üst sınır: 20"
+// diye YANLIŞ bir mesaj gösteriyorduk — asıl sınır sayfalamayla 60. `sayfaSayisi` çağırana kaç
+// gerçek Google isteği yapıldığını bildirir (kullanım/kota loglaması bunun üzerinden, sonuç
+// sayısı üzerinden değil — Google sayfa başına faturalandırıyor).
+const TEK_SAYFA_SONUC_LIMIT = 20;
+const TOPLAM_SONUC_UST_SINIR = 60;
+
 // Text Search (New) yerine bilinçli tercih edildi: Nearby Search'ün includedTypes'ı Google'ın
 // sabit tip listesine bağlı (ör. 'psychotherapist', 'counselor') — bu tipler Türkiye'deki
 // işletmelerde zayıf/eksik kapsanıyor ve Çiğdem'e ne arandığını göstermiyor. Text Search, Çiğdem'in
@@ -35,37 +44,66 @@ export async function searchCompetitors(
 	lng: number,
 	radiusMeters: number,
 	maxResultCount: number,
-): Promise<NearbyPlace[]> {
-	const response = await fetch(PLACES_API, {
-		method: 'POST',
-		headers: {
-			'content-type': 'application/json',
-			'x-goog-api-key': env.GOOGLE_PLACES_API_KEY,
-			'x-goog-fieldmask': 'places.displayName,places.formattedAddress,places.location',
-		},
-		body: JSON.stringify({
-			textQuery,
-			// Bir Text Search çağrısı Google'a TEK istek olarak faturalanır, döndürülen sonuç
-			// sayısından (1-20) bağımsız — bu parametre kota tüketimini azaltmaz, sadece Çiğdem'in
-			// aynı arama içinde kaç sonuç görmek istediğini kontrol eder.
-			maxResultCount,
-			// Text Search (New)'de 'locationRestriction' sadece dikdörtgen (rectangle) kabul ediyor —
-			// çember (circle) göndermek sessizce reddediliyor (400 değil, boş sonuç). Yarıçapı gerçek
-			// bir dikdörtgen sınıra çeviriyoruz ki Çiğdem'in girdiği yarıçap gerçekten sınırlasın
-			// ('locationBias' sadece "öncelik ver" demek, sınırı garanti etmezdi).
-			locationRestriction: { rectangle: boundingRectangle(lat, lng, radiusMeters) },
-		}),
-	});
-	if (!response.ok) {
-		throw new Error(`Google Places API call failed: ${response.status} ${await response.text()}`);
-	}
-	const data = (await response.json()) as {
-		places?: { displayName?: { text?: string }; formattedAddress?: string; location?: { latitude?: number; longitude?: number } }[];
-	};
-	return (data.places ?? []).map((p) => ({
-		name: p.displayName?.text ?? '',
-		address: p.formattedAddress ?? '',
-		lat: p.location?.latitude ?? 0,
-		lng: p.location?.longitude ?? 0,
-	}));
+): Promise<{ places: NearbyPlace[]; sayfaSayisi: number }> {
+	const hedefSonuc = Math.min(maxResultCount, TOPLAM_SONUC_UST_SINIR);
+	const places: NearbyPlace[] = [];
+	let pageToken: string | undefined;
+	let sayfaSayisi = 0;
+
+	do {
+		const response = await fetch(PLACES_API, {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json',
+				'x-goog-api-key': env.GOOGLE_PLACES_API_KEY,
+				// nextPageToken üst-seviye bir alan — field mask'e eklenmezse Google onu response'a hiç
+				// koymuyor ve sayfalama sessizce çalışmaz.
+				'x-goog-fieldmask': 'places.displayName,places.formattedAddress,places.location,nextPageToken',
+			},
+			body: JSON.stringify(
+				pageToken
+					? // Google dokümantasyonu: sayfa 2+ isteklerinde textQuery/locationRestriction gibi diğer
+						// alanlar İLK istekle AYNI kalmalı — bu yüzden hepsini tekrar gönderiyoruz, sadece
+						// pageToken ekliyoruz.
+						{
+							textQuery,
+							maxResultCount: TEK_SAYFA_SONUC_LIMIT,
+							locationRestriction: { rectangle: boundingRectangle(lat, lng, radiusMeters) },
+							pageToken,
+						}
+					: {
+							textQuery,
+							// Bir Text Search çağrısı Google'a TEK istek olarak faturalanır, döndürülen sonuç
+							// sayısından (1-20) bağımsız — bu parametre kota tüketimini azaltmaz, sadece
+							// Çiğdem'in aynı sayfada kaç sonuç görmek istediğini kontrol eder.
+							maxResultCount: Math.min(hedefSonuc, TEK_SAYFA_SONUC_LIMIT),
+							// Text Search (New)'de 'locationRestriction' sadece dikdörtgen (rectangle) kabul
+							// ediyor — çember (circle) göndermek sessizce reddediliyor (400 değil, boş
+							// sonuç). Yarıçapı gerçek bir dikdörtgen sınıra çeviriyoruz ki Çiğdem'in girdiği
+							// yarıçap gerçekten sınırlasın ('locationBias' sadece "öncelik ver" demek,
+							// sınırı garanti etmezdi).
+							locationRestriction: { rectangle: boundingRectangle(lat, lng, radiusMeters) },
+						},
+			),
+		});
+		if (!response.ok) {
+			throw new Error(`Google Places API call failed: ${response.status} ${await response.text()}`);
+		}
+		sayfaSayisi++;
+		const data = (await response.json()) as {
+			places?: { displayName?: { text?: string }; formattedAddress?: string; location?: { latitude?: number; longitude?: number } }[];
+			nextPageToken?: string;
+		};
+		places.push(
+			...(data.places ?? []).map((p) => ({
+				name: p.displayName?.text ?? '',
+				address: p.formattedAddress ?? '',
+				lat: p.location?.latitude ?? 0,
+				lng: p.location?.longitude ?? 0,
+			})),
+		);
+		pageToken = places.length < hedefSonuc ? data.nextPageToken : undefined;
+	} while (pageToken);
+
+	return { places, sayfaSayisi };
 }

@@ -241,3 +241,14 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .rakip-takip-anahtar { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; font-weight: 500; color: var(--ink); margin: 0.5rem 0; }
 .rakip-takip-anahtar input[type="checkbox"] { width: auto; margin: 0; }
 #karsilastirmaGrafikler canvas { max-height: 260px; }
+
+/* Harita — sağda dikey zoom scroll (2026-08-17, kullanıcı isteği). Native <input type=range>,
+   Chrome/Safari için -webkit-appearance:slider-vertical, Firefox için writing-mode ile dikeye
+   çevriliyor. zoom_changed listener'ıyla native scroll-wheel zoom ile de senkron kalır. */
+.harita-zoom-slider {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 140px; margin: 0; z-index: 5;
+  -webkit-appearance: slider-vertical; appearance: slider-vertical;
+  writing-mode: vertical-lr; direction: rtl;
+  accent-color: #3B82F6; background: transparent;
+}
