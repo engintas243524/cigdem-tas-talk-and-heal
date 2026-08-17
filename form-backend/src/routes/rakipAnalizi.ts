@@ -9,7 +9,8 @@ import {
 	type RakipAnalizRow,
 } from '../lib/rakipSheets';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
-import { searchCompetitors } from '../lib/places';
+import { searchCompetitorsInArea, OPTIMAL_RADIUS_METERS } from '../lib/places';
+import { rakipHavuzunuSiralaVeKirp } from '../lib/rakipBulmaSiralama';
 import { geocodeAddress } from '../lib/geocoding';
 import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
@@ -271,13 +272,24 @@ export async function handleRakipAra(request: Request, env: Env): Promise<Respon
 	try {
 		const { lat, lng } = await geocodeAddress(env, adres);
 		await logKullanim(env, 'adresBulma', adres);
-		const { places, sayfaSayisi } = await searchCompetitors(env, sorgu, lat, lng, radiusMeters, maxResults);
+		const { places: havuz, sayfaSayisi, grid } = await searchCompetitorsInArea(env, sorgu, lat, lng, radiusMeters, maxResults);
+		// Grid arama (radiusMeters > OPTIMAL_RADIUS_METERS) havuzu büyütüyor (recall) ama Google'ın
+		// kapalı "relevance" sıralamasına güvenmek yerine, havuzu Set 1 (Rakip Bulma/Sıralama)
+		// formülüyle AÇIKÇA yeniden sıralayıp istenen sayıya kırpıyoruz — bkz. lib/rakipBulmaSiralama.ts
+		// ve RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md Bölüm 8-9. Kalıcı kapanmış işletmeler burada
+		// (skorlanmadan) elenir.
+		const places = rakipHavuzunuSiralaVeKirp(havuz, lat, lng, radiusMeters, maxResults);
 		// Google her sayfayı AYRI faturalandırıyor (bkz. lib/places.ts), gerçek tüketim sayfaSayisi
 		// kadar — ama sayfa başına ayrı logKullanim çağrısı, kotaDolduMu'nun zaten ağır olan
 		// Sheets-okuma zincirini Cloudflare'in tek-istek subrequest sınırına (free plan) itiyordu
 		// (bkz. hata günlüğü). Tek log satırına dönüp gerçek sayfa sayısını detay metnine yazıyoruz.
-		await logKullanim(env, 'rakipArama', `'${sorgu}' (${radiusMeters}m) — ${adres}` + (sayfaSayisi > 1 ? ` [${sayfaSayisi} sayfa]` : ''));
-		return json({ places, merkez: { lat, lng } }, request);
+		await logKullanim(
+			env,
+			'rakipArama',
+			`'${sorgu}' (${radiusMeters}m) — ${adres}` +
+				(sayfaSayisi > 1 ? ` [${sayfaSayisi} sayfa/${grid.boyut > 1 ? `${grid.boyut}x${grid.boyut} grid` : 'tek alan'}]` : ''),
+		);
+		return json({ places, merkez: { lat, lng }, grid, optimalYaricapMetre: OPTIMAL_RADIUS_METERS }, request);
 	} catch (err) {
 		return errorResponse(request, 502, 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', err);
 	}
@@ -443,17 +455,40 @@ export async function handleIcerikStrateji(request: Request, env: Env): Promise<
 
 // Kullanıcı kararı (2026-08-15): İçerik Stratejisi'nin aksine, burada seçilen rakiplerin TAM
 // karşılaştırmalı analizi yapılır — randevu/hedef verisiyle birlikte doğrudan rakip kıyası.
+// Parametre Seti 2 — "Rakip Analiz" formülü (2026-08-17, kullanıcı isteği, bkz.
+// RAKIP_SIRALAMA_KRITERLERI_ARASTIRMASI.md Bölüm 10) — rakip verisi verildiğinde Claude'un analizi
+// bu 4 grup etrafında yapılandırması için talimat. Set 1'den (rakip BULMA/sıralama, lib/
+// rakipBulmaSiralama.ts) TAMAMEN AYRI — bu, zaten bulunmuş rakib(ler)i DERİNLEMESİNE incelemek
+// için. Tek rakip modunda 4 grup anlatı olarak, çoklu rakip modunda karşılaştırma olarak işlenir —
+// aynı parametre seti, farklı sunum (rapor Bölüm 10.5).
+const RAKIP_ANALIZ_PARAMETRE_GRUPLARI = `
+Rakip verisini analiz ederken şu 4 grup etrafında yapılandır (Parametre Seti 2):
+1. Hizmet Profili — hizmet çeşitliliği, uzmanlık alanları, seans formatı (yüz yüze/online/hibrit).
+2. Dijital Varlık — web sitesi/sosyal medya varlığı ve İÇERİK SIKLIĞI/ERİŞİMİ (takipçi SAYISI değil,
+   etkileşim/erişim daha anlamlı bir sinyaldir).
+3. Yerel Erişim & İtibar — konum yakınlığı, Google puanı/yorum hacmi, profil tamlığı.
+4. Değişim-Trend Sinyalleri — işletme durumu (açık/kapalı/taşınmış), yorum hacmindeki artış/azalış
+   hızı gibi büyüme/küçülme belirtileri.
+Tek rakip seçiliyse bu 4 grubu tam anlatı olarak işle. Birden fazla rakip seçiliyse, her grup
+rakipler ARASI bir karşılaştırmaya dönüşsün (ör. "puan ortalaması", "en güçlü/en zayıf" gibi) —
+parametre seti aynı kalır, sadece sunum tekil-anlatıdan çoklu-karşılaştırmaya döner.
+ÖNEMLİ ETİK/YASAL NOT (Grup 2 için): Türkiye'de psikolog (TPD etik ilkeleri) ve özellikle
+psikiyatrist (TTB + Sağlık Bakanlığı mevzuatı) unvanlı rakiplerin agresif/karşılaştırmalı reklam
+niteliğindeki sosyal medya paylaşımları meslek etiği/yasa ihlali riski taşıyabilir. Bu yüzden
+yüksek sosyal-medya-aktifliğini ASLA "taklit edilmesi gereken bir başarı" olarak sunma — nötr bir
+gözlem olarak belirt, gerekirse bu riski açıkça hatırlat.`;
+
 export const AKSIYON_ANALIZ_SYSTEM_PROMPT = `Sen Talk and Heal'in (Çiğdem Taş'ın terapi pratiği) iş stratejisti olarak çalışıyorsun.
 Sana verilen randevu/gelir verisi, (varsa) seçilen rakiplerin verisi ve Çiğdem'in gözlem/yorumuna
 dayanarak haftalık/aylık/3-6-9-12 aylık somut hedefler, bir yol haritası ve atılması gereken
 adımları öner. Rakip verisi verilmişse, İçerik Stratejisi analizinin aksine burada rakip rakip
 DOĞRUDAN karşılaştırma yapabilirsin (fiyat/konum/sosyal medya aktifliği gibi verilen boyutlarda
-Çiğdem'in nerede güçlü/zayıf olduğunu somutça belirt). Eğer önceki bir dönemin hedefi verilmişse,
-"neredeydik / ne yaptık / neredeyiz" üçlemesiyle realizasyonu değerlendir; sapma varsa nedenini
-analiz edip bir sonraki dönem için düzeltilmiş hedef/yol haritası öner. Türkçe yaz, somut ve
-ölçülebilir ol. Sade, gündelik bir dil kullan — pazarlama/iş jargonu, uzun karmaşık cümleler ve
-süslü terimlerden kaçın; hiç bu alanda uzman olmayan sıradan bir okuyucunun tek okuyuşta
-anlayacağı, kısa cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
+Çiğdem'in nerede güçlü/zayıf olduğunu somutça belirt).${RAKIP_ANALIZ_PARAMETRE_GRUPLARI}
+Eğer önceki bir dönemin hedefi verilmişse, "neredeydik / ne yaptık / neredeyiz" üçlemesiyle
+realizasyonu değerlendir; sapma varsa nedenini analiz edip bir sonraki dönem için düzeltilmiş
+hedef/yol haritası öner. Türkçe yaz, somut ve ölçülebilir ol. Sade, gündelik bir dil kullan —
+pazarlama/iş jargonu, uzun karmaşık cümleler ve süslü terimlerden kaçın; hiç bu alanda uzman
+olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
 
 // POST /panel/rakip-analizi/aksiyon-analiz { yorum, rakipIds?, parametreler? } — booking
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses

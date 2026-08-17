@@ -51,6 +51,7 @@
       <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
       <input type="text" id="rakipSorgu" placeholder="Ne arıyorsun? (örn: psikolog, terapi merkezi, danışmanlık)">
       <input type="number" id="rakipRadius" placeholder="Yarıçap (metre)" value="2000">
+      <p class="muted" id="rakipOptimalYaricapNot">Önerilen (optimal) yarıçap: <strong>3000m</strong> — bu değerin altında en keskin/alakalı sonuçları alırsın. Daha büyük bir yarıçap girersen sistem alanı otomatik olarak 3000m'lik alt-bölgelere bölüp her birini ayrı ayrı tarar (daha geniş kapsam), ama bu, doğrudan optimal yarıçapta arama yapmak kadar keskin/verimli değildir.</p>
       <label for="rakipMaxSonuc">Kaç sonuç görmek istersin? (Google'ın sayfalamayla izin verdiği üst sınır: 60 — listeden seç ya da yaz)</label>
       <input type="number" id="rakipMaxSonuc" list="rakipMaxSonucOnerileri" min="1" max="60" value="20">
       <datalist id="rakipMaxSonucOnerileri">
@@ -1887,7 +1888,17 @@
       haritaEklenenId = {};
       renderAramaSonuclari();
       if (!places.length) { setStatus(el('rakipAraStatus'), 'Bu konum/yarıçapta sonuç bulunamadı.', ''); return; }
-      setStatus(el('rakipAraStatus'), places.length + ' sonuç bulundu.', 'ok');
+      var mesaj = places.length + ' sonuç bulundu.';
+      // Grid arama uyarısı (2026-08-17, kullanıcı isteği): optimal yarıçapı aşan aramalarda alan
+      // otomatik alt-bölgelere bölünüyor — bu, doğrudan optimal yarıçapta arama yapmak kadar
+      // keskin/verimli değil, bu yüzden ne zaman devreye girdiği açıkça bildiriliyor.
+      var grid = res.data.grid;
+      if (grid && grid.uygulandi) {
+        mesaj += ' (' + grid.boyut + 'x' + grid.boyut + ' alt-bölgeye bölünerek tarandı — doğrudan ' + res.data.optimalYaricapMetre + 'm optimal yarıçapta arama kadar keskin değildir.';
+        if (grid.sinirlandirildiMi) { mesaj += ' Not: çok geniş yarıçap nedeniyle sadece ' + grid.kapsananYaricapMetre + 'm\'ye kadar tarandı, istenen ' + grid.istenenYaricapMetre + 'm\'nin tamamı değil.'; }
+        mesaj += ')';
+      }
+      setStatus(el('rakipAraStatus'), mesaj, 'ok');
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', 'err'); });
   });
 

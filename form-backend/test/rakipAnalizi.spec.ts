@@ -137,7 +137,7 @@ describe('GET /panel/rakip-analizi/rakip-ara', () => {
 		);
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as { places: { name: string }[] };
-		expect(data.places).toEqual([{ name: 'Test Klinik', address: 'Test Adres', lat: 1, lng: 2 }]);
+		expect(data.places).toMatchObject([{ name: 'Test Klinik', address: 'Test Adres', lat: 1, lng: 2 }]);
 	});
 
 	it('rejects a missing address', async () => {
