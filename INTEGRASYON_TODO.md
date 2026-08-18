@@ -2130,3 +2130,46 @@ commit push edilmiş (origin/main) VE en az iki sonraki `wrangler deploy` ile (1
 2026-08-17, sonra 2026-08-18'deki Madde 7/11 deploy'ları da dahil olmak üzere) canlıda. Sadece bu
 dosyaya durum notu düşülmemişti — kod tarafında eksik yok. Kalan: Faz 5/6 (YouTube/Instagram API,
 ayrı roadmap).
+
+### Etik/Yasal Gate Roadmap — Faz 5 durumu (2026-08-18 doğrulandı, geriye dönük not)
+
+Faz 5 (YouTube Data API v3 entegrasyonu) de ZATEN tamamlanmış — commit `0c5c6ec` (2026-08-17
+22:29 +0300): `lib/youtube.ts` (`search.list`/`videos.list` wrapper, ISO 8601 süre parse),
+`lib/gorselVideoBulmaSiralama.ts` (`ilgi_orani`/`doygunluk_tersi`/`format_uygunlugu` formülü,
+`GORSEL_VIDEO_STRATEJISI_KRITERLERI_ARASTIRMASI.md` Bölüm 2.6), `rakipAnalizi.ts`'e opt-in olarak
+bağlı (Çiğdem "konu/trend skorla" alanına 1-5 konu yazarsa gerçek YouTube verisiyle skorlanıyor,
+aynı Claude çağrısına gömülü — ekstra maliyet yok). `YOUTUBE_API_KEY` production secret olarak
+zaten ayarlı, aynı GCP projesinde ("My First Project"). 322/322 test yeşil, local'de görsel
+doğrulanmış (commit mesajına göre), push edilmiş VE sonraki deploy'larla (19:29, 19:40 UTC
+2026-08-17, + 2026-08-18 deploy'ları) canlıda. Kalan: sadece Faz 6 (Instagram API).
+
+### Çiğdem'den gelen "Website Implementation Brief" — 4 maddelik istek (2026-08-18, sıraya alındı, birebir kayıt)
+
+Kullanıcının ilettiği, Çiğdem'den gelen metin (birebir, İngilizce orijinal):
+
+> Website Implementation Brief
+> 1. Dynamic Event Box (Workshops & Masterclasses)
+> Locations: Homepage (Hero section) & Services page.
+> Fields needed: Category Badge (Workshop / Masterclass), Title, Date/Time, Location/Format
+> (Online/In-person), Short Description, and CTA Button (Reserve Spot / Learn More).
+> 2. Blog Categories
+> Set up filtering for the following 4 categories:
+> Academic & Clinical
+> Thought Pieces (Düşünce Yazıları)
+> Creative Writing
+> Videos & Media
+> 3. Social Media Integration
+> Platforms: LinkedIn, Instagram, YouTube.
+> Unified Feed: Integrate a social feed aggregator widget (e.g., EmbedSocial, Juicer, or
+> Flockler) to stream posts from all 3 platforms into a single grid layout on the site.
+> 4. Logo / Trust Bar (Footer & About Page)
+> Add logo sections for the following:
+> Professional Accreditations: BACP, BPS, EMDR Europe, Society for Existential Analysis, ACBS
+> (ACT).
+> Approved Insurance Providers: Bupa, AXA Health, Aviva.
+> Social Media Icons: LinkedIn, Instagram, YouTube.
+
+Durum: SIRAYA ALINDI, henüz başlanmadı. Kullanıcı "uygun bir anda halletmek için sıraya al" dedi —
+şu an öncelik Faz 6 (Instagram API). Not: Madde 3 (Social Media Integration, üçüncü-parti widget
+aggregator) muhtemelen Faz 6 ile örtüşüyor/ilişkili — Faz 6'ya başlarken bu madde ile çapraz
+kontrol edilmeli.
