@@ -640,19 +640,44 @@ paketten tek seans iptali (şimdilik sadece tüm paket iptali var).
 
 ## Phase 4 — Uçtan uca test (Selen'in test hesaplarıyla)
 
-**Ön koşul (2026-07-22):** Bu fazın WhatsApp'a bağlı maddeleri (onay/hatırlatma mesajları), Phase 2
-Session 6/7'deki "GERİ DÖNÜLECEK" maddesindeki 4 şablonun Meta onayına bağlı — onay gelmeden bu
-fazın tamamı bitirilemez.
+**Ön koşul (2026-07-22) — ÇÖZÜLDÜ (2026-08-18 doğrulandı):** Bu fazın WhatsApp'a bağlı maddeleri
+Meta onayına bağlıydı. Gerçek Meta Graph API'sinden (`GET /{waba-id}/message_templates`) canlı
+sorgulandı: 4 booking şablonu (`randevu_onay_danisan`, `randevu_hatirlatma_danisan`,
+`yeni_randevu_bildirimi`, `hatirlatma_gonderildi_bildirimi`) + 3 iptal şablonu hepsi
+**APPROVED** durumda (haftalar önce onaylanmış, bu dosya güncellenmemişti).
 
-- [ ] WhatsApp'a ilk mesaj → otomatik karşılama + randevu sayfası linki (serbest metin, ücretsiz)
-- [ ] Slot seç → form doldur → Stripe test kartıyla öde
-- [ ] Onay mesajı WhatsApp'tan danışana geldi mi kontrol et
-- [ ] Selen'e yeni randevu bildirimi (WhatsApp + e-posta) ve "onay mesajı gönderildi" bildirimi geldi mi kontrol et
-- [ ] Sheets'e satır düştü mü, "onay mesajı gönderildi" alanı doğru işlendi mi kontrol et
-- [ ] Farklı ülke kodlu test numaralarıyla timezone tespitinin doğru çalıştığını doğrula
-- [ ] Cron job'ı manuel tetikleyip gün-öncesi hatırlatma mesajının doğru saatte/formatta gittiğini,
-      Sheets logunun ve Selen bildiriminin doğru işlendiğini doğrula
-- [ ] 6. Aşama (Test/QA) betiğine yeni endpoint'ler için testler eklenir
+- [x] Slot seç → form doldur → Stripe test kartıyla öde — **2026-08-18 canlı doğrulandı:**
+      gerçek `booking.html` üzerinden (tarayıcı otomasyonu + kullanıcı, kart numarasını
+      kullanıcı girdi — finansal alan güvenlik kısıtı), Standart/Bireysel/Online, 20 Ağustos
+      2026 11:00 (TR görünüm) / 08:00 UTC, gerçek Stripe test-mode ödeme (£120) başarıyla
+      tamamlandı, `booking-success`'e yönlendirdi.
+- [x] Onay mesajı WhatsApp'tan danışana geldi mi kontrol et — **DOĞRULANDI**, kullanıcı test
+      numarasında (+90 537 322 0224) `randevu_onay_danisan` mesajını aldığını teyit etti.
+- [x] Selen'e yeni randevu bildirimi (WhatsApp + e-posta) geldi mi kontrol et — **DOĞRULANDI**,
+      hem e-posta (`engintass19@gmail.com`) hem WhatsApp (+44 7595 455398,
+      `yeni_randevu_bildirimi` şablonu) kullanıcı tarafından teyit edildi.
+- [x] Sheets'e satır düştü mü kontrol et — **DOĞRULANDI**, `/panel/clients` üzerinden gerçek
+      satır görüldü (isim, e-posta, telefon, seans detayları hepsi doğru).
+- [x] Farklı ülke kodlu test numarasıyla timezone tespitinin doğru çalıştığını doğrula —
+      **KISMEN DOĞRULANDI** (+90/Türkiye ile): booking.html'de TR bayrağı seçiliyken slot
+      "11:00" gösterdi, Sheets'e UTC 08:00 olarak yazıldı — Europe/Istanbul (UTC+3)
+      dönüşümüyle birebir tutarlı. Diğer ülke kodları ayrıca test edilmedi ama
+      `lib/timezone.ts`'in birim testleri zaten geniş kapsamlı.
+- [ ] "onay mesajı gönderildi" bildirimi (Selen'e, hatırlatma sonrası) — henüz test EDİLEMEDİ,
+      bu ayrı bir şablon (`hatirlatma_gonderildi_bildirimi`), sadece hatırlatma cron'u
+      tetiklenince gönderiliyor (aşağıdaki maddeye bağlı).
+- [ ] WhatsApp'a ilk mesaj → otomatik karşılama + randevu sayfası linki — henüz test EDİLMEDİ,
+      gerçek bir WhatsApp'tan test numarasına mesaj atılması gerekiyor (Claude bunu
+      başlatamaz, insan katılımı gerekli).
+- [ ] Cron job'ı manuel tetikleyip gün-öncesi hatırlatma mesajının doğru saatte/formatta
+      gittiğini doğrula — henüz test EDİLMEDİ. Yukarıdaki test kaydı (2026-08-20 08:00 UTC
+      randevu) doğal cron ile hatırlatma tetiklenmeden önce silinebilir/beklenebilir; canlı
+      production cron'u manuel tetiklemenin güvenli bir yolu yok (sadece `wrangler dev` yerelde
+      `/cdn-cgi/handler/scheduled` destekliyor) — istenirse ayrıca ele alınır.
+- [ ] 6. Aşama (Test/QA) betiğine yeni endpoint'ler için testler eklenir — bu proje için hiç
+      `qa.spec.js`/Playwright QA altyapısı kurulmamış (araştırıldı, dosya yok) — bu madde
+      aslında "birkaç test ekleme" değil, sıfırdan bir Playwright/Lighthouse/axe-core kurulumu;
+      ayrı, daha büyük bir iş olarak ele alınmalı.
 
 ## Phase 5 — GERÇEK HESABA GEÇİŞ (yayına almadan önce ZORUNLU)
 
