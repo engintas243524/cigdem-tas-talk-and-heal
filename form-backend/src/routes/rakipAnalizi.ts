@@ -43,10 +43,18 @@ function aktifYayinciRejimleri(): EtikRejimi[] {
 // sadece üstüne ekleniyor.
 export const RAPOR_YAPISI_TALIMATI = `
 
-Çıktının biçimi: ilk satır kısa bir başlık (madde işaretsiz, tek cümle). Ardından 2-4 tane "## Başlık"
+Çıktının biçimi: ilk satır kısa bir başlık (madde işaretsiz, tek cümle). Ardından 3-5 tane "## Başlık"
 ile ayrılmış bölüm. Somut öneri/adım/aksiyon içeren her satırı "- " ile başlayan bir madde olarak
 yaz. Bölüm başlıkları ve madde işaretleri DIŞINDA markdown biçimlendirmesi (kalın/italik/tablo/kod
-bloğu) kullanma.`;
+bloğu) kullanma.
+
+Bu bölümlerden İLKİ HER ZAMAN "## Özet" olsun (Madde 11, 2026-08-18, kullanıcı isteği) — 3-5
+cümlelik, sade ve anlaşılır dilde, raporun geri kalanını hiç okumadan konunun genel çerçevesini
+kavramak ve zaman kazanmak için yazılmış bir özet. Bu özet KESİNLİKLE "özetin özeti" gibi
+bağlamından kopuk, aşırı kısaltılmış, anlamsızlaşmış bir cümle yığını OLMASIN — okuyan kişi sadece
+bu bölümü okuyarak raporun ne hakkında olduğunu ve öne çıkan ana bulgu/öneriyi gerçekten
+anlayabilsin. Bu bölümün TEK işlevi budur (zamandan tasarruf + genel çerçeve) — raporun yerine
+geçmez, sonraki bölümlerdeki somut detay/adımları tekrarlamaz veya onların yerini almaz.`;
 
 const NOTE_MAX_LENGTH = 5000;
 // İçe Aktar (Faz D1) tek seferde en fazla kaç kaynak belge/link kabul eder — hem prompt boyutunu

@@ -2092,6 +2092,21 @@ Aksiyon/Hedef Analizi + Görsel/Video Stratejisi HEM Otomatik Rakip Takibi rapor
 kullanıldığı için (Madde 4'ten beri) tek değişiklikle ikisinde de görünür oldu — kullanıcının
 "hem ... hem ..." isteğiyle birebir örtüşüyor. `panel.css?v=26`.
 
-Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7, 8, 9 ve 10
-YAPILDI. Madde 2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü, Madde 5 eki (çok formatlı
-indirme) yapıldı, Madde 6 KAPANDI (yanlış anlaşılmaydı) — kalan: 11.
+Madde 11 durumu (2026-08-18): YAPILDI — `RAPOR_YAPISI_TALIMATI` (form-backend/src/routes/
+rakipAnalizi.ts) güncellendi: raporun ilk "## " bölümü artık HER ZAMAN "## Özet" olmalı (3-5
+cümle, sade dil, "raporun geri kalanını okumadan konunun genel çerçevesini kavramak ve zaman
+kazanmak için" — kullanıcının "özetin özeti gibi bağlamından kopuk ve kısa özetle değil" kısıtı
+birebir talimata işlendi). Bu sabit `ICERIK_STRATEJI_SYSTEM_PROMPT`, `AKSIYON_ANALIZ_SYSTEM_PROMPT`
+VE `KARSILASTIRMA_SYSTEM_PROMPT` (rakipTakip.ts) tarafından paylaşıldığı için TEK değişiklikle
+Aksiyon/Hedef Analizi + Görsel/Video Stratejisi + Otomatik Rakip Takibi + Zaman İçi Karşılaştırma
+raporlarının HEPSİNE uygulandı — kullanıcının istediği "iki bölüm" zaten bu ortak sabiti
+paylaşıyordu, üçüncü/dördüncü rapor türüne de tutarlılık için ekstra fayda olarak yansıdı. Ekstra
+Claude çağrısı YOK (aynı üretim isteğinin içine gömülü). `npx tsc --noEmit` + `npx prettier
+--check` + `npm test` (322/322) temiz, `wrangler deploy` ile canlıya alındı. Canlı bir rapor
+üretilerek uçtan uca DENENMEDİ (kota tüketmemek için) — bir sonraki gerçek rapor üretiminde "##
+Özet" bölümünün gerçekten çıktığı gözle doğrulanabilir.
+
+Durum: TÜM 11 MADDE TAMAMLANDI (Madde 2 hariç — mikrofon dikte sorunu ASKIDA, yukarı bakınız,
+kullanıcı kararıyla ertelendi). YouTube/Instagram API entegrasyonu (Faz 5/6, ayrı roadmap) hâlâ
+sırada. Özet: Madde 1, 3, 4, 5(+eki), 7, 8, 9, 10, 11 YAPILDI; Madde 6 KAPANDI (yanlış
+anlaşılmaydı); Madde 2 ASKIDA.
