@@ -69,23 +69,34 @@ function attachVoiceInput(config) {
     activeRecog = r;
 
     r.onstart = function () {
+      console.log('[mic] onstart, session', mySession, 'lang', r.lang);
       if (mySession !== currentSession) return;
       recognizing = true;
       micBtnEl.classList.add('recording');
       micHintEl.textContent = LISTENING_TEXT;
     };
     r.onresult = function (e) {
+      console.log('[mic] onresult fired, session', mySession, 'current', currentSession, 'resultIndex', e.resultIndex, 'results.length', e.results.length);
       if (mySession !== currentSession) return;
-      noSpeechStreak = 0;
-      if (micHintEl.textContent === TOO_QUIET_TEXT) micHintEl.textContent = LISTENING_TEXT;
-      var interim = '';
-      for (var i = e.resultIndex; i < e.results.length; i++) {
-        var t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) committed += t; else interim += t;
+      try {
+        noSpeechStreak = 0;
+        if (micHintEl.textContent === TOO_QUIET_TEXT) micHintEl.textContent = LISTENING_TEXT;
+        var interim = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          var t = e.results[i][0].transcript;
+          console.log('[mic] result', i, JSON.stringify(t), 'isFinal', e.results[i].isFinal);
+          if (e.results[i].isFinal) committed += t; else interim += t;
+        }
+        textareaEl.value = before + committed + interim + after;
+      } catch (err) {
+        console.log('[mic] onresult THREW', err && err.message, err);
       }
-      textareaEl.value = before + committed + interim + after;
     };
+    r.onaudiostart = function () { console.log('[mic] onaudiostart, session', mySession); };
+    r.onsoundstart = function () { console.log('[mic] onsoundstart, session', mySession); };
+    r.onspeechstart = function () { console.log('[mic] onspeechstart, session', mySession); };
     r.onerror = function (e) {
+      console.log('[mic] onerror', e.error, 'session', mySession, 'current', currentSession);
       if (mySession !== currentSession) return;
       // 'no-speech' is the normal "nothing heard in this stretch" case — onend still restarts
       // the next utterance below, same as always. Every OTHER error (network, aborted, etc.)
@@ -104,6 +115,7 @@ function attachVoiceInput(config) {
         : 'Ses tanıma hatası (' + e.error + '). Lütfen tekrar deneyin.';
     };
     r.onend = function () {
+      console.log('[mic] onend, session', mySession, 'current', currentSession, 'stoppedByUser', stoppedByUser);
       if (mySession !== currentSession) return;
       recognizing = false;
       micBtnEl.classList.remove('recording');
