@@ -526,7 +526,8 @@ nav.primary.open{
   white-space:nowrap;
 }
 .zig-rule{ flex:1; height:0.0625rem; background:var(--border); max-width:13.75rem; }
-.zig-text h2{ font-size:clamp(1.8rem, 1.4rem + 3vw, 3.6rem); margin-bottom:var(--space-3); }
+.zig-text h2, #etkinlikler h2{ font-size:clamp(1.8rem, 1.4rem + 3vw, 3.6rem); margin-bottom:var(--space-3); }
+#etkinlikler .wrap{ position:relative; z-index:1; }
 .zig-text a.zig-title-link{ text-decoration:none; color:inherit; }
 .zig-copy{
   position:relative;
@@ -809,29 +810,16 @@ section.alt{ background:var(--surface); }
   color:#3d3733;
 }
 
-/* Dynamic Event Box (Website Implementation Brief Madde 1, 2026-08-18) — events-data.js/
-   events-box.js tarafından doldurulur; etkinlik yoksa :empty ile otomatik gizlenir. */
-.event-box{
-  display:grid;
-  gap:var(--space-3);
-  grid-template-columns:1fr;
-  margin:var(--space-4) 0;
-}
+/* Etkinlikler bölümü (Website Implementation Brief Madde 1, 2026-08-18 — kullanıcı isteğiyle
+   2. tasarım: hero/services'teki beyaz kartlı kutu yerine, index.html'de about/services/approach/
+   blog ile AYNI zig deseninde, sayfayla uyumlu (çerçevesiz) kendi bölümü — id="etkinlikler",
+   yukarıda). Etkinlik yoksa .event-box boş kalır -> :has() ile TÜM #etkinlikler bölümü gizlenir,
+   yarım kalmış bir "Etkinlikler" başlığı boşta durmasın diye. */
+#etkinlikler:has(.event-box:empty){ display:none; }
+.event-box{ position:relative; z-index:1; display:flex; flex-direction:column; }
 .event-box:empty{ display:none; }
-/* index.html'in hero'su .hero-grid'i tek gerçek flex öğesi olarak bekliyor (.hero{display:flex}) —
-   event-box'ı ikinci bir kardeş yapmak yerine grid'in İÇİNE, iki kolonu da kaplayan 3. öğe olarak
-   koyuyoruz (2026-08-18 düzeltmesi: sibling versiyonu hero-grid'i yarı genişliğe sıkıştırıyordu). */
-.hero-grid .event-box{ grid-column:1 / -1; }
-@media (min-width:700px){
-  .event-box{ grid-template-columns:repeat(auto-fit, minmax(16rem, 1fr)); }
-}
-.event-card{
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  padding:var(--space-3);
-  text-align:left;
-}
+.event-card{ padding-block:var(--space-4); text-align:left; }
+.event-card + .event-card{ border-top:0.0625rem solid var(--border); }
 .event-badge{
   display:inline-block;
   font-size:0.72rem;
@@ -844,9 +832,9 @@ section.alt{ background:var(--surface); }
   padding:0.25rem 0.6rem;
   margin-bottom:var(--space-1);
 }
-.event-title{ font-size:1.05rem; font-weight:400; margin:0 0 var(--space-1); color:#3d3733; }
-.event-meta{ font-size:0.82rem; color:var(--taupe); margin:0 0 var(--space-1); }
-.event-desc{ font-size:0.92rem; font-weight:300; color:#3d3733; margin:0 0 var(--space-2); }
+.event-title{ font-size:1.3rem; font-weight:400; margin:0 0 var(--space-1); color:var(--ink); }
+.event-meta{ font-size:0.85rem; color:var(--taupe); margin:0 0 var(--space-2); }
+.event-desc{ font-size:0.98rem; font-weight:300; color:var(--ink); max-width:56ch; margin:0 0 var(--space-2); }
 .event-cta{ font-size:0.85rem; padding:0.5rem 1.1rem; }
 
 /* Blog category filters (Website Implementation Brief Madde 2, 2026-08-18). */
