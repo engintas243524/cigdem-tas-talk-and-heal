@@ -2015,7 +2015,32 @@ Madde 2 durumu (2026-08-18): ASKIYA ALINDI (kullanıcı kararı — "mikrofon i�
 Son kod durumu: `panel-voice.js` içinde hâlâ `[mic]` konsol teşhis logları var (temizlenmedi,
 sorunun devamı için bilerek bırakıldı) — mikrofon işine dönülünce önce oradan devam edilebilir.
 
-Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1 YAPILDI VE CANLIDA
-DOĞRULANDI (2026-08-18, haritada arama merkezine Google'ın varsayılan pin'i eklendi). Madde 2
-ASKIDA (yukarı bakınız). Madde 3 kısmen çözüldü, Madde 5 eki (çok formatlı indirme) yapıldı
-(yukarı bakınız), kalanlar (Madde 4, 6, 7, 8, 9, 10, 11) sırada.
+Madde 4 durumu (2026-08-18): YAPILDI VE CANLIDA DOĞRULANDI — Aksiyon/Hedef Analizi, Görsel/Video
+Stratejisi ve Otomatik Rakip Takibi raporları artık tek üzerine-yazılan div yerine kart yığını
+(en yenisi en üstte), her kartın altında "Raporu Gizle"/"Raporu Aç" düğmesi var (bkz. commit
+726b254, `raporKartiOlustur`/`raporKartiAksiyonlarEkle`). Canlıda sahte 2 kart enjekte edilerek
+(kota harcanmadan) sıralama ve toggle davranışı görsel olarak doğrulandı.
+
+Madde 6 durumu (2026-08-18): KAPANDI — GERÇEK BİR HATA DEĞİLDİ, YANLIŞ ANLAŞILMAYDI. Canlı backend'e
+gerçek bir GET çağrısı yapılıp (kota harcanmadan) doğrulandı: Google Sheets'te 12 kayıtlı rakip
+gerçekten var (`RakipAnalizi` sekmesi, randevu verisinin olduğu `Sayfa1`'den ayrı). Kullanıcı büyük
+ihtimalle yanlış sekmeye (Sayfa1) bakmıştı. Ayrıca netleşti: bu hâlâ kullanıcının TEST Google
+hesabı (Çiğdem'in gerçek hesabına geçiş henüz yapılmadı, bkz. `NOTES.md` kritik pre-launch gate) —
+kullanıcı bunu onayladı, sorun değil.
+
+Madde 7 durumu (2026-08-18): YAPILDI — `ICERIK_STRATEJI_SYSTEM_PROMPT`'a yeni bir talimat bloğu
+(`ICERIK_GORSEL_VIDEO_DETAY_TALIMATI`, `form-backend/src/routes/rakipAnalizi.ts`) eklendi: görsel
+önerileri artık kompozisyon/font (Talk & Heal'in marka fontu Jost)/renk (style.css'teki gerçek
+marka token'ları — terracotta #C97452, sage #4F7A5C, paper/ink #FEFBF8/#4B4749) + görsel stil/ton
+detayı içermeli; video önerileri kullanıcının doğrudan okuyarak seslendirebileceği bir konuşma
+metni içermeli, uzunluğu önerilen formatla (kısa-form 60-90sn — JMIR/PubMed kaynaklı bulgu; uzun-
+form konunun derinliğine uygun makul süre) orantılı olmalı ve metnin altında tahmini süre
+belirtilmeli. Bu prompt hem `/icerik-strateji` uç noktasında hem Otomatik Rakip Takibi'nin
+`icerikRaporu` üretiminde (aynı sabiti paylaşıyorlar) otomatik olarak geçerli. `npx tsc --noEmit` +
+`npx prettier --check` + `npm test` (322/322) temiz. Canlı bir rapor üretilerek uçtan uca
+DENENMEDİ (kota tüketmemek için, kullanıcının standing talimatı) — bir sonraki gerçek rapor
+üretiminde çıktı gözle doğrulanabilir.
+
+Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4 ve 7 YAPILDI. Madde 2
+ASKIDA (yukarı bakınız). Madde 3 kısmen çözüldü, Madde 5 eki (çok formatlı indirme) yapıldı, Madde 6
+KAPANDI (yanlış anlaşılmaydı) — kalanlar (8, 9, 10, 11) sırada.

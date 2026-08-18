@@ -318,6 +318,30 @@ ASA CAP Code'dan (guarantee/100% effective/proven-to-cure iddiaları, rakip deni
 "accredited" iddiası), Türkiye'de TPD etik ilkeleri + TTB/Sağlık Bakanlığı mevzuatından geliyor —
 psikiyatrist unvanlı içerik için kısıt psikologdan daha sıkı.`;
 
+// Madde 7 (2026-08-18, kullanıcı isteği, birebir): görsel önerileri "ne paylaşılsın" düzeyinde
+// kalmasın, GERÇEKTEN üretilebilecek kadar somut olsun (kompozisyon/font/renk); video önerileri de
+// kullanıcının doğrudan okuyarak seslendirebileceği bir metin içersin, uzunluğu önerilen formatın
+// (reels/uzun video) süresiyle örtüşsün. Renk/font referansları style.css'teki GERÇEK marka
+// token'ları (--font-display: Jost, --brand: #C97452 terracotta, --sage: #4F7A5C, --paper: #FEFBF8,
+// --ink: #4B4743) — uydurma/generic "marka renginiz" tavsiyesi yerine somut, siteyle tutarlı değer.
+const ICERIK_GORSEL_VIDEO_DETAY_TALIMATI = `
+Her görsel önerisi için sadece "ne paylaşılsın" deme — SOMUT tasarım detayı ver: (1) Kompozisyon —
+ana metin/vurgu görselin neresinde (üst/alt/orta, sol/sağ hizalı), negatif boşluk nasıl kullanılsın;
+(2) Font — Talk and Heal'in marka fontu Jost ailesinden (başlıkta display ağırlık, gövde metinde
+normal ağırlık) öner; (3) Renk — Talk and Heal'in marka paletinden en az birini temel al (terracotta
+#C97452, sage yeşili #4F7A5C, sıcak paper/ink tonları #FEFBF8/#4B4743) ve kontrast/okunabilirliği
+gözet; (4) Görsel stil/ton — fotoğraf mı illüstrasyon mu, yakın çekim mi geniş kadraj mı, sıcak/
+güven veren terapötik tonu koru (klinik/soğuk görünümden kaçın). Bunların dışında konuya özgü ek
+detay (ör. ikonografi, doku, çerçeveleme) varsa onu da ekle — yukarıdaki 4 madde asgari, tavan değil.
+
+Her video önerisi için kullanıcının DOĞRUDAN OKUYARAK seslendirebileceği tam bir konuşma metni yaz
+(giriş-gelişme-kapanış çağrısı akışıyla, doğal/gündelik konuşma diliyle — okunduğunda kulağa yazı
+gibi değil sohbet gibi gelsin). Bu metnin uzunluğu önerdiğin formatla ORANTILI olsun: kısa-form
+(reels/60-90sn) için JMIR/PubMed kaynaklı bulgu 60-90 saniyelik insan-anlatımlı kişisel anlatının
+etkili olduğunu gösteriyor — dakikada ~130-150 kelime konuşma hızı varsayımıyla metni buna göre
+kısa tut; uzun-form video için konunun derinliğine uygun, gereksiz uzatmadan makul bir süre öngör.
+Metnin hemen altında tahmini süreyi parantez içinde belirt (ör. "(~75 saniye)").`;
+
 // Görsel/video stratejisi için sistem talimatı — rakip içeriği KOPYALANMAZ, sadece stratejiden
 // (format/sıklık/platform) ilham alınır; küratif yaklaşımın kod-seviyesindeki karşılığı bu.
 // Kullanıcı kararı (2026-08-15): rakip seçimi bu dalda da mümkün ama seçilen rakiplerin
@@ -337,7 +361,7 @@ tarihine göre) görsel/video içerik trendlerini (ör. hangi format/platform ö
 türü daha çok etkileşim alıyor) araştırmak için 2-4 hedefli arama yap. Aramaları verimli kullan
 (aynı şeyi tekrar tekrar arama), bulduğun somut/güncel bilgiyi öneriler içinde açıkça belirt (ör.
 "son aylarda X formatı öne çıkıyor" gibi). Hiçbir güncel sonuç bulamazsan bunu belirtip genel
-bilginle devam et, ama önce mutlaka aramayı dene.${ICERIK_ETIK_UYARI_METNI}${RAPOR_YAPISI_TALIMATI}`;
+bilginle devam et, ama önce mutlaka aramayı dene.${ICERIK_GORSEL_VIDEO_DETAY_TALIMATI}${ICERIK_ETIK_UYARI_METNI}${RAPOR_YAPISI_TALIMATI}`;
 
 export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
