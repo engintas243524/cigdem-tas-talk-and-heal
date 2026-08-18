@@ -246,6 +246,16 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .rakip-takip-anahtar input[type="checkbox"] { width: auto; margin: 0; }
 #karsilastirmaGrafikler canvas { max-height: 260px; }
 
+/* Rapor kartları (Madde 4, 2026-08-18, kullanıcı isteği) — birden çok rapor art arda üretilince
+   en yenisi en üstte, her biri kendi Raporu Gizle/Aç düğmesiyle. Buton govde'nin DIŞINDA duruyor
+   (raporKartiOlustur, rakip-analizi.html) ki kapatınca da görünür kalıp yeniden açabilsin. */
+.rapor-karti { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 0.9rem 1rem; margin-bottom: 0.8rem; }
+.rapor-karti-baslik { font-size: 0.95rem; font-weight: 600; color: var(--ink); margin-bottom: 0.6rem; }
+.rapor-karti-govde { font-size: 0.92rem; color: var(--ink); }
+.rapor-karti-govde.hidden { display: none; }
+.rapor-karti-metin { white-space: pre-wrap; margin: 0 0 0.6rem; }
+.rapor-karti-toggle { margin-top: 0.7rem; padding: 0.4rem 0.9rem; font-size: 0.8rem; }
+
 /* Harita — sağda dikey zoom scroll (2026-08-17, kullanıcı isteği). Native <input type=range>,
    Chrome/Safari için -webkit-appearance:slider-vertical, Firefox için writing-mode ile dikeye
    çevriliyor. zoom_changed listener'ıyla native scroll-wheel zoom ile de senkron kalır. */

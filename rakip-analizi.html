@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=20">
+<link rel="stylesheet" href="panel.css?v=21">
 </head>
 <body>
 <div class="panel-wrap">
@@ -221,17 +221,10 @@
       <button class="btn-secondary" id="dalIceAktarBtn" type="button">Dosya Yükle</button>
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
-      <div id="dalRapor" class="muted" style="white-space:pre-wrap;"></div>
-      <div id="dalEtikUyari" class="etik-uyari hidden"></div>
-      <p class="muted hidden" id="dalKonuTrendSonuc"></p>
-      <div id="dalGrafikler"></div>
-      <div class="actions hidden" id="dalRaporAksiyonlar">
-        <select id="dalIndirFormat" title="İndirme formatı"></select>
-        <button class="btn-secondary" id="dalIndirBtn" type="button">İndir</button>
-        <button class="btn-secondary" id="dalWhatsappBtn" type="button">WhatsApp'ta Paylaş</button>
-        <button class="btn-secondary" id="dalEpostaBtn" type="button">E-posta ile Paylaş</button>
-        <button class="btn-secondary hidden" id="dalPaylasBtn" type="button">Paylaş</button>
-      </div>
+      <!-- Madde 4 (2026-08-18, kullanıcı isteği): birden çok rapor art arda üretilebildiği için
+           tek bir üzerine-yazılan div yerine, her üretilen rapor kendi kartında (en yenisi en
+           üstte) listeleniyor — kartlar raporKartiOlustur() ile JS'te dinamik oluşturuluyor. -->
+      <div id="dalRaporGecmis"></div>
     </div>
 
     <!-- İçe Aktar modalı: rapor üretilmeden önce ek kaynak belge/link/metin eklemek için.
@@ -281,11 +274,8 @@
       <p class="muted">Aşağıdaki butonlar her zaman çalışır — anahtar kapalıyken bile tek seferlik deneme/manuel adım atmak için kullanılabilir.</p>
       <div id="rakipTakipListe"></div>
       <div class="status" id="rakipTakipStatus"></div>
-      <div id="rakipTakipSonuc" class="muted" style="white-space:pre-wrap;"></div>
-      <div class="actions hidden" id="rakipTakipRaporAksiyonlar">
-        <select id="rakipTakipIndirFormat" title="İndirme formatı"></select>
-        <button class="btn-secondary" id="rakipTakipIndirBtn" type="button">İndir</button>
-      </div>
+      <!-- Madde 4 (2026-08-18) — dalRaporGecmis ile aynı desen, bkz. raporKartiOlustur(). -->
+      <div id="rakipTakipRaporGecmis"></div>
 
       <!-- Zaman İçi Karşılaştırma Raporu: RakipTakipGecmis'teki (son 12 periyot, rotasyonlu)
            geçmişten Talk and Heal ile seçilen rakib(ler)i grafikle karşılaştırır. En az bir
@@ -783,6 +773,86 @@
     });
     container.appendChild(liste);
     container.classList.remove('hidden');
+  }
+
+  // Rapor kartları (Madde 4, 2026-08-18, kullanıcı isteği) — art arda üretilen her rapor kendi
+  // kartına gelir, en yenisi en üstte (gecmisWrap.insertBefore ile prepend). Toggle butonu govde'nin
+  // DIŞINDA duruyor (govde'nin İÇİNDE olsaydı, govde gizlenince buton da gizlenip yeniden açma
+  // yolu kalmazdı) — kapatınca sadece başlık + bu buton görünür kalır, aç/kapa döngüsü böyle
+  // kurulur. Dönen govde elementine çağıran kod (dalGonderBtn/rakipTakipUret) metin/etik/grafik/
+  // aksiyon alt-elemanlarını kendi ekliyor — bu fonksiyon sadece kart iskeletini kurar.
+  function raporKartiOlustur(gecmisWrap, baslik, altBaslikMetin) {
+    var kart = document.createElement('div');
+    kart.className = 'rapor-karti';
+
+    var baslikEl = document.createElement('div');
+    baslikEl.className = 'rapor-karti-baslik';
+    baslikEl.textContent = baslik + (altBaslikMetin ? ' — ' + altBaslikMetin : '');
+    kart.appendChild(baslikEl);
+
+    var govde = document.createElement('div');
+    govde.className = 'rapor-karti-govde';
+    kart.appendChild(govde);
+
+    var toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'btn-secondary rapor-karti-toggle';
+    toggleBtn.textContent = 'Raporu Gizle';
+    toggleBtn.addEventListener('click', function () {
+      var gizlendi = govde.classList.toggle('hidden');
+      toggleBtn.textContent = gizlendi ? 'Raporu Aç' : 'Raporu Gizle';
+    });
+    kart.appendChild(toggleBtn);
+
+    gecmisWrap.insertBefore(kart, gecmisWrap.firstChild);
+    return govde;
+  }
+
+  // İndir/WhatsApp/E-posta/Paylaş butonları — artık global sonRaporMetni yerine BU karta ait
+  // metin/dosyaAdıTaban'ı closure'da tutuyor, çünkü aynı anda birden çok kart (rapor) ekranda
+  // olabiliyor (Madde 4).
+  function raporKartiAksiyonlarEkle(govde, baslik, dosyaAdiTaban, metin, grafikler) {
+    var aksiyonlar = document.createElement('div');
+    aksiyonlar.className = 'actions';
+
+    var formatSecici = document.createElement('select');
+    formatSecici.title = 'İndirme formatı';
+    raporIndirFormatSeciciDoldur(formatSecici);
+    aksiyonlar.appendChild(formatSecici);
+
+    var indirBtn = document.createElement('button');
+    indirBtn.type = 'button'; indirBtn.className = 'btn-secondary'; indirBtn.textContent = 'İndir';
+    indirBtn.addEventListener('click', function () {
+      raporIndir(formatSecici.value, dosyaAdiTaban, baslik, new Date().toLocaleDateString('tr-TR'), metin, grafikler || []);
+    });
+    aksiyonlar.appendChild(indirBtn);
+
+    var whatsappBtn = document.createElement('button');
+    whatsappBtn.type = 'button'; whatsappBtn.className = 'btn-secondary'; whatsappBtn.textContent = "WhatsApp'ta Paylaş";
+    whatsappBtn.addEventListener('click', function () {
+      var kisaMetin = metin.length > 1500 ? metin.slice(0, 1500) + '... (tam metin için PDF\'i indir)' : metin;
+      window.open('https://wa.me/?text=' + encodeURIComponent(kisaMetin), '_blank');
+    });
+    aksiyonlar.appendChild(whatsappBtn);
+
+    var epostaBtn = document.createElement('button');
+    epostaBtn.type = 'button'; epostaBtn.className = 'btn-secondary'; epostaBtn.textContent = 'E-posta ile Paylaş';
+    epostaBtn.addEventListener('click', function () {
+      var kisaMetin = metin.length > 1500 ? metin.slice(0, 1500) + '... (tam metin için PDF\'i indir)' : metin;
+      window.location.href = 'mailto:?subject=' + encodeURIComponent(baslik) + '&body=' + encodeURIComponent(kisaMetin);
+    });
+    aksiyonlar.appendChild(epostaBtn);
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      var paylasBtn = document.createElement('button');
+      paylasBtn.type = 'button'; paylasBtn.className = 'btn-secondary'; paylasBtn.textContent = 'Paylaş';
+      paylasBtn.addEventListener('click', function () {
+        navigator.share({ title: baslik, text: metin }).catch(function () { /* kullanıcı iptal etti, sorun değil */ });
+      });
+      aksiyonlar.appendChild(paylasBtn);
+    }
+
+    govde.appendChild(aksiyonlar);
   }
 
   var GRAFIK_RENKLER = ['#7C9C4A', '#C97452', '#5B7FA6', '#B08BBB', '#D4A94B'];
@@ -1457,12 +1527,9 @@
       .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Ayar kaydedilemedi.', 'err'); });
   });
 
-  var sonRakipTakipVerisi = null;
   function rakipTakipUret(periyotTuru, btn) {
     btn.disabled = true;
     setStatus(el('rakipTakipStatus'), 'Üretiliyor...', '');
-    el('rakipTakipSonuc').textContent = '';
-    el('rakipTakipRaporAksiyonlar').classList.add('hidden');
     var rakipIds = Object.keys(rakipListeSecili);
     authFetch('/panel/rakip-analizi/rakip-takip/uret', { method: 'POST', body: JSON.stringify({ periyotTuru: periyotTuru, rakipIds: rakipIds }) })
       .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
@@ -1470,21 +1537,17 @@
         btn.disabled = false;
         if (!res.ok) { setStatusLimit(el('rakipTakipStatus'), res.data.error || 'Üretilemedi.', res.data.limitUrl); return; }
         setStatus(el('rakipTakipStatus'), RAKIP_TAKIP_ASAMA_ETIKETLER[res.data.asama] || res.data.asama, 'ok');
-        el('rakipTakipSonuc').textContent =
-          'Aksiyon/Hedef:\n' + res.data.aksiyonRaporu + '\n\nGörsel/Video (küratif):\n' + res.data.icerikRaporu;
-        sonRakipTakipVerisi = { periyotTuru: periyotTuru, aksiyonRaporu: res.data.aksiyonRaporu, icerikRaporu: res.data.icerikRaporu };
-        el('rakipTakipRaporAksiyonlar').classList.remove('hidden');
+        var govdeMetin = '## Aksiyon/Hedef\n' + res.data.aksiyonRaporu + '\n\n## Görsel/Video (küratif)\n' + res.data.icerikRaporu;
+        var kart = raporKartiOlustur(el('rakipTakipRaporGecmis'), 'Otomatik Rakip Takibi Raporu', new Date().toLocaleDateString('tr-TR'));
+        var metinEl = document.createElement('div');
+        metinEl.className = 'rapor-karti-metin';
+        metinEl.textContent = govdeMetin;
+        kart.appendChild(metinEl);
+        var dosyaAdiTaban = 'rakip-takip-' + periyotTuru + '-' + new Date().toISOString().slice(0, 10);
+        raporKartiAksiyonlarEkle(kart, 'Otomatik Rakip Takibi Raporu', dosyaAdiTaban, govdeMetin, []);
         loadRakipTakip();
       }).catch(function (e) { btn.disabled = false; if (e.message !== 'unauthorized') setStatus(el('rakipTakipStatus'), 'Üretilemedi, tekrar dene.', 'err'); });
   }
-
-  raporIndirFormatSeciciDoldur(el('rakipTakipIndirFormat'));
-  el('rakipTakipIndirBtn').addEventListener('click', function () {
-    if (!sonRakipTakipVerisi) return;
-    var govde = '## Aksiyon/Hedef\n' + sonRakipTakipVerisi.aksiyonRaporu + '\n\n## Görsel/Video (küratif)\n' + sonRakipTakipVerisi.icerikRaporu;
-    var dosyaAdiTaban = 'rakip-takip-' + sonRakipTakipVerisi.periyotTuru + '-' + new Date().toISOString().slice(0, 10);
-    raporIndir(el('rakipTakipIndirFormat').value, dosyaAdiTaban, 'Otomatik Rakip Takibi Raporu', new Date().toLocaleDateString('tr-TR'), govde, []);
-  });
 
   // Zaman İçi Karşılaştırma Raporu — RakipTakipGecmis'teki geçmişten Talk and Heal'i seçilen
   // rakib(ler)le grafikle karşılaştırır. Chart.js CDN ile yükleniyor (aynı jsPDF/sıfır-bağımlılık
@@ -2153,9 +2216,6 @@
   });
 
   var currentDal = 'icerikStrateji';
-  var sonRaporMetni = '';
-  var dalChartlar = [];
-  var dalGrafikCanvasBilgileri = [];
   function setDal(dal) {
     currentDal = dal;
     el('dalBaslik').textContent = dal === 'icerikStrateji' ? 'Görsel/Video Stratejisi İsteği' : 'Aksiyon/Hedef Analizi İsteği';
@@ -2175,9 +2235,8 @@
     // burada tekrar inşa etmek yerine sadece Aksiyon/Hedef Analizi'ndeyken oraya bir link gösterir
     // (kullanıcı isteği: "bu rapor türü Rapor üret butonuyla ürettiğim raporda da olsun").
     el('dalKarsilastirmaLink').classList.toggle('hidden', dal !== 'aksiyonAnaliz');
-    el('dalRaporAksiyonlar').classList.add('hidden');
-    el('dalRapor').textContent = '';
-    sonRaporMetni = '';
+    // Rapor geçmişi (dalRaporGecmis) dal değişince TEMİZLENMİYOR — Madde 4 sonrası her rapor
+    // kendi kartında kalıcı, hangi dalda üretildiği kartın başlığında zaten görünüyor.
     rakipSecimGuncellendi();
   }
   el('dalIcerikBtn').addEventListener('click', function () { setDal('icerikStrateji'); });
@@ -2197,7 +2256,6 @@
   el('karsilastirmaParametreler').addEventListener('change', karsilastirmaParametreOzetGuncelle);
   karsilastirmaParametreOzetGuncelle();
   setDal('icerikStrateji');
-  if (typeof navigator !== 'undefined' && navigator.share) { el('dalPaylasBtn').classList.remove('hidden'); }
 
   // --- İçe Aktar (Faz D1: pdf/txt/md/docx/csv/pptx/epub + web linki + yapıştırılan metin).
   // Görsel/Video Stratejisi ile Aksiyon/Hedef Analizi arasında dal değişse de eklenen kaynaklar
@@ -2324,13 +2382,6 @@
     var istek = el('dalIstek').value.trim();
     if (!istek) { setStatus(el('dalStatus'), 'İstek metni gerekli.', 'err'); return; }
     setStatus(el('dalStatus'), 'Rapor üretiliyor...', '');
-    el('dalRaporAksiyonlar').classList.add('hidden');
-    etikUyariGoster(el('dalEtikUyari'), null);
-    el('dalKonuTrendSonuc').classList.add('hidden');
-    el('dalGrafikler').innerHTML = '';
-    dalChartlar.forEach(function (c) { c.destroy(); });
-    dalChartlar = [];
-    dalGrafikCanvasBilgileri = [];
     var rakipIds = Object.keys(rakipListeSecili);
     var parametreler = currentDal === 'aksiyonAnaliz'
       ? Array.prototype.map.call(document.querySelectorAll('#dalParametreler input[type="checkbox"]:checked'), function (cb) { return cb.value; })
@@ -2341,6 +2392,10 @@
     var kaynakPdfler = hazirIceAktarilanlar.filter(function (x) { return x.pdfBase64; }).map(function (x) { return x.pdfBase64; });
     var payload;
     var grafikKaynaklariSecili = [];
+    // Yanıt gelene kadar kullanıcı sekme değiştirebilir — kart hangi daldan geldiğini isteğin
+    // ANINDAKİ currentDal'a göre sabitler, yanıt döndüğündeki (değişmiş olabilecek) değere göre değil.
+    var dalTuBuAnda = currentDal;
+    var grafikTuruSecim = el('dalGrafikTuru').value;
     if (currentDal === 'icerikStrateji') {
       var konular = el('dalKonuSkorla').value.split(',').map(function (k) { return k.trim(); }).filter(function (k) { return k; });
       payload = { istek: istek, rakipIds: rakipIds, parametreler: parametreler, kaynakBelgeler: kaynakBelgeler, kaynakPdfler: kaynakPdfler, konular: konular };
@@ -2363,59 +2418,43 @@
       loadKullanimSayaci();
       if (!res.ok) { setStatusLimit(el('dalStatus'), res.data.error || 'Rapor üretilemedi.', res.data.limitUrl); return; }
       setStatus(el('dalStatus'), '', '');
-      sonRaporMetni = res.data.rapor;
-      el('dalRapor').textContent = sonRaporMetni;
-      etikUyariGoster(el('dalEtikUyari'), res.data.etikBayraklari);
-      var konuTrendEl = el('dalKonuTrendSonuc');
+      var raporMetni = res.data.rapor;
+      var baslik = dalTuBuAnda === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu';
+      var kart = raporKartiOlustur(el('dalRaporGecmis'), baslik, new Date().toLocaleDateString('tr-TR'));
+
+      var metinEl = document.createElement('div');
+      metinEl.className = 'rapor-karti-metin';
+      metinEl.textContent = raporMetni;
+      kart.appendChild(metinEl);
+
+      var etikDiv = document.createElement('div');
+      etikDiv.className = 'etik-uyari hidden';
+      kart.appendChild(etikDiv);
+      etikUyariGoster(etikDiv, res.data.etikBayraklari);
+
       if (res.data.konuTrendleri && res.data.konuTrendleri.length) {
+        var konuTrendEl = document.createElement('p');
+        konuTrendEl.className = 'muted';
         konuTrendEl.textContent = 'Konu/trend skorları (1-10, YouTube verisiyle): ' + res.data.konuTrendleri.map(function (k) { return k.konu + ': ' + k.skor; }).join(' · ');
-        konuTrendEl.classList.remove('hidden');
-      } else {
-        konuTrendEl.textContent = '';
-        konuTrendEl.classList.add('hidden');
+        kart.appendChild(konuTrendEl);
       }
+
+      var grafikCanvasBilgileri = [];
       if (grafikKaynaklariSecili.length) {
+        var grafiklerDiv = document.createElement('div');
+        kart.appendChild(grafiklerDiv);
         // Grafik çizimi rapor metninden AYRI bir hata yüzeyi — biri patlarsa diğerini
         // (ve aşağıdaki indir/paylaş butonlarını) gizlememeli (bkz. INTEGRASYON_TODO.md Madde 3).
         try {
-          dalGrafikCanvasBilgileri = grafikVerileriRender(el('dalGrafikler'), res.data.grafikVerileri, el('dalGrafikTuru').value, dalChartlar);
+          grafikCanvasBilgileri = grafikVerileriRender(grafiklerDiv, res.data.grafikVerileri, grafikTuruSecim, []);
         } catch (grafikHata) {
-          el('dalGrafikler').textContent = 'Grafik çizilemedi, ama rapor metni geçerli (yukarıda).';
+          grafiklerDiv.textContent = 'Grafik çizilemedi, ama rapor metni geçerli (yukarıda).';
         }
       }
-      el('dalRaporAksiyonlar').classList.remove('hidden');
+
+      var dosyaAdiTaban = (dalTuBuAnda === 'icerikStrateji' ? 'gorsel-video-stratejisi' : 'aksiyon-hedef-analizi') + '-' + new Date().toISOString().slice(0, 10);
+      raporKartiAksiyonlarEkle(kart, baslik, dosyaAdiTaban, raporMetni, grafikCanvasBilgileri);
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('dalStatus'), 'Rapor şu an üretilemedi, lütfen tekrar dene.', 'err'); });
-  });
-
-  // Rapor indirme/paylaşma — hem Görsel/Video Stratejisi hem Aksiyon/Hedef Analizi raporları
-  // için aynı butonlar (sonRaporMetni, hangi dal üretildiyse onu tutuyor).
-  raporIndirFormatSeciciDoldur(el('dalIndirFormat'));
-  function raporDosyaAdiTaban() {
-    return (currentDal === 'icerikStrateji' ? 'gorsel-video-stratejisi' : 'aksiyon-hedef-analizi') + '-' + new Date().toISOString().slice(0, 10);
-  }
-
-  el('dalIndirBtn').addEventListener('click', function () {
-    if (!sonRaporMetni) return;
-    var baslik = currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu';
-    raporIndir(el('dalIndirFormat').value, raporDosyaAdiTaban(), baslik, new Date().toLocaleDateString('tr-TR'), sonRaporMetni, dalGrafikCanvasBilgileri);
-  });
-
-  el('dalWhatsappBtn').addEventListener('click', function () {
-    if (!sonRaporMetni) return;
-    var metin = sonRaporMetni.length > 1500 ? sonRaporMetni.slice(0, 1500) + '... (tam metin için PDF\'i indir)' : sonRaporMetni;
-    window.open('https://wa.me/?text=' + encodeURIComponent(metin), '_blank');
-  });
-
-  el('dalEpostaBtn').addEventListener('click', function () {
-    if (!sonRaporMetni) return;
-    var konu = currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu';
-    var metin = sonRaporMetni.length > 1500 ? sonRaporMetni.slice(0, 1500) + '... (tam metin için PDF\'i indir)' : sonRaporMetni;
-    window.location.href = 'mailto:?subject=' + encodeURIComponent(konu) + '&body=' + encodeURIComponent(metin);
-  });
-
-  el('dalPaylasBtn').addEventListener('click', function () {
-    if (!sonRaporMetni || !navigator.share) return;
-    navigator.share({ title: currentDal === 'icerikStrateji' ? 'Görsel/Video Stratejisi Raporu' : 'Aksiyon/Hedef Analizi Raporu', text: sonRaporMetni }).catch(function () { /* kullanıcı iptal etti, sorun değil */ });
   });
 
   // Resume an existing session-token on reload (e.g. already logged in via panel.html).

@@ -1984,7 +1984,38 @@ Rapor Üret akışıyla uçtan uca TIKLANARAK henüz denenmedi (kota tüketmemek
 > birlikte kesinlikle özetin özeti gibi bağlamından kopuk ve kısa özetle değil — zamandan tasarruf
 > etmek ve konuyu genel çerçevesiyle anlamak için olsun, bunun dışında bir amaca hizmet etmeyecek.
 
+Madde 2 durumu (2026-08-18): ASKIYA ALINDI (kullanıcı kararı — "mikrofon işini bir yere not et
+çok zaman harcadık, sonra döneriz"). Yapılan denemeler ve bulgular (sırayla):
+1. Sessiz sonsuz yeniden-başlatma döngüsü (onerror'da sadece 3 hata kodu fatal sayılıyordu) +
+   paralel ses-seviyesi izleyicinin (getUserMedia+AudioContext) yarış durumu → ikisi de düzeltildi.
+2. AudioContext'in 'suspended' kalması ihtimaline karşı ctx.resume() eklendi.
+3. Canlı testte kanıtlandı: SpeechRecognition'ın kendi dahili mikrofon yakalamasıyla AYNI ANDA
+   çalışan paralel getUserMedia akışı (ses-seviyesi izleyici), bu makinede SpeechRecognition'ın
+   gerçek sesi hiç almamasına yol açıyordu (her denemede sessiz "no-speech" hatası). Bağımsız bir
+   referans sayfada (MDN speech-color-changer, ikinci akış YOK) dikte anında çalıştı — bu da
+   çakışmayı doğruladı. Paralel akış tamamen kaldırıldı.
+4. Kaldırılmasına rağmen sorun AYNEN devam etti (dikte hiç yazılmıyor). Kod sıfırdan, MDN'nin
+   kanıtlanmış basit yapısına en yakın şekilde yeniden yazıldı (tek SpeechRecognition nesnesi,
+   continuous:true, oturum-zinciri/session-id karmaşıklığı yok) — sonuç DEĞİŞMEDİ.
+5. Gizli sekmede (önbellek/eklenti ihtimali sıfırlanmış ortamda) test edildi — sonuç AYNI.
+   Permissions-Policy/CSP kısıtlaması yok, çift event-listener/çift script include yok — hepsi
+   koddan elendi.
+6. Canlı konsol logu KRİTİK bir bulgu verdi: `onspeechstart` gerçekten ateşleniyor (Chrome
+   konuşmayı gerçekten algılıyor) ama ne `onresult` ne `onerror` hiç gelmiyor — motor sessizce
+   asılı kalıyor. `stop()` çağrılsa bile bu sistemde `onend` güvenilir şekilde tetiklenmiyor,
+   bu yüzden buton "dinliyor" durumunda kalıcı olarak takılabiliyor.
+7. MDN referans sayfası art arda (rakip-analizi sekmesindeki takılı kalmış eski oturum HÂLÂ AÇIKKEN)
+   tekrar test edildi ve YİNE başarılı oldu (network/Google ASR backend sağlıklı) — yani sorun ağ
+   değil, hâlâ bizim sayfaya/oturuma özel bir şey (belki: aynı tarayıcıda daha önce takılı kalmış,
+   hiç `onend` almamış zombi SpeechRecognition nesnelerinin birikmesi — test edilmedi).
+8. Önerilen ama henüz uygulanmamış sonraki adım: Chrome'u TAMAMEN kapatıp (Cmd+Q), SADECE
+   rakip-analizi.html açık tek bir temiz sekmede, hiçbir eski/takılı oturum olmadan tek seferlik
+   test — kullanıcının şu an çok sayıda hesap/pencere açık olması nedeniyle yapılamadı, ertelendi.
+
+Son kod durumu: `panel-voice.js` içinde hâlâ `[mic]` konsol teşhis logları var (temizlenmedi,
+sorunun devamı için bilerek bırakıldı) — mikrofon işine dönülünce önce oradan devam edilebilir.
+
 Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1 YAPILDI VE CANLIDA
-DOĞRULANDI (2026-08-18, haritada arama merkezine Google'ın varsayılan pin'i eklendi). Madde 3
-kısmen çözüldü, Madde 5 eki (çok formatlı indirme) yapıldı (yukarı bakınız), kalanlar (Madde 2, 4,
-6, 7, 8, 9, 10, 11) sırada.
+DOĞRULANDI (2026-08-18, haritada arama merkezine Google'ın varsayılan pin'i eklendi). Madde 2
+ASKIDA (yukarı bakınız). Madde 3 kısmen çözüldü, Madde 5 eki (çok formatlı indirme) yapıldı
+(yukarı bakınız), kalanlar (Madde 4, 6, 7, 8, 9, 10, 11) sırada.
