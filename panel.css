@@ -88,10 +88,17 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 /* auto-fit ile denendi ama başlık satırı ile veri satırları farklı genişlikte içerik yüzünden
    farklı sütun sayısına "fit" olabiliyordu, dar ekranda hücreler üst üste biniyordu — sabit
    (fixed) 7 sütun + dar ekranda ayrı bir kart düzenine geçiş daha güvenilir. */
-/* Madde 9 (2026-08-18, kullanıcı isteği): liste "Daha Fazla" ile büyüdükçe sayfayı sürükleyip
-   aşağı itmesin — kutu ~3 satır boyunda sabit kalır, fare tekerleği + kutunun kendi (native)
-   dikey scrollbar'ıyla kayar. overflow-x zaten vardı (yatay, dar ekran için); ikisi birlikte. */
-.rakip-table { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; max-height: 15.5rem; overflow-y: auto; }
+/* Madde 9 (2026-08-18, kullanıcı isteği — düzeltme: max-height DEĞİL sabit height olmalı). Kutu
+   HER ZAMAN aynı ~3 satırlık boyutta kalır — DOM'da 1 satır da olsa 50 satır da olsa kutunun
+   pikseli değişmez (max-height'ta olduğu gibi az satırda küçülüp çok satırda büyümüyor); "Daha
+   Fazla/Daha Az" butonları SADECE DOM'a kaç satır yükleneceğini belirlemeye devam eder, kutunun
+   boyutunu değil. Fazlası fare tekerleği + kutunun native dikey scrollbar'ıyla kayıyor. overflow-x
+   zaten vardı (yatay, dar ekran için); ikisi birlikte. */
+.rakip-table { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; height: 15.5rem; overflow-y: auto; }
+/* Sabit height artık İÇİ boşken de (hiç rakip/sonuç yokken, renderRakipListe/renderAramaSonuclari
+   erken return'ünde list.innerHTML='' ile boş bırakılıyor) kutuyu boş-ve-15.5rem göstermesin diye —
+   asıl "boş" mesajı zaten ayrı bir elemanda (#rakipListeBos vb.) gösteriliyor. */
+.rakip-table:empty { display: none; }
 .rakip-row { display: grid; grid-template-columns: 1.6rem 1.3fr 1.6fr 0.9fr 1.6fr 1fr 1.6fr; gap: 0.4rem 0.8rem; padding: 0.6rem 0.85rem; border-top: 1px solid var(--border); font-size: 0.86rem; align-items: center; min-width: 760px; }
 /* Arama Sonuçları tablosu: ilk sütun onay kutusu değil "Ekle" butonu tutuyor, checkbox genişliği
    (1.6rem) bir buton için yetersiz — daha geniş bir sütunla eziliyor. */

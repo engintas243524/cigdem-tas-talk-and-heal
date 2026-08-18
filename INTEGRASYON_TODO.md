@@ -2053,14 +2053,16 @@ sabitlendi. Canlı sayfada, kota harcamadan, düzeltilmiş CDN URL'sini dinamik 
 veriyle test ettim — dördü de hatasız çizildi, null değerler zaten Chart.js tarafından sorunsuz
 atlanıyor. Yani hem CDN linki hem de null-değer davranışı artık kanıtlı şekilde çalışıyor.
 
-Madde 9 durumu (2026-08-18): YAPILDI — `.rakip-table` (Rakip Ekle'nin arama sonuçları + Kayıtlı
-Rakipler, `panel.css`) artık `max-height: 15.5rem` + `overflow-y: auto` ile sabit ~3 satır boyunda
-kalıp kayan bir kutu; mevcut "Daha Fazla/Tümünü Görüntüle" buton tabanlı sayfalama AYNEN korundu
-(DOM'a kaç satır yükleneceğini o belirliyor), yeni olan: yüklenen satır sayısı kutunun boyunu
-aşınca sayfayı aşağı itmek yerine kutunun İÇİNDE fare tekerleğiyle VE native dikey scrollbar'la
-kayıyor — kullanıcının istediği iki yöntem de (mouse hareketi + yanda scroll) bu tek CSS
-değişikliğiyle otomatik geliyor, ekstra JS gerekmedi. Başlık satırı da `position: sticky` yapıldı
-(kayarken sütun isimleri kaybolmasın diye, ek bir iyileştirme). `panel.css?v=22`.
+Madde 9 durumu (2026-08-18): YAPILDI. İlk sürüm `max-height` kullanmıştı — kullanıcı bunu
+düzeltti: "sadece seçili 3/6/9 için değil, tabloda kaç satır varsa scroll ile görünebilsin,
+pencere büyümeden; büyüme/küçülme sadece Daha Fazla/Daha Az butonlarıyla tetiklensin." Yani kutu
+`max-height` (az satırda küçülüp çok satırda büyüyen bir tavan) değil, SABİT `height: 15.5rem`
+olmalı — DOM'da 1 satır da olsa 50 satır da olsa kutunun pikseli hiç değişmiyor, "Daha Fazla/Daha
+Az" butonları SADECE DOM'a kaç satır yükleneceğini belirlemeye devam ediyor (kutunun boyutunu
+değil), fazlası fare tekerleği + native dikey scrollbar'la kayıyor. Yan etki düzeltmesi: sabit
+height, liste boşken (0 rakip/sonuç) de kutuyu boş-ve-15.5rem gösterirdi — `.rakip-table:empty {
+display: none; }` ile o durumda kutu tamamen gizleniyor (asıl "boş" mesajı zaten ayrı elemanda).
+Başlık satırı `position: sticky` (kayarken sütun isimleri kaybolmasın). `panel.css?v=23`.
 
 Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7, 8 ve 9 YAPILDI.
 Madde 2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü, Madde 5 eki (çok formatlı indirme)
