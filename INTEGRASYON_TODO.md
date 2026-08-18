@@ -30,7 +30,8 @@ olduğu adım bitmediği için) · `[x]` test edilip çalıştığı doğruland�
 - [x] Test Google hesabı: **engintass19@gmail.com** (kullanıcı onayladı, 2026-07-21)
 - [x] KVKK/gizlilik: Drive klasörü sadece Selen + Çiğdem'e kısıtlı paylaşımla kurulacak
       ("Sorun Özeti" alanı hassas veri sayılır) — kullanıcı onayladı
-- [ ] **Zaman dilimi tespiti (yeni, 2026-07-21):** Danışanın ülkesi/yerel saati, WhatsApp
+- [x] **Zaman dilimi tespiti (yeni, 2026-07-21) — YAPILMIŞ, stale checkbox 2026-08-18'de
+      düzeltildi (`lib/timezone.ts` mevcut/çalışıyor, kod üzerinden doğrulandı):** Danışanın ülkesi/yerel saati, WhatsApp
       telefon numarasının ülke koduna bakılarak (örn. `libphonenumber-js` ile) tespit edilecek,
       sonra ülke → IANA timezone eşlemesiyle (basit statik tablo) yerel 13:00'ün UTC karşılığı
       hesaplanacak. **Bilinçli sınır:** birden fazla saat dilimi olan ülkelerde (ABD, Rusya vb.)
@@ -46,7 +47,8 @@ olduğu adım bitmediği için) · `[x]` test edilip çalıştığı doğruland�
       Manager kurulurken ayrı bir "test" yapısı değil, doğrudan tek bir WABA kurulacak** (test
       numarasıyla başlanır, ileride Çiğdem'in gerçek numarası aynı WABA'ya eklenir).
       Sources: [Meta — Business phone numbers](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/phone-numbers), [Insider One — Migrate WhatsApp Phone Numbers](https://academy.insiderone.com/docs/migrate-whatsapp-phone-numbers)
-- [ ] **Google/Stripe hesap geçişi için mühendislik kuralı:** Takvim ID'si, Sheets ID'si, Stripe
+- [x] **Google/Stripe hesap geçişi için mühendislik kuralı — UYGULANMIŞ, stale checkbox
+      2026-08-18'de düzeltildi (grep ile hardcoded ID/key taraması temiz):** Takvim ID'si, Sheets ID'si, Stripe
       API anahtarları koda GÖMÜLMEYECEK, Cloudflare Worker secret/env değişkenlerinde tutulacak
       — böylece Çiğdem'in hesaplarına geçiş, kod değişikliği değil sadece bu değerlerin
       güncellenmesi olur. Stripe: canlıya geçişte hesap zorunlu olarak Çiğdem'in kendi hesabı
@@ -245,7 +247,8 @@ This has been logged in the booking sheet.
       "randevu -1 gün yerel 13:00→UTC" hesaplama, ABD/Rusya çoklu-saat-dilimi edge case'leri dahil
       test edildi), router iskeleti `src/index.ts`. 14/14 test yeşil, `tsc --noEmit` ve
       `prettier --check` temiz. Bağımlılık: `libphonenumber-js` eklendi.
-- [ ] Google Calendar freebusy endpoint'i → boş slot listesi döner
+- [x] Google Calendar freebusy endpoint'i → boş slot listesi döner (YAPILMIŞ, stale checkbox
+      2026-08-18'de düzeltildi — `lib/calendar.ts` + `/availability` çalışıyor)
 - [x] **Session 2 — Google auth + Calendar okuma (2026-07-21):** `lib/google-auth.ts` (jose ile
       Service Account JWT → OAuth2 access token, önbellekli), `lib/calendar.ts` (freebusy sorgusu
       + iş saatlerine göre slot dilimleme + Stripe session id'sinden deterministik event id
@@ -629,7 +632,8 @@ paketten tek seans iptali (şimdilik sadece tüm paket iptali var).
       normal tıklanabilir kaldı). Etkinlik silinince slot anında tekrar "available" oldu — bu, Madde
       4'teki tatil-günü-açma mekanizmasıyla birebir aynı alt yapı, ikisi de canlı doğrulanmış oldu.
       Test etkinliği temizlendi.
-- [ ] Session 13 — İptal + iade akışı (2 yeni WhatsApp şablonu gerekiyor, en riskli dilim)
+- [x] Session 13 — İptal + iade akışı (YAPILMIŞ, stale checkbox 2026-08-18'de düzeltildi —
+      `cancel.html` + `lib/policy.ts` çalışıyor, CLAUDE.md'de de "done" olarak geçiyor)
 
 ## Phase 4 — Uçtan uca test (Selen'in test hesaplarıyla)
 
