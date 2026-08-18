@@ -2173,3 +2173,13 @@ Durum: SIRAYA ALINDI, henüz başlanmadı. Kullanıcı "uygun bir anda halletmek
 şu an öncelik Faz 6 (Instagram API). Not: Madde 3 (Social Media Integration, üçüncü-parti widget
 aggregator) muhtemelen Faz 6 ile örtüşüyor/ilişkili — Faz 6'ya başlarken bu madde ile çapraz
 kontrol edilmeli.
+
+### Faz 6 (Instagram API) — BLOKE, Çiğdem'den bilgi/aksiyon bekleniyor (2026-08-18)
+
+`INSTAGRAM_API_ARASTIRMASI.md`'de tespit edilen ön koşul (Instagram hesabı Business/Creator mi,
+Facebook Page'e bağlı mı) SADECE Çiğdem'den öğrenilebilir/onun aksiyonuyla ayarlanabilir. Kullanıcı:
+"çiğdem den bununla ilgili bilgi ve aksiyonu ancak yarın saat 14:00 ve sonrasında alabiliriz, çünkü
+yarın whatsapp görüntülü arama ile konuşacağız" — yani **2026-08-19 14:00'ten önce Faz 6'da
+ilerleme mümkün değil.** O saatten sonra kaldığı yer: kullanıcıya hesap türü/Page bağlantısı
+sorusu sorulacak, cevaba göre adım adım kurulum rehberliği (mevcut "Talk and Heal" Meta App'i
+üzerinden, Standard Access) başlayacak.
