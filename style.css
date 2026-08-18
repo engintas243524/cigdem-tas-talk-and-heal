@@ -818,6 +818,10 @@ section.alt{ background:var(--surface); }
   margin:var(--space-4) 0;
 }
 .event-box:empty{ display:none; }
+/* index.html'in hero'su .hero-grid'i tek gerçek flex öğesi olarak bekliyor (.hero{display:flex}) —
+   event-box'ı ikinci bir kardeş yapmak yerine grid'in İÇİNE, iki kolonu da kaplayan 3. öğe olarak
+   koyuyoruz (2026-08-18 düzeltmesi: sibling versiyonu hero-grid'i yarı genişliğe sıkıştırıyordu). */
+.hero-grid .event-box{ grid-column:1 / -1; }
 @media (min-width:700px){
   .event-box{ grid-template-columns:repeat(auto-fit, minmax(16rem, 1fr)); }
 }
