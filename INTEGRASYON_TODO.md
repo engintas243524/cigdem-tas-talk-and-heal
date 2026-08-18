@@ -2053,7 +2053,15 @@ sabitlendi. Canlı sayfada, kota harcamadan, düzeltilmiş CDN URL'sini dinamik 
 veriyle test ettim — dördü de hatasız çizildi, null değerler zaten Chart.js tarafından sorunsuz
 atlanıyor. Yani hem CDN linki hem de null-değer davranışı artık kanıtlı şekilde çalışıyor.
 
-Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7 ve 8 YAPILDI. Madde
-2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü (Madde 8'in kök nedeni aynı zamanda Madde 3'ün
-"grafik hiç çizilmiyor" kalıntısını da kapattı), Madde 5 eki (çok formatlı indirme) yapıldı, Madde 6
-KAPANDI (yanlış anlaşılmaydı) — kalanlar (9, 10, 11) sırada.
+Madde 9 durumu (2026-08-18): YAPILDI — `.rakip-table` (Rakip Ekle'nin arama sonuçları + Kayıtlı
+Rakipler, `panel.css`) artık `max-height: 15.5rem` + `overflow-y: auto` ile sabit ~3 satır boyunda
+kalıp kayan bir kutu; mevcut "Daha Fazla/Tümünü Görüntüle" buton tabanlı sayfalama AYNEN korundu
+(DOM'a kaç satır yükleneceğini o belirliyor), yeni olan: yüklenen satır sayısı kutunun boyunu
+aşınca sayfayı aşağı itmek yerine kutunun İÇİNDE fare tekerleğiyle VE native dikey scrollbar'la
+kayıyor — kullanıcının istediği iki yöntem de (mouse hareketi + yanda scroll) bu tek CSS
+değişikliğiyle otomatik geliyor, ekstra JS gerekmedi. Başlık satırı da `position: sticky` yapıldı
+(kayarken sütun isimleri kaybolmasın diye, ek bir iyileştirme). `panel.css?v=22`.
+
+Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7, 8 ve 9 YAPILDI.
+Madde 2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü, Madde 5 eki (çok formatlı indirme)
+yapıldı, Madde 6 KAPANDI (yanlış anlaşılmaydı) — kalanlar (10, 11) sırada.
