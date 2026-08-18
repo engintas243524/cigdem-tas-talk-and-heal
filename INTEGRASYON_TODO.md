@@ -2053,16 +2053,23 @@ sabitlendi. Canlı sayfada, kota harcamadan, düzeltilmiş CDN URL'sini dinamik 
 veriyle test ettim — dördü de hatasız çizildi, null değerler zaten Chart.js tarafından sorunsuz
 atlanıyor. Yani hem CDN linki hem de null-değer davranışı artık kanıtlı şekilde çalışıyor.
 
-Madde 9 durumu (2026-08-18): YAPILDI. İlk sürüm `max-height` kullanmıştı — kullanıcı bunu
-düzeltti: "sadece seçili 3/6/9 için değil, tabloda kaç satır varsa scroll ile görünebilsin,
-pencere büyümeden; büyüme/küçülme sadece Daha Fazla/Daha Az butonlarıyla tetiklensin." Yani kutu
-`max-height` (az satırda küçülüp çok satırda büyüyen bir tavan) değil, SABİT `height: 15.5rem`
-olmalı — DOM'da 1 satır da olsa 50 satır da olsa kutunun pikseli hiç değişmiyor, "Daha Fazla/Daha
-Az" butonları SADECE DOM'a kaç satır yükleneceğini belirlemeye devam ediyor (kutunun boyutunu
-değil), fazlası fare tekerleği + native dikey scrollbar'la kayıyor. Yan etki düzeltmesi: sabit
-height, liste boşken (0 rakip/sonuç) de kutuyu boş-ve-15.5rem gösterirdi — `.rakip-table:empty {
-display: none; }` ile o durumda kutu tamamen gizleniyor (asıl "boş" mesajı zaten ayrı elemanda).
-Başlık satırı `position: sticky` (kayarken sütun isimleri kaybolmasın). `panel.css?v=23`.
+Madde 9 durumu (2026-08-18): YAPILDI VE CANLIDA SAYISAL OLARAK DOĞRULANDI (`.rakip-table`,
+`panel.css`, üç deneme sonrası son hâl): `max-height: 26rem` + `overflow-y: auto`. Ara denemeler:
+(1) `max-height: 15.5rem` — tavan bu sayfadaki gerçek satırlara (uzun Not/adres metniyle bir satır
+~300px'e çıkabiliyor) göre ÇOK düşüktü, kutu ilk 3 satırda bile tavana çarpıp büyüme hiç
+GÖRÜNMÜYORDU — kullanıcı test edip yakaladı. (2) Sabit `height: 15.5rem` denendi ama bu da yanlıştı
+— kullanıcı "Daha Fazla'ya tıklayınca kutu gerçekten büyümeli" diye düzeltti. Doğru davranış
+`max-height`'in kendisiydi, sadece tavan değeri yükseltilmeliydi. Canlıda ölçülen son doğru
+davranış (`rakipListe`, gerçek veriyle): başlangıç (3 satır) 329px doğal boyut/scroll yok → "Daha
+Fazla" sonrası (6 satır) 416px'e BÜYÜDÜ (tavana ulaştı) → 2. "Daha Fazla" (9 satır) 416px'te sabit,
+içerik scroll ile kayıyor → "Daha Az" ile simetrik şekilde 416px→329px küçülüyor. Yan etki
+düzeltmesi: liste boşken (0 rakip/sonuç) kutuyu boş göstermesin diye `.rakip-table:empty { display:
+none; }` eklendi (asıl "boş" mesajı zaten ayrı bir elemanda). Başlık satırı `position: sticky`
+(kayarken sütun isimleri kaybolmasın). `panel.css?v=24`. **Ders:** GitHub Pages/Fastly CDN
+(`cache-control: max-age=600`) VE tarayıcı önbelleği üst üste binebiliyor — deploy sonrası canlı
+testte `?cachebust=1` gibi bir query param ile HTML'i zorla taze çekmek gerekebilir, aksi halde
+CSS güncellemesi doğrulanırken yanlışlıkla eski davranış test edilebilir (bu oturumda tam olarak
+oldu).
 
 Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7, 8 ve 9 YAPILDI.
 Madde 2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü, Madde 5 eki (çok formatlı indirme)
