@@ -2042,6 +2042,18 @@ belirtilmeli. Bu prompt hem `/icerik-strateji` uç noktasında hem Otomatik Raki
 DENENMEDİ (kota tüketmemek için, kullanıcının standing talimatı) — bir sonraki gerçek rapor
 üretiminde çıktı gözle doğrulanabilir.
 
-Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4 ve 7 YAPILDI. Madde 2
-ASKIDA (yukarı bakınız). Madde 3 kısmen çözüldü, Madde 5 eki (çok formatlı indirme) yapıldı, Madde 6
-KAPANDI (yanlış anlaşılmaydı) — kalanlar (8, 9, 10, 11) sırada.
+Madde 8 durumu (2026-08-18): YAPILDI VE KÖK NEDENİ DOĞRULANDI — kullanıcının teorisi (seçilen
+rakip hakkında veri azlığı) YANLIŞTI. Gerçek kök neden: `rakip-analizi.html`'in Chart.js CDN linki
+sabit `4.4.4` sürümüne kilitliydi, ama cdnjs bu sürümü kaldırmış (`api.cdnjs.com/libraries/Chart.js/
+4.4.4` → 404, script dosyasının kendisi de 404) — yani `window.Chart` HİÇ tanımlanmıyordu, "grafik
+çizilemedi" hatası (Madde 3'te eklenen try/catch) bunun için tetikleniyordu, null/eksik parametre
+verisiyle hiç ilgisi yoktu. `4.5.0`'a (cdnjs'te GERÇEKTEN mevcut, `curl -I` ile 200 doğrulandı)
+sabitlendi. Canlı sayfada, kota harcamadan, düzeltilmiş CDN URL'sini dinamik enjekte edip hem
+çizgi hem sütun grafik tipini, HEM tam-null HEM kısmi-null (gerçekçi "az veri" senaryosu) sahte
+veriyle test ettim — dördü de hatasız çizildi, null değerler zaten Chart.js tarafından sorunsuz
+atlanıyor. Yani hem CDN linki hem de null-değer davranışı artık kanıtlı şekilde çalışıyor.
+
+Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7 ve 8 YAPILDI. Madde
+2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü (Madde 8'in kök nedeni aynı zamanda Madde 3'ün
+"grafik hiç çizilmiyor" kalıntısını da kapattı), Madde 5 eki (çok formatlı indirme) yapıldı, Madde 6
+KAPANDI (yanlış anlaşılmaydı) — kalanlar (9, 10, 11) sırada.

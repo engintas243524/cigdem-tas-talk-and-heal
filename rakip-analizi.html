@@ -375,7 +375,10 @@
      bir iskelet PowerPoint'in dosyayı "bozuk" diye reddetmesine yol açabilir). -->
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <!-- Zaman içi karşılaştırma grafiği için — açık kaynak, ücretsiz, build adımı gerektirmiyor. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<!-- Madde 8 (2026-08-18) kök nedeni: cdnjs 4.4.4'ü kaldırmış (404), Chart global'i hiç tanımlanmıyordu
+     — "grafik verisi az" değil, kütüphane hiç yüklenmiyordu. 4.5.0'a (cdnjs'te GERÇEKTEN mevcut,
+     200 ile doğrulandı) sabitlendi. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <script>
 (function () {
   // Local dev (python3 -m http.server + wrangler dev) uses localhost:8787; every other origin
