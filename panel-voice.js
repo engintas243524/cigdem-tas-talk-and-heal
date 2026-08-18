@@ -38,8 +38,9 @@ function attachVoiceInput(config) {
   var recognition = null;
 
   micBtnEl.addEventListener('click', function () {
+    console.log('[mic] click, recognizing=', recognizing);
     if (recognizing) {
-      if (recognition) { try { recognition.stop(); } catch (e) {} }
+      if (recognition) { try { recognition.stop(); console.log('[mic] stop() called'); } catch (e) { console.log('[mic] stop() threw', e); } }
       return;
     }
 
@@ -52,31 +53,41 @@ function attachVoiceInput(config) {
     recognition.lang = micLang === 'en' ? 'en-GB' : 'tr-TR';
     recognition.continuous = true;
     recognition.interimResults = true;
+    console.log('[mic] created recognition, lang=', recognition.lang);
 
     recognition.onstart = function () {
+      console.log('[mic] onstart');
       recognizing = true;
       micBtnEl.classList.add('recording');
       micHintEl.textContent = LISTENING_TEXT;
     };
+    recognition.onaudiostart = function () { console.log('[mic] onaudiostart'); };
+    recognition.onsoundstart = function () { console.log('[mic] onsoundstart'); };
+    recognition.onspeechstart = function () { console.log('[mic] onspeechstart'); };
+    recognition.onspeechend = function () { console.log('[mic] onspeechend'); };
     recognition.onresult = function (e) {
+      console.log('[mic] onresult, resultIndex=', e.resultIndex, 'len=', e.results.length);
       var interim = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var t = e.results[i][0].transcript;
+        console.log('[mic] result[' + i + ']', JSON.stringify(t), 'isFinal=', e.results[i].isFinal);
         if (e.results[i].isFinal) finalText += t; else interim += t;
       }
       textareaEl.value = before + finalText + interim + after;
     };
     recognition.onerror = function (e) {
+      console.log('[mic] onerror', e.error, e.message);
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         micHintEl.textContent = 'Mikrofon hatası. İzin verildiğinden emin olun.';
       }
     };
     recognition.onend = function () {
+      console.log('[mic] onend');
       recognizing = false;
       micBtnEl.classList.remove('recording');
       if (micHintEl.textContent === LISTENING_TEXT) micHintEl.textContent = '';
     };
 
-    try { recognition.start(); } catch (e) { /* ignore — button click already gated by recognizing */ }
+    try { recognition.start(); console.log('[mic] start() called OK'); } catch (e) { console.log('[mic] start() threw', e); }
   });
 }
