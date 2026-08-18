@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,500&family=WindSong&display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=96">
+<link rel="stylesheet" href="style.css?v=97">
 </head>
 <body>
 
@@ -91,20 +91,40 @@
 
   <section>
     <div class="wrap">
-      <div class="services-grid">
-        <div class="service-card">
+      <div class="blog-filters" role="group" aria-label="Blog categories / Blog kategorileri">
+        <button type="button" class="blog-filter-btn is-active" data-blog-filter="all">
+          <span data-en>All</span><span data-tr>Tümü</span>
+        </button>
+        <button type="button" class="blog-filter-btn" data-blog-filter="academic-clinical">
+          <span data-en>Academic &amp; Clinical</span><span data-tr>Akademik ve Klinik</span>
+        </button>
+        <button type="button" class="blog-filter-btn" data-blog-filter="thought-pieces">
+          <span data-en>Thought Pieces</span><span data-tr>Düşünce Yazıları</span>
+        </button>
+        <button type="button" class="blog-filter-btn" data-blog-filter="creative-writing">
+          <span data-en>Creative Writing</span><span data-tr>Yaratıcı Yazın</span>
+        </button>
+        <button type="button" class="blog-filter-btn" data-blog-filter="videos-media">
+          <span data-en>Videos &amp; Media</span><span data-tr>Video ve Medya</span>
+        </button>
+      </div>
+      <div class="services-grid" id="blogGrid">
+        <div class="service-card" data-blog-category="academic-clinical">
           <h2><span data-en>What anxiety is actually trying to tell you</span><span data-tr>Kaygının sana asıl anlatmaya çalıştığı şey</span></h2>
           <p><span data-en>Anxiety is rarely the problem itself — usually it's pointing at something underneath that hasn't been named yet.</span><span data-tr>Kaygı nadiren sorunun kendisidir — genelde henüz adlandırılmamış bir şeye işaret eder.</span></p>
         </div>
-        <div class="service-card">
+        <div class="service-card" data-blog-category="thought-pieces">
           <h2><span data-en>Grieving a place you can't quite call home</span><span data-tr>Tam olarak "ev" diyemediğin bir yeri yaslamak</span></h2>
           <p><span data-en>Living between London and Istanbul comes with a specific, quiet kind of grief that rarely gets named directly.</span><span data-tr>Londra ile İstanbul arasında yaşamak, nadiren doğrudan adlandırılan, sessiz ve kendine özgü bir yasla gelir.</span></p>
         </div>
-        <div class="service-card">
+        <div class="service-card" data-blog-category="thought-pieces">
           <h2><span data-en>What a first session is actually like</span><span data-tr>İlk seans gerçekte nasıl geçer</span></h2>
           <p><span data-en>No couch, no forms to fill in advance — just a conversation to see if the fit feels right.</span><span data-tr>Divan yok, önceden doldurulacak formlar yok — sadece eşleşmenin doğru hissedip hissetmediğini görmek için bir sohbet.</span></p>
         </div>
       </div>
+      <p class="blog-filter-empty hidden" id="blogFilterEmpty">
+        <span data-en>No posts in this category yet.</span><span data-tr>Bu kategoride henüz yazı yok.</span>
+      </p>
     </div>
   </section>
 
@@ -135,6 +155,25 @@
   flags.forEach(function(btn){
     btn.addEventListener('click', function(){ setLang(btn.getAttribute('data-lang')); });
   });
+
+  (function () {
+    var filterBtns = document.querySelectorAll('.blog-filter-btn');
+    var cards = document.querySelectorAll('#blogGrid .service-card');
+    var emptyMsg = document.getElementById('blogFilterEmpty');
+    filterBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var category = btn.getAttribute('data-blog-filter');
+        filterBtns.forEach(function (b) { b.classList.toggle('is-active', b === btn); });
+        var visibleCount = 0;
+        cards.forEach(function (card) {
+          var match = category === 'all' || card.getAttribute('data-blog-category') === category;
+          card.classList.toggle('hidden', !match);
+          if (match) visibleCount++;
+        });
+        emptyMsg.classList.toggle('hidden', visibleCount > 0);
+      });
+    });
+  })();
 
   var menuBtn = document.getElementById('menuBtn');
   var navPrimary = document.querySelector('nav.primary');

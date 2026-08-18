@@ -844,6 +844,30 @@ section.alt{ background:var(--surface); }
 .event-meta{ font-size:0.82rem; color:var(--taupe); margin:0 0 var(--space-1); }
 .event-desc{ font-size:0.92rem; font-weight:300; color:#3d3733; margin:0 0 var(--space-2); }
 .event-cta{ font-size:0.85rem; padding:0.5rem 1.1rem; }
+
+/* Blog category filters (Website Implementation Brief Madde 2, 2026-08-18). */
+.blog-filters{
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--space-1);
+  margin-bottom:var(--space-3);
+}
+.blog-filter-btn{
+  font-family:var(--font-body);
+  font-size:0.82rem;
+  font-weight:400;
+  background:transparent;
+  color:var(--ink);
+  border:0.0625rem solid var(--border);
+  border-radius:999px;
+  padding:0.45rem 1rem;
+  cursor:pointer;
+  transition:border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.blog-filter-btn:hover{ border-color:var(--sage); color:var(--sage); }
+.blog-filter-btn.is-active{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.blog-filter-empty{ color:var(--taupe); font-size:0.92rem; margin-top:var(--space-2); }
+.hidden{ display:none; }
 .service-hint .hint-less{ display:none; }
 .service-card.is-open .service-hint .hint-more{ display:none; }
 .service-card.is-open .service-hint .hint-less{ display:inline; }
