@@ -2053,23 +2053,34 @@ sabitlendi. Canlı sayfada, kota harcamadan, düzeltilmiş CDN URL'sini dinamik 
 veriyle test ettim — dördü de hatasız çizildi, null değerler zaten Chart.js tarafından sorunsuz
 atlanıyor. Yani hem CDN linki hem de null-değer davranışı artık kanıtlı şekilde çalışıyor.
 
-Madde 9 durumu (2026-08-18): YAPILDI VE CANLIDA SAYISAL OLARAK DOĞRULANDI (`.rakip-table`,
-`panel.css`, üç deneme sonrası son hâl): `max-height: 26rem` + `overflow-y: auto`. Ara denemeler:
-(1) `max-height: 15.5rem` — tavan bu sayfadaki gerçek satırlara (uzun Not/adres metniyle bir satır
-~300px'e çıkabiliyor) göre ÇOK düşüktü, kutu ilk 3 satırda bile tavana çarpıp büyüme hiç
-GÖRÜNMÜYORDU — kullanıcı test edip yakaladı. (2) Sabit `height: 15.5rem` denendi ama bu da yanlıştı
-— kullanıcı "Daha Fazla'ya tıklayınca kutu gerçekten büyümeli" diye düzeltti. Doğru davranış
-`max-height`'in kendisiydi, sadece tavan değeri yükseltilmeliydi. Canlıda ölçülen son doğru
-davranış (`rakipListe`, gerçek veriyle): başlangıç (3 satır) 329px doğal boyut/scroll yok → "Daha
-Fazla" sonrası (6 satır) 416px'e BÜYÜDÜ (tavana ulaştı) → 2. "Daha Fazla" (9 satır) 416px'te sabit,
-içerik scroll ile kayıyor → "Daha Az" ile simetrik şekilde 416px→329px küçülüyor. Yan etki
-düzeltmesi: liste boşken (0 rakip/sonuç) kutuyu boş göstermesin diye `.rakip-table:empty { display:
-none; }` eklendi (asıl "boş" mesajı zaten ayrı bir elemanda). Başlık satırı `position: sticky`
-(kayarken sütun isimleri kaybolmasın). `panel.css?v=24`. **Ders:** GitHub Pages/Fastly CDN
-(`cache-control: max-age=600`) VE tarayıcı önbelleği üst üste binebiliyor — deploy sonrası canlı
-testte `?cachebust=1` gibi bir query param ile HTML'i zorla taze çekmek gerekebilir, aksi halde
-CSS güncellemesi doğrulanırken yanlışlıkla eski davranış test edilebilir (bu oturumda tam olarak
-oldu).
+Madde 9 durumu (2026-08-18): YAPILDI VE CANLIDA SAYISAL OLARAK DOĞRULANDI — DÖRT deneme sonrası
+son hâl. Sırasıyla denenip elenenler: (1) `max-height: 15.5rem` — tavan bu sayfadaki gerçek
+satırlara (uzun Not/adres metniyle bir satır ~300px'e çıkabiliyor) göre çok düşüktü, "Daha
+Fazla"da büyüme hiç GÖRÜNMÜYORDU. (2) Sabit `height: 15.5rem` — kullanıcı "Daha Fazla'ya tıklayınca
+kutu gerçekten büyümeli" diye düzeltti. (3) `max-height: 26rem` — kullanıcı BU SEFER şunu
+netleştirdi: scroll'un sadece o an DOM'a yüklenmiş (state.visible kadar) satırlar için değil,
+tablodaki TÜM satırlar için "ilk 3 satır görünürken bile" çalışması gerekiyor — ama o ana kadarki
+tüm sürümlerde DOM'a hep sadece state.visible+1 kadar satır giriyordu (slice), yani 3 satır
+durumunda scroll'un gideceği bir yer yoktu.
+
+**Son (4.) ve doğru mimari:** `renderRakipListe`/`renderAramaSonuclari` artık TÜM satırları HER
+ZAMAN DOM'a yazıyor (slice/silik-onizleme tamamen kaldırıldı). Kutunun GÖRÜNEN boyu artık CSS'te
+sabit değil — yeni `sayfalamaYukseklikUygula()` fonksiyonu (rakip-analizi.html) her render'da
+state.visible kadar satırın GERÇEKTEN ÖLÇÜLMÜŞ (`offsetHeight`) toplam yüksekliğini hesaplayıp
+`listEl.style.height`'a yazıyor; "Daha Fazla/Daha Az" bu değeri değiştirip kutuyu büyütüp
+küçültüyor, kutunun boyu ne olursa olsun DOM'daki TÜM satırlara scroll ile ulaşılabiliyor.
+`panel.css`'ten `max-height`/sabit `height` tamamen kaldırıldı (sadece `overflow-x/y: auto` kaldı).
+
+Canlıda doğrulama (gerçek veri, 12 kayıtlı rakip, hiçbir butona basmadan): DOM'da 12 rakip satırı
+VAR, kutu yüksekliği sadece 3 satıra göre ölçülmüş (293px, `scrollHeight`:1200px) — `el.scrollTop
+= 500` ile programatik kaydırma yapıldığında listenin **12. (en sondaki) rakibi** görünür alana
+geldi, hiçbir "Daha Fazla" tıklaması olmadan. Başlık satırı `position: sticky` (kayarken sütun
+isimleri kaybolmasın), liste boşken kutu `:empty{display:none}` ile gizli. `panel.css?v=25`.
+
+**Ders (bu oturumda 2 kez yaşandı):** GitHub Pages/Fastly CDN (`cache-control: max-age=600`) VE
+tarayıcı önbelleği üst üste binebiliyor — deploy sonrası canlı testte `?cb=N` gibi bir query
+param ile HTML'i zorla taze çekmek gerekebilir, aksi halde CSS/JS güncellemesi doğrulanırken
+yanlışlıkla eski davranış test edilip yanlış sonuca varılabilir.
 
 Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7, 8 ve 9 YAPILDI.
 Madde 2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü, Madde 5 eki (çok formatlı indirme)
