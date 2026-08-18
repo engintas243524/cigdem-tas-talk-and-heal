@@ -2102,8 +2102,9 @@ Aksiyon/Hedef Analizi + Görsel/Video Stratejisi + Otomatik Rakip Takibi + Zaman
 raporlarının HEPSİNE uygulandı — kullanıcının istediği "iki bölüm" zaten bu ortak sabiti
 paylaşıyordu, üçüncü/dördüncü rapor türüne de tutarlılık için ekstra fayda olarak yansıdı. Ekstra
 Claude çağrısı YOK (aynı üretim isteğinin içine gömülü). `npx tsc --noEmit` + `npx prettier
---check` + `npm test` (322/322) temiz, `wrangler deploy` ile canlıya alındı. Canlı bir rapor
-üretilerek uçtan uca DENENMEDİ (kota tüketmemek için) — bir sonraki gerçek rapor üretiminde "##
+--check` + `npm test` (322/322) temiz, `wrangler deploy` ile canlıya alındı (Version ID:
+90f12aab-8c90-4a2c-a792-f05628fd24b8). Canlı bir rapor üretilerek uçtan uca DENENMEDİ (kota
+tüketmemek için) — bir sonraki gerçek rapor üretiminde "##
 Özet" bölümünün gerçekten çıktığı gözle doğrulanabilir.
 
 Durum: TÜM 11 MADDE TAMAMLANDI (Madde 2 hariç — mikrofon dikte sorunu ASKIDA, yukarı bakınız,
