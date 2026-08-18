@@ -398,9 +398,10 @@ Selen'e) ilk ulaştığı kanal loglanacak. Şimdilik 3 değer:
       `/tmp/booking-*.png`'de.
       **Not:** `API_BASE` şu an `http://localhost:8787` olarak sabit (TBD) — Session 8'de backend
       workers.dev'e deploy edilince gerçek URL'e güncellenecek.
-- [ ] WhatsApp karşılama mesajındaki link bu randevu sayfasına işaret edecek (şu an
-      `config.ts`'teki `BOOKING_PAGE_URL` de aynı TBD durumda, gerçek domain'e çıkınca ikisi
-      birlikte güncellenecek)
+- [x] WhatsApp karşılama mesajındaki link bu randevu sayfasına işaret ediyor — stale checkbox
+      düzeltmesi (2026-08-18): `config.ts`'teki `BOOKING_PAGE_URL` artık gerçek domain
+      (`https://talkandheal.co.uk/booking`), `routes/whatsapp.ts`'in `WELCOME_MESSAGE`'ı bunu
+      doğrudan import edip kullanıyor — kod tarafında eksik yok, sadece işaretlenmemişti.
 
 ## Randevu Sistemi Genişletmesi (2026-07-22, canlı test sırasında istendi)
 
@@ -465,8 +466,10 @@ paketten tek seans iptali (şimdilik sadece tüm paket iptali var).
       `tsc`/`prettier` temiz. **Not:** mevcut `booking.html` henüz bu yeni `slotStartUtcs` dizi
       şeklini göndermiyor (hâlâ eski tekil `slotStartUtc`) — Session 11'de güncellenecek, o ana
       kadar frontend/backend uyumsuz.
-- [ ] Session 11 — Frontend: fiyat matrisi UI, kompakt çok-haftalık takvim, çoklu seçim, Translate
-      butonu, dinamik iptal metni, mobil `API_BASE` düzeltmesi
+- [x] Session 11 — Frontend: fiyat matrisi UI, kompakt çok-haftalık takvim, çoklu seçim, Translate
+      butonu, dinamik iptal metni, mobil `API_BASE` düzeltmesi — stale checkbox düzeltmesi
+      (2026-08-18): alttaki tüm alt maddeler zaten `[x]`, satır 555 "Session 11 tamamen bitti"
+      diyor, sadece üst madde işaretlenmemişti.
       - [x] Kompakt çok-haftalık takvim (booking.html "2. Choose a time"): eski günlük
         başlık+grid yapısı yerine, günlük tek satır (tarih + satır-içi saat "chip"leri) ve
         haftalara göre gruplama, aralarında soluk gradient ayırıcı. Varsayılan 4 hafta gösterip
