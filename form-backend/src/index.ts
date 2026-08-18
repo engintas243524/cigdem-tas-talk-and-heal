@@ -29,6 +29,7 @@ import {
 } from './routes/rakipAnalizi';
 import { handleRakipTakipDurum, handleRakipTakipUret, handleRakipTakipAyar, handleRakipTakipKarsilastirma } from './routes/rakipTakip';
 import { handleKullanimLimitArttir } from './routes/kullanimLimit';
+import { handleEventsListe, handlePanelEventsListe, handlePanelEventEkle, handlePanelEventSil } from './routes/events';
 import {
 	runReminderSweep,
 	runSessionNoteFallback,
@@ -66,6 +67,10 @@ export default {
 				return handleCancelPost(request, env);
 			case 'GET /translate':
 				return handleTranslate(request, env);
+			// Dynamic Event Box (Website Implementation Brief Madde 1, 2026-08-18) — public read,
+			// panel-gated write, aynı /panel/rakip-analizi/* auth deseniyle.
+			case 'GET /events':
+				return handleEventsListe(request, env);
 			case 'GET /fix-text':
 				return handleFixText(request, env);
 			// Madde 5 control panel. Login is public (it's the password check); every other panel
@@ -112,6 +117,12 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handleRakipTakipKarsilastirma(request, env);
 			case 'POST /panel/rakip-analizi/kullanim-limit-arttir':
 				return (await requirePanelAuth(request, env)) ?? handleKullanimLimitArttir(request, env);
+			case 'GET /panel/events':
+				return (await requirePanelAuth(request, env)) ?? handlePanelEventsListe(request, env);
+			case 'POST /panel/events':
+				return (await requirePanelAuth(request, env)) ?? handlePanelEventEkle(request, env);
+			case 'POST /panel/events-sil':
+				return (await requirePanelAuth(request, env)) ?? handlePanelEventSil(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}

@@ -1,10 +1,16 @@
 // Talk & Heal — Dynamic Event Box render mantığı (Website Implementation Brief Madde 1, 2026-08-18).
-// Veri: events-data.js. Her [data-event-box] container'ını, mevcut data-en/data-tr dil
-// mekanizmasına (style.css: html[data-lang] [data-en/tr]{display:none}) otomatik uyacak şekilde
-// doldurur. Etkinlik yoksa hiçbir şey yazmaz -> container boş kalır -> CSS ile gizlenir.
+// Veri: backend GET /events (public, panel.html'in "Etkinlikler" formundan besleniyor — bkz.
+// form-backend/src/routes/events.ts). Her [data-event-box] container'ını, mevcut data-en/data-tr
+// dil mekanizmasına (style.css: html[data-lang] [data-en/tr]{display:none}) otomatik uyacak
+// şekilde doldurur. Etkinlik yoksa hiçbir şey yazmaz -> container boş kalır -> CSS ile gizlenir.
 (function () {
-  var events = window.TALK_AND_HEAL_EVENTS || [];
-  if (!events.length) return;
+  var boxes = document.querySelectorAll('[data-event-box]');
+  if (!boxes.length) return;
+
+  // panel.html'deki API_BASE tespitiyle aynı desen.
+  var API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:')
+    ? 'http://localhost:8787'
+    : 'https://form-backend.engintass19-358.workers.dev';
 
   var CATEGORY_LABEL = {
     workshop: { en: 'Workshop', tr: 'Atölye' },
@@ -64,9 +70,14 @@
     return card;
   }
 
-  document.querySelectorAll('[data-event-box]').forEach(function (box) {
-    events.forEach(function (ev) {
-      box.appendChild(eventCard(ev));
-    });
-  });
+  fetch(API_BASE + '/events')
+    .then(function (r) { return r.ok ? r.json() : { events: [] }; })
+    .then(function (data) {
+      var events = data.events || [];
+      if (!events.length) return; // boş -> container boş kalır, CSS ile gizli
+      boxes.forEach(function (box) {
+        events.forEach(function (ev) { box.appendChild(eventCard(ev)); });
+      });
+    })
+    .catch(function () { /* sessiz düş — kutu boş kalır, sayfanın geri kalanı etkilenmez */ });
 })();

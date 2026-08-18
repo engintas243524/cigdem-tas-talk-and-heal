@@ -616,3 +616,45 @@ export const MEVZUAT_TAKIP_COLUMN_LABELS: Record<(typeof MEVZUAT_TAKIP_COLUMNS)[
 	degisiklikVarMi: 'Değişiklik Var mı',
 	ozet: 'Özet',
 };
+
+// Etkinlikler (Website Implementation Brief Madde 1 — Dynamic Event Box, 2026-08-18): panelde
+// eklenen atölye/ustalık sınıfı duyuruları buraya yazılır, index.html/services.html public bir
+// GET ile bu sekmeyi okuyup görüntüler (bkz. routes/events.ts, lib/eventsSheets.ts).
+export const EVENTS_TAB_NAME = 'Etkinlikler';
+
+export const EVENTS_CATEGORIES = ['workshop', 'masterclass'] as const;
+export type EventCategory = (typeof EVENTS_CATEGORIES)[number];
+
+export const EVENTS_COLUMNS = [
+	'id',
+	'createdAtUtc',
+	'category',
+	'titleEn',
+	'titleTr',
+	'dateTimeEn',
+	'dateTimeTr',
+	'formatEn',
+	'formatTr',
+	'descriptionEn',
+	'descriptionTr',
+	'ctaLabelEn',
+	'ctaLabelTr',
+	'ctaHref',
+] as const;
+
+export const EVENTS_COLUMN_LABELS: Record<(typeof EVENTS_COLUMNS)[number], string> = {
+	id: 'ID',
+	createdAtUtc: 'Oluşturulma (UTC)',
+	category: 'Kategori',
+	titleEn: 'Başlık (EN)',
+	titleTr: 'Başlık (TR)',
+	dateTimeEn: 'Tarih/Saat (EN)',
+	dateTimeTr: 'Tarih/Saat (TR)',
+	formatEn: 'Format (EN)',
+	formatTr: 'Format (TR)',
+	descriptionEn: 'Açıklama (EN)',
+	descriptionTr: 'Açıklama (TR)',
+	ctaLabelEn: 'Buton Metni (EN)',
+	ctaLabelTr: 'Buton Metni (TR)',
+	ctaHref: 'Buton Linki',
+};

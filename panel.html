@@ -33,6 +33,7 @@
     <h1>Seans Notu</h1>
     <div class="actions">
       <button class="btn-secondary" id="goRakipAnaliziBtn" type="button">Rakip Analizi</button>
+      <button class="btn-secondary" id="goEventsBtn" type="button">Etkinlikler</button>
     </div>
 
     <div class="field">
@@ -131,6 +132,73 @@
       <button class="btn-primary" id="addBtn" type="button">Ekle</button>
     </div>
     <div class="status" id="panelStatus"></div>
+  </section>
+
+  <!-- EVENTS (Website Implementation Brief Madde 1, 2026-08-18) -->
+  <section id="eventsView" class="hidden">
+    <h1>Etkinlikler</h1>
+    <div class="actions">
+      <button class="btn-secondary" id="eventsBackBtn" type="button">← Geri</button>
+    </div>
+
+    <div class="field">
+      <label for="eventCategory">Kategori</label>
+      <select id="eventCategory">
+        <option value="workshop">Atölye (Workshop)</option>
+        <option value="masterclass">Ustalık Sınıfı (Masterclass)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="eventTitleEn">Başlık (EN)</label>
+      <input type="text" id="eventTitleEn" />
+    </div>
+    <div class="field">
+      <label for="eventTitleTr">Başlık (TR)</label>
+      <input type="text" id="eventTitleTr" />
+    </div>
+    <div class="field">
+      <label for="eventDateTimeEn">Tarih/Saat (EN)</label>
+      <input type="text" id="eventDateTimeEn" placeholder="ör. 14 Sept 2026, 18:00 BST" />
+    </div>
+    <div class="field">
+      <label for="eventDateTimeTr">Tarih/Saat (TR)</label>
+      <input type="text" id="eventDateTimeTr" placeholder="ör. 14 Eylül 2026, 18:00" />
+    </div>
+    <div class="field">
+      <label for="eventFormatEn">Format (EN)</label>
+      <input type="text" id="eventFormatEn" placeholder="ör. Online / In-person — London" />
+    </div>
+    <div class="field">
+      <label for="eventFormatTr">Format (TR)</label>
+      <input type="text" id="eventFormatTr" placeholder="ör. Çevrimiçi / Yüz yüze — Londra" />
+    </div>
+    <div class="field">
+      <label for="eventDescriptionEn">Açıklama (EN)</label>
+      <textarea id="eventDescriptionEn"></textarea>
+    </div>
+    <div class="field">
+      <label for="eventDescriptionTr">Açıklama (TR)</label>
+      <textarea id="eventDescriptionTr"></textarea>
+    </div>
+    <div class="field">
+      <label for="eventCtaLabelEn">Buton Metni (EN)</label>
+      <input type="text" id="eventCtaLabelEn" placeholder="ör. Reserve Spot" />
+    </div>
+    <div class="field">
+      <label for="eventCtaLabelTr">Buton Metni (TR)</label>
+      <input type="text" id="eventCtaLabelTr" placeholder="ör. Yerinizi Ayırtın" />
+    </div>
+    <div class="field">
+      <label for="eventCtaHref">Buton Linki</label>
+      <input type="text" id="eventCtaHref" placeholder="mailto:... veya https://..." />
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="eventAddBtn" type="button">Ekle</button>
+    </div>
+    <div class="status" id="eventFormStatus"></div>
+
+    <h2>Mevcut Etkinlikler</h2>
+    <div id="eventsList"></div>
   </section>
 
 </div>
@@ -515,6 +583,102 @@
   // sadece yönlendirme yeterli, ayrı bir giriş ekranı gerekmiyor.
   el('goRakipAnaliziBtn').addEventListener('click', function () {
     window.location.href = 'rakip-analizi.html';
+  });
+
+  // --- Etkinlikler (Website Implementation Brief Madde 1, 2026-08-18) ---
+  // panelView'in yerine geçen üçüncü bir görünüm (loginView/panelView desenindeki gibi) — ayrı
+  // bir sayfa açmıyoruz çünkü basit bir liste+form, rakip-analizi.html kadar karmaşık değil.
+  var eventsView = el('eventsView');
+  var eventsList = el('eventsList');
+  var CATEGORY_LABEL_TR = { workshop: 'Atölye', masterclass: 'Ustalık Sınıfı' };
+
+  var EVENT_FIELDS = [
+    'eventTitleEn', 'eventTitleTr', 'eventDateTimeEn', 'eventDateTimeTr', 'eventFormatEn', 'eventFormatTr',
+    'eventDescriptionEn', 'eventDescriptionTr', 'eventCtaLabelEn', 'eventCtaLabelTr', 'eventCtaHref',
+  ];
+
+  function clearEventForm() {
+    EVENT_FIELDS.forEach(function (id) { el(id).value = ''; });
+    el('eventCategory').value = 'workshop';
+  }
+
+  function renderEventsList(events) {
+    eventsList.innerHTML = '';
+    if (!events.length) {
+      eventsList.innerHTML = '<p class="muted">Henüz etkinlik eklenmedi.</p>';
+      return;
+    }
+    events.forEach(function (ev) {
+      var row = document.createElement('div');
+      row.className = 'client';
+      var title = document.createElement('div');
+      title.className = 'client-name';
+      title.textContent = '[' + (CATEGORY_LABEL_TR[ev.category] || ev.category) + '] ' + ev.titleTr;
+      row.appendChild(title);
+      var meta = document.createElement('div');
+      meta.className = 'muted';
+      meta.textContent = ev.dateTimeTr + ' — ' + ev.formatTr;
+      row.appendChild(meta);
+      var delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'sess cancel-trigger';
+      delBtn.textContent = 'Sil';
+      delBtn.addEventListener('click', function () {
+        if (!window.confirm('"' + ev.titleTr + '" silinsin mi? Bu işlem geri alınamaz.')) return;
+        authFetch('/panel/events-sil', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: ev.id }) })
+          .then(function (r) { if (!r.ok) throw new Error('sil-basarisiz'); return loadEvents(); })
+          .catch(function (e) { if (e.message !== 'unauthorized') window.alert('Silinemedi, tekrar deneyin.'); });
+      });
+      row.appendChild(delBtn);
+      eventsList.appendChild(row);
+    });
+  }
+
+  function loadEvents() {
+    eventsList.innerHTML = '<p class="muted">Yükleniyor...</p>';
+    return authFetch('/panel/events').then(function (r) { return r.json(); }).then(function (data) {
+      renderEventsList(data.events || []);
+    }).catch(function (e) {
+      if (e.message !== 'unauthorized') eventsList.innerHTML = '<p class="muted">Liste yüklenemedi.</p>';
+    });
+  }
+
+  el('goEventsBtn').addEventListener('click', function () {
+    panelView.classList.add('hidden');
+    eventsView.classList.remove('hidden');
+    loadEvents();
+  });
+  el('eventsBackBtn').addEventListener('click', function () {
+    eventsView.classList.add('hidden');
+    panelView.classList.remove('hidden');
+  });
+
+  el('eventAddBtn').addEventListener('click', function () {
+    var payload = {
+      category: el('eventCategory').value,
+      titleEn: el('eventTitleEn').value.trim(),
+      titleTr: el('eventTitleTr').value.trim(),
+      dateTimeEn: el('eventDateTimeEn').value.trim(),
+      dateTimeTr: el('eventDateTimeTr').value.trim(),
+      formatEn: el('eventFormatEn').value.trim(),
+      formatTr: el('eventFormatTr').value.trim(),
+      descriptionEn: el('eventDescriptionEn').value.trim(),
+      descriptionTr: el('eventDescriptionTr').value.trim(),
+      ctaLabelEn: el('eventCtaLabelEn').value.trim(),
+      ctaLabelTr: el('eventCtaLabelTr').value.trim(),
+      ctaHref: el('eventCtaHref').value.trim(),
+    };
+    if (!payload.titleEn || !payload.titleTr) { setStatus(el('eventFormStatus'), 'Başlık (EN ve TR) gerekli.', 'err'); return; }
+    if (!payload.ctaHref) { setStatus(el('eventFormStatus'), 'Buton linki gerekli.', 'err'); return; }
+    setStatus(el('eventFormStatus'), 'Ekleniyor...', '');
+    authFetch('/panel/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then(function (r) { if (!r.ok) throw new Error('ekle-basarisiz'); return r.json(); })
+      .then(function () {
+        setStatus(el('eventFormStatus'), 'Eklendi.', 'ok');
+        clearEventForm();
+        loadEvents();
+      })
+      .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('eventFormStatus'), 'Eklenemedi, tekrar deneyin.', 'err'); });
   });
 
   // Resume an existing session-token on reload.
