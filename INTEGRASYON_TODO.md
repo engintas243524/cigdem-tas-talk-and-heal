@@ -2183,3 +2183,27 @@ yarın whatsapp görüntülü arama ile konuşacağız" — yani **2026-08-19 14
 ilerleme mümkün değil.** O saatten sonra kaldığı yer: kullanıcıya hesap türü/Page bağlantısı
 sorusu sorulacak, cevaba göre adım adım kurulum rehberliği (mevcut "Talk and Heal" Meta App'i
 üzerinden, Standard Access) başlayacak.
+
+### 2026-08-19 14:00 görüşmesinde Çiğdem'den istenecekler — TOPLU LİSTE (2026-08-18'de eklendi)
+
+Kullanıcı: "çiğdem den alacağımız birşey varsa yarınki 14:00 sonrası işi yaparken hatırlatırsın
+onları da isteriz." Faz 6'nın kendi sorusuna (Instagram Business/Creator + Facebook Page durumu,
+yukarıda) EK olarak, Website Implementation Brief'i uygularken çıkan sorular:
+
+- **Trust Bar (Madde 4) — KRİTİK, etik-gate ile doğrudan ilişkili:** Brief'te 5 akreditasyon
+  (BACP, BPS, EMDR Europe, Society for Existential Analysis, ACBS/ACT) ve 3 sigorta sağlayıcısı
+  (Bupa, AXA Health, Aviva) logosu isteniyor — AMA bunların HANGİLERİNE Çiğdem'in GERÇEKTEN
+  güncel/geçerli üyeliği/onayı var, doğrulanmadan siteye eklenemez (bkz.
+  `BACP_INGILTERE_MEVZUAT_ARASTIRMASI.md` Bölüm 3 — yanlış/abartılı akreditasyon iddiası gerçek
+  bir ASA emsalinde reklamın kaldırılmasına yol açmış). Sorulacak: her biri için gerçekten
+  üye/onaylı mı, resmi logo dosyası/kullanım izni var mı?
+- **Dynamic Event Box (Madde 1):** şu an gerçek bir workshop/masterclass verisi yok — ilk gerçek
+  etkinlik ne zaman, hangi bilgilerle (tarih/saat, online mı yüz-yüze mi, CTA linki ne olacak —
+  mailto/WhatsApp mı yoksa dış bir link mi, ör. Zoom/Eventbrite) net değil.
+- **Social Media Integration (Madde 3):** LinkedIn/Instagram/YouTube hesap linkleri + hangi
+  widget'ın (EmbedSocial/Juicer/Flockler) kullanılacağı henüz araştırılmadı/kullanıcıyla
+  konuşulmadı (maliyet karşılaştırması gerekiyor, `feedback_arac_arama_maliyet_performans_marj_protokolu`
+  kuralına göre) — bu, Faz 6'nın Instagram sorusuyla kısmen örtüşüyor.
+
+Durum: BEKLİYOR — 2026-08-19 14:00 görüşmesinde sorulacak, cevap gelene kadar Madde 1'in kod
+iskeleti boş veri dizisiyle kurulabilir ama Madde 3/4 gerçek içerikle tamamlanamaz.
