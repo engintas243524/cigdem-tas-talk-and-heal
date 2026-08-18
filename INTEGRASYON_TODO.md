@@ -2115,3 +2115,18 @@ Durum: TÜM 11 MADDE TAMAMLANDI (Madde 2 hariç — mikrofon dikte sorunu ASKIDA
 kullanıcı kararıyla ertelendi). YouTube/Instagram API entegrasyonu (Faz 5/6, ayrı roadmap) hâlâ
 sırada. Özet: Madde 1, 3, 4, 5(+eki), 7, 8, 9, 10, 11 YAPILDI; Madde 6 KAPANDI (yanlış
 anlaşılmaydı); Madde 2 ASKIDA.
+
+### Etik/Yasal Gate Roadmap — Faz 0-4 durumu (2026-08-18 doğrulandı, geriye dönük not)
+
+Plan dosyası (`~/.claude-hesap2/plans/harmonic-tumbling-toast.md`) "Faz 0'dan başlanacak" diyordu ama
+kod incelemesi Faz 0-4'ün ZATEN tamamlanmış olduğunu gösterdi — tek commit'te (`95f1dea`,
+2026-08-17 20:53): `BACP_INGILTERE_MEVZUAT_ARASTIRMASI.md` (Faz 0), `config.ts`'te
+`YAYINCI_PROFILLERI`/`ETIK_REJIMLERI` (Faz 1), `lib/etikGate.ts`+`lib/etikKurallari.ts`+
+`test/etikGate.spec.ts` (Faz 2, deterministik regex denetimi), `lib/mevzuatTakip.ts`+
+`lib/mevzuatTakipSheets.ts`+`scheduled.ts`'e entegre 30 günlük cron sweep (Faz 3), `rakipAnalizi.ts`'in
+hem `handleIcerikStrateji` hem `handleAksiyonAnaliz`'inde `etikDenetimYap` çağrısı + `rakip-analizi.html`'de
+`etikUyariGoster` (Faz 4). `npx tsc --noEmit` + `npx prettier --check` + `npm test` (322/322) temiz;
+commit push edilmiş (origin/main) VE en az iki sonraki `wrangler deploy` ile (19:29, 19:40 UTC
+2026-08-17, sonra 2026-08-18'deki Madde 7/11 deploy'ları da dahil olmak üzere) canlıda. Sadece bu
+dosyaya durum notu düşülmemişti — kod tarafında eksik yok. Kalan: Faz 5/6 (YouTube/Instagram API,
+ayrı roadmap).
