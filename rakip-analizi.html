@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=24">
+<link rel="stylesheet" href="panel.css?v=25">
 </head>
 <body>
 <div class="panel-wrap">
@@ -1079,6 +1079,23 @@
     container.appendChild(input); container.appendChild(select);
   }
 
+  // Madde 9 (2026-08-18, kullanıcı isteği — son hâl): TÜM satırlar artık her zaman DOM'da
+  // (renderRakipListe/renderAramaSonuclari slice ile kesmiyor) — "ilk 3 satır görünürken de"
+  // scroll ile ötesine ulaşılabilsin diye. Kutunun GÖRÜNEN boyu burada, state.visible kadar
+  // satırın GERÇEKTEN ÖLÇÜLMÜŞ (offsetHeight) yüksekliğine göre ayarlanıyor — sabit bir rem/px
+  // tahmini bu sayfadaki satırlara (uzun Not/adres metniyle bir satır ~300px'e çıkabiliyor) göre
+  // güvenilir değildi (bkz. Madde 9'un önceki iki başarısız denemesi). state.visible tüm veri
+  // satırlarını kapsıyorsa (Tümünü Görüntüle) kutu doğal boyuna (yükseklik sınırı yok) açılır.
+  function sayfalamaYukseklikUygula(listEl, state) {
+    var rows = listEl.querySelectorAll('.rakip-row');
+    if (rows.length <= 1) { listEl.style.height = ''; return; } // sadece başlık ya da hiç satır yok
+    var veriSatiriSayisi = rows.length - 1; // rows[0] başlık satırı
+    if (state.visible >= veriSatiriSayisi) { listEl.style.height = ''; return; }
+    var yukseklik = rows[0].offsetHeight;
+    for (var i = 1; i <= state.visible && i < rows.length; i++) yukseklik += rows[i].offsetHeight;
+    listEl.style.height = yukseklik + 'px';
+  }
+
   // Şu ana kadar eklenen (manuel veya haritadan) rakiplerin listesi — bunlar sadece Google
   // Sheet'in RakipAnalizi sekmesinde tutuluyordu, uygulamada görünür bir yer yoktu ("Eklendi"
   // yazıyor ama nereye eklendiği belli değildi).
@@ -1206,11 +1223,13 @@
       renderRakipListe();
     }, true);
 
-    // Görünür N satırın tam altında, SIRADAKİ tek satır kısmen/soluk bir "önizleme" olarak
-    // gösteriliyor; onun ötesindekiler hiç render edilmiyor (slice ile DOM'a hiç girmiyor).
-    rakipler.slice(0, rakipListeState.visible + 1).forEach(function (r, i) {
+    // Madde 9 (2026-08-18, kullanıcı isteği — son hâl): TÜM satırlar her zaman DOM'da — "ilk 3
+    // satır görünürken de" scroll ile ötesine ulaşılabilsin diye artık slice ile kesilmiyor.
+    // Kutunun GÖRÜNEN boyu (kaç satırlık "pencere" hissi vereceği) render sonunda
+    // sayfalamaYukseklikUygula() ile GERÇEK ölçülmüş satır yüksekliklerine göre ayarlanıyor.
+    rakipler.forEach(function (r, i) {
       var row = document.createElement('div');
-      row.className = 'rakip-row' + (i === rakipListeState.visible ? ' silik-onizleme' : '');
+      row.className = 'rakip-row';
       var duzenleniyor = rakipListeDuzenlemeId === r.id;
 
       var checkboxSpan = document.createElement('span');
@@ -1286,6 +1305,7 @@
 
     sayfalamaButonlariCiz(toggleWrap, rakipListeState, rakipler.length, renderRakipListe);
     sayfalamaManuelKontrolCiz(manuelSayfalama, rakipListeState, rakipler.length, renderRakipListe);
+    sayfalamaYukseklikUygula(list, rakipListeState);
   }
   rakipListeFiltreleriKur();
 
@@ -2114,11 +2134,11 @@
       renderAramaSonuclari();
     });
 
-    // slice(0, N) sıralamayı bozmuyor, forEach'teki i == orijinal dizideki index (rakipAramaSecili
-    // anahtarları bu index'i kullanıyor).
-    places.slice(0, rakipAramaState.visible + 1).forEach(function (p, i) {
+    // Madde 9 (2026-08-18) — dalRaporGecmis'teki aynı desen: TÜM sonuçlar her zaman DOM'da, kutunun
+    // görünen boyu sayfalamaYukseklikUygula() ile ölçülüp ayarlanıyor (bkz. renderRakipListe).
+    places.forEach(function (p, i) {
       var row = document.createElement('div');
-      row.className = 'rakip-row' + (i === rakipAramaState.visible ? ' silik-onizleme' : '');
+      row.className = 'rakip-row';
 
       var aksiyonSpan = document.createElement('span');
       var checkbox = document.createElement('input');
@@ -2141,6 +2161,7 @@
 
     sayfalamaButonlariCiz(toggleWrap, rakipAramaState, places.length, renderAramaSonuclari);
     sayfalamaManuelKontrolCiz(manuelSayfalama, rakipAramaState, places.length, renderAramaSonuclari);
+    sayfalamaYukseklikUygula(list, rakipAramaState);
   }
 
   // "Seçilenleri Sil" (2026-08-17, kullanıcı isteği) — Kayıtlı Rakipler'e EKLEMEDEN, sadece bu
