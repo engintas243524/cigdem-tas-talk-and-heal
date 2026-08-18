@@ -2037,7 +2037,8 @@ metni içermeli, uzunluğu önerilen formatla (kısa-form 60-90sn — JMIR/PubMe
 form konunun derinliğine uygun makul süre) orantılı olmalı ve metnin altında tahmini süre
 belirtilmeli. Bu prompt hem `/icerik-strateji` uç noktasında hem Otomatik Rakip Takibi'nin
 `icerikRaporu` üretiminde (aynı sabiti paylaşıyorlar) otomatik olarak geçerli. `npx tsc --noEmit` +
-`npx prettier --check` + `npm test` (322/322) temiz. Canlı bir rapor üretilerek uçtan uca
+`npx prettier --check` + `npm test` (322/322) temiz. `wrangler deploy` ile canlıya alındı
+(Version ID: 4ab99dfc-c4a4-420c-8634-40ebb8a47bca). Canlı bir rapor üretilerek uçtan uca
 DENENMEDİ (kota tüketmemek için, kullanıcının standing talimatı) — bir sonraki gerçek rapor
 üretiminde çıktı gözle doğrulanabilir.
 
