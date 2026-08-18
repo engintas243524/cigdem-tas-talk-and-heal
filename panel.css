@@ -263,6 +263,9 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
 .rapor-karti-govde.hidden { display: none; }
 .rapor-karti-metin { white-space: pre-wrap; margin: 0 0 0.6rem; }
 .rapor-karti-toggle { margin-top: 0.7rem; padding: 0.4rem 0.9rem; font-size: 0.8rem; }
+/* Madde 10 (2026-08-18) — NotebookLM yönlendirme butonları, rapor kartının indir/paylaş
+   butonlarından görsel olarak ayrışsın diye üstte ince bir çizgiyle bölünüyor. */
+.notebooklm-yonlendirme { margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px dashed var(--border); }
 
 /* Harita — sağda dikey zoom scroll (2026-08-17, kullanıcı isteği). Native <input type=range>,
    Chrome/Safari için -webkit-appearance:slider-vertical, Firefox için writing-mode ile dikeye

@@ -2082,6 +2082,16 @@ tarayıcı önbelleği üst üste binebiliyor — deploy sonrası canlı testte 
 param ile HTML'i zorla taze çekmek gerekebilir, aksi halde CSS/JS güncellemesi doğrulanırken
 yanlışlıkla eski davranış test edilip yanlış sonuca varılabilir.
 
-Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7, 8 ve 9 YAPILDI.
-Madde 2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü, Madde 5 eki (çok formatlı indirme)
-yapıldı, Madde 6 KAPANDI (yanlış anlaşılmaydı) — kalanlar (10, 11) sırada.
+Madde 10 durumu (2026-08-18): YAPILDI — `raporKartiAksiyonlarEkle` (rakip-analizi.html) artık
+mevcut İndir/WhatsApp/E-posta/Paylaş butonlarının altına, ince kesikli bir çizgiyle ayrılmış 4
+NotebookLM yönlendirme butonu ekliyor: "Sunum (PPTX)", "Videolu Özet", "Veri Tablosu", "Sesli
+Özet". NotebookLM'in genel bir API'si olmadığı için tıklanınca rapor metni panoya kopyalanıyor
+(`navigator.clipboard.writeText`), `notebooklm.google.com` yeni sekmede açılıyor, altta hangi
+Stüdyo-paneli özelliğinin kullanılacağına dair kısa bir ipucu metni beliriyor. Bu fonksiyon HEM
+Aksiyon/Hedef Analizi + Görsel/Video Stratejisi HEM Otomatik Rakip Takibi raporlarında ortak
+kullanıldığı için (Madde 4'ten beri) tek değişiklikle ikisinde de görünür oldu — kullanıcının
+"hem ... hem ..." isteğiyle birebir örtüşüyor. `panel.css?v=26`.
+
+Durum: TAMAMLANMADI — YouTube/Instagram API işinden sonra sırada. Madde 1, 4, 7, 8, 9 ve 10
+YAPILDI. Madde 2 ASKIDA (yukarı bakınız). Madde 3 tamamen çözüldü, Madde 5 eki (çok formatlı
+indirme) yapıldı, Madde 6 KAPANDI (yanlış anlaşılmaydı) — kalan: 11.

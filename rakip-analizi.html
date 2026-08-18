@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css?v=95">
-<link rel="stylesheet" href="panel.css?v=25">
+<link rel="stylesheet" href="panel.css?v=26">
 </head>
 <body>
 <div class="panel-wrap">
@@ -856,6 +856,52 @@
     }
 
     govde.appendChild(aksiyonlar);
+
+    // Madde 10 (2026-08-18, kullanıcı isteği, birebir): rapor Sunum/Videolu Özet/Veri Tablosu/
+    // Sesli Özet formatlarına dönüştürülsün diye kullanıcı NotebookLM'e MANUEL yönlendirilir —
+    // NotebookLM'in bunun için genel bir API'si yok (Faz 5/6'daki YouTube/Instagram API'lerinin
+    // aksine). Buton rapor metnini panoya kopyalar, NotebookLM'i yeni sekmede açar; kullanıcı
+    // orada "Kaynak ekle" → "Yapıştırılan metin" ile ekleyip Stüdyo panelinden ilgili formatı
+    // kendi üretir. Bu bölüm hem Aksiyon/Hedef Analizi + Görsel/Video Stratejisi hem de Otomatik
+    // Rakip Takibi raporlarında görünür — ikisi de bu AYNI raporKartiAksiyonlarEkle'yi kullanıyor.
+    var notebookLmWrap = document.createElement('div');
+    notebookLmWrap.className = 'notebooklm-yonlendirme';
+    var notebookLmBaslik = document.createElement('p');
+    notebookLmBaslik.className = 'muted';
+    notebookLmBaslik.textContent = 'Bu raporu NotebookLM\'de dönüştür (rapor metni panoya kopyalanır, NotebookLM yeni sekmede açılır — orada "Kaynak ekle" ile yapıştır):';
+    notebookLmWrap.appendChild(notebookLmBaslik);
+
+    var notebookLmAksiyonlar = document.createElement('div');
+    notebookLmAksiyonlar.className = 'actions';
+    var notebookLmDurum = document.createElement('p');
+    notebookLmDurum.className = 'muted hidden';
+
+    var NOTEBOOKLM_FORMATLAR = [
+      { etiket: 'Sunum (PPTX)', ipucu: 'Stüdyo panelinden bir sunum/rapor formatı oluştur.' },
+      { etiket: 'Videolu Özet', ipucu: 'Stüdyo panelinden "Video Özeti" oluştur.' },
+      { etiket: 'Veri Tablosu', ipucu: 'Stüdyo panelinden bir tablo/rapor formatı oluştur.' },
+      { etiket: 'Sesli Özet', ipucu: 'Stüdyo panelinden "Ses Özeti" (podcast tarzı) oluştur.' },
+    ];
+    NOTEBOOKLM_FORMATLAR.forEach(function (f) {
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn-secondary'; btn.textContent = 'NotebookLM: ' + f.etiket;
+      btn.addEventListener('click', function () {
+        function ac() {
+          window.open('https://notebooklm.google.com/', '_blank');
+          notebookLmDurum.textContent = 'Rapor metni panoya kopyalandı. NotebookLM açıldı — yeni not defterinde "Kaynak ekle" → "Yapıştırılan metin" ile ekle, sonra ' + f.ipucu;
+          notebookLmDurum.classList.remove('hidden');
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(metin).then(ac).catch(ac);
+        } else {
+          ac();
+        }
+      });
+      notebookLmAksiyonlar.appendChild(btn);
+    });
+    notebookLmWrap.appendChild(notebookLmAksiyonlar);
+    notebookLmWrap.appendChild(notebookLmDurum);
+    govde.appendChild(notebookLmWrap);
   }
 
   var GRAFIK_RENKLER = ['#7C9C4A', '#C97452', '#5B7FA6', '#B08BBB', '#D4A94B'];
