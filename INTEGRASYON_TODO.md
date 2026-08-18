@@ -666,9 +666,20 @@ sorgulandı: 4 booking şablonu (`randevu_onay_danisan`, `randevu_hatirlatma_dan
 - [ ] "onay mesajı gönderildi" bildirimi (Selen'e, hatırlatma sonrası) — henüz test EDİLEMEDİ,
       bu ayrı bir şablon (`hatirlatma_gonderildi_bildirimi`), sadece hatırlatma cron'u
       tetiklenince gönderiliyor (aşağıdaki maddeye bağlı).
-- [ ] WhatsApp'a ilk mesaj → otomatik karşılama + randevu sayfası linki — henüz test EDİLMEDİ,
-      gerçek bir WhatsApp'tan test numarasına mesaj atılması gerekiyor (Claude bunu
-      başlatamaz, insan katılımı gerekli).
+- [x] WhatsApp'a ilk mesaj → otomatik karşılama + randevu sayfası linki — **DOĞRULANDI**
+      (2026-08-19), ama yolda gerçek bir bug bulunup düzeltildi: webhook Meta App Dashboard'da
+      hiç kurulmamıştı (Callback URL/Verify token boş) VE WABA, "Talk and Heal" uygulaması
+      yerine Meta'nın varsayılan `WA DevX Webhook Events 1P App`'ine (id 2202427980234937) abone
+      olmuş durumdaydı — bu yüzden outbound (bize giden) mesajlar hep çalışırken inbound hiç
+      tetiklenmiyordu. Düzeltme: (1) Meta Dashboard → Talk and Heal app → Connect on WhatsApp →
+      Step 2 → Configure Webhooks'a Callback URL (`https://form-backend.engintass19-358.workers.dev/webhook/whatsapp`)
+      + `.dev.vars`'taki `WHATSAPP_VERIFY_TOKEN` girildi; (2) `POST /{waba-id}/subscribed_apps`
+      Graph API çağrısıyla WABA, "Talk and Heal" uygulamasına da abone edildi (artık ikisi de
+      listede). Gerçek telefondan (905373220224) atılan "Test6" mesajına otomatik karşılama
+      yanıtı geldiği ekran görüntüsüyle doğrulandı. `wrangler tail` bu ortamda kararsız
+      (tekrarlayan EPROTO/TLS hataları) — doğrulama, Worker'a doğrudan sahte bir webhook payload'ı
+      curl ile POST edip önce kod tarafını izole test ederek, sonra gerçek mesajla teyit ederek
+      yapıldı.
 - [ ] Cron job'ı manuel tetikleyip gün-öncesi hatırlatma mesajının doğru saatte/formatta
       gittiğini doğrula — henüz test EDİLMEDİ. Yukarıdaki test kaydı (2026-08-20 08:00 UTC
       randevu) doğal cron ile hatırlatma tetiklenmeden önce silinebilir/beklenebilir; canlı
