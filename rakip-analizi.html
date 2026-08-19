@@ -1975,6 +1975,12 @@
   var rakipHaritaRenk = {}; // dizideki index -> 'blue' | 'red' (beyaz = hiç kaydı yok) — TEK renk kaynağı
   var haritaEklenenId = {}; // dizideki index -> haritadan tıklanarak Kayıtlı Rakipler'e eklenen rakibin id'si (silmek için gerekli)
   var haritaIslemKilit = {}; // dizideki index -> true iken o rakip için ekle/sil isteği hâlâ sürüyor demektir
+  // "Seçilenleri Sil" (Arama Sonuçları) artık rakipAramaSonuclariCache'i SPLICE ETMİYOR (2026-08-20,
+  // kullanıcı geri bildirimi: "haritadan hiçbir şekilde rakip silinmemeli, mevcut renginin
+  // değişmesi yeterli" — splice haritadaki markerı da tamamen kaybettiriyordu, sadece kırmızıya
+  // dönmesi gerekirken). Bunun yerine sadece TABLODAN gizler — harita haritaCiz() ile tüm
+  // rakipAramaSonuclariCache'i dolaşmaya devam eder, marker'lar kalıcı kalır.
+  var rakipSonuclarGizli = {}; // dizideki index -> true ise Arama Sonuçları tablosunda gösterilmez
 
   // Sayfa refresh'inde harita/arama sonuçlarının kaybolmaması için (2026-08-19, kullanıcı
   // isteği) — bu 6 state değişkeni tamamen bellek-içiydi, F5'te sıfırlanıyordu. sessionStorage
@@ -1986,7 +1992,7 @@
     try {
       sessionStorage.setItem(RAKIP_ARAMA_STATE_KEY, JSON.stringify({
         baglam: rakipAramaBaglam, sonuclar: rakipAramaSonuclariCache, secili: rakipAramaSecili,
-        renk: rakipHaritaRenk, eklenenId: haritaEklenenId, sayfalama: rakipAramaState,
+        renk: rakipHaritaRenk, eklenenId: haritaEklenenId, sayfalama: rakipAramaState, gizli: rakipSonuclarGizli,
       }));
     } catch (e) { /* sessionStorage dolu/erişilemez olabilir — sadece harita kalıcılığı, sessizce vazgeç */ }
   }
@@ -2002,6 +2008,7 @@
     rakipAramaSecili = data.secili || {};
     rakipHaritaRenk = data.renk || {};
     haritaEklenenId = data.eklenenId || {};
+    rakipSonuclarGizli = data.gizli || {};
     rakipAramaState = data.sayfalama || { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
     // 2026-08-20 düzeltme (kullanıcı geri bildirimi): harita/sonuçlar geri geliyordu ama arama
     // kutuları (adres/terim/yarıçap/azami sonuç) boş kalıyordu — "kriterler siliniyor" hissi
@@ -2292,24 +2299,34 @@
     var list = el('rakipSonuclar'), toggleWrap = el('rakipSonuclarToggleWrap');
     var manuelSayfalama = el('rakipSonuclarManuelSayfalama');
     var places = rakipAramaSonuclariCache;
+    // Tabloda gösterilecek indeksler — "Seçilenleri Sil" ile gizlenmiş olanlar hariç. Harita
+    // (haritaCiz) bundan bağımsız, TÜM places'i dolaşmaya devam eder (marker'lar hep kalıcı).
+    var gorunurIndeksler = [];
+    places.forEach(function (p, i) { if (!rakipSonuclarGizli[i]) gorunurIndeksler.push(i); });
     list.innerHTML = '';
-    el('rakipSonuclarBaslik').classList.toggle('hidden', places.length === 0);
+    el('rakipSonuclarBaslik').classList.toggle('hidden', gorunurIndeksler.length === 0);
     updateRakipSonuclarTopluBtn();
     haritaCiz();
     rakipAramaStateKaydet();
-    if (!places.length) { toggleWrap.innerHTML = ''; manuelSayfalama.innerHTML = ''; return; }
+    if (!gorunurIndeksler.length) { toggleWrap.innerHTML = ''; manuelSayfalama.innerHTML = ''; return; }
 
-    var tumSecili = places.length > 0 && places.every(function (p, i) { return !!rakipAramaSecili[i]; });
+    var tumSecili = gorunurIndeksler.every(function (i) { return !!rakipAramaSecili[i]; });
     rakipTabloBasligiCiz(list, tumSecili, function (checked) {
-      places.forEach(function (p, i) { if (checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; } });
+      gorunurIndeksler.forEach(function (i) { if (checked) { rakipAramaSecili[i] = true; } else { delete rakipAramaSecili[i]; } });
       renderAramaSonuclari();
     });
 
-    // Madde 9 (2026-08-18) — dalRaporGecmis'teki aynı desen: TÜM sonuçlar her zaman DOM'da, kutunun
-    // görünen boyu sayfalamaYukseklikUygula() ile ölçülüp ayarlanıyor (bkz. renderRakipListe).
-    places.forEach(function (p, i) {
+    // Madde 9 (2026-08-18) — dalRaporGecmis'teki aynı desen: TÜM (görünür) sonuçlar her zaman
+    // DOM'da, kutunun görünen boyu sayfalamaYukseklikUygula() ile ölçülüp ayarlanıyor (bkz.
+    // renderRakipListe).
+    gorunurIndeksler.forEach(function (i) {
+      var p = places[i];
       var row = document.createElement('div');
       row.className = 'rakip-row';
+      // Gizlenen satırlar artık DOM pozisyonu ile dizi index'ini AYRIŞTIRABİLİR (2026-08-20) —
+      // "Seçilenleri Ekle" toplu butonu bu gerçek index'e ihtiyaç duyuyor (bkz. aşağıdaki
+      // gorunurButonlar eşleştirmesi, artık DOM sırası yerine bunu okuyor).
+      row.dataset.index = i;
 
       var aksiyonSpan = document.createElement('span');
       var checkbox = document.createElement('input');
@@ -2336,22 +2353,22 @@
       list.appendChild(row);
     });
 
-    sayfalamaButonlariCiz(toggleWrap, rakipAramaState, places.length, renderAramaSonuclari);
-    sayfalamaManuelKontrolCiz(manuelSayfalama, rakipAramaState, places.length, renderAramaSonuclari);
+    sayfalamaButonlariCiz(toggleWrap, rakipAramaState, gorunurIndeksler.length, renderAramaSonuclari);
+    sayfalamaManuelKontrolCiz(manuelSayfalama, rakipAramaState, gorunurIndeksler.length, renderAramaSonuclari);
     sayfalamaYukseklikUygula(list, rakipAramaState);
   }
 
   // "Seçilenleri Sil" (2026-08-17, kullanıcı isteği) — Kayıtlı Rakipler'e EKLEMEDEN, sadece bu
-  // arama sonuçları listesinden istenmeyen satırları çıkarıp listeyi temizlemek için. Backend'e
-  // hiçbir istek gitmiyor (henüz kaydedilmemiş, sadece ekrandaki geçici arama sonucu), o yüzden
-  // sil işlemi anında/senkron — indeksleri büyükten küçüğe sırayla splice ederek kaydırma hatasını
-  // önlüyoruz.
+  // arama sonuçları TABLOSUNDAN istenmeyen satırları gizleyip listeyi temizlemek için. Backend'e
+  // hiçbir istek gitmiyor. 2026-08-20 düzeltmesi (kullanıcı geri bildirimi: "haritadan hiçbir
+  // şekilde rakip silinmemeli, mevcut renginin değişmesi yeterli") — ARTIK rakipAramaSonuclariCache'i
+  // splice ETMİYORUZ (bu, haritadaki marker'ı da tamamen kaybettiriyordu ve indeksleri kaydırıp
+  // rakipHaritaRenk/haritaEklenenId'yi tüm diziler için sıfırlamayı gerektiriyordu). Sadece
+  // rakipSonuclarGizli[i]=true işaretlenir — harita (haritaCiz) hâlâ TAM diziyi dolaşır, marker
+  // ve rengi (mavi/kırmızı/beyaz — gerçek Kayıtlı Rakipler durumunu yansıtır) kalıcı kalır.
   el('rakipSonuclarTopluSilBtn').addEventListener('click', function () {
-    var indeksler = Object.keys(rakipAramaSecili).map(Number).sort(function (a, b) { return b - a; });
-    indeksler.forEach(function (i) { rakipAramaSonuclariCache.splice(i, 1); });
+    Object.keys(rakipAramaSecili).forEach(function (i) { rakipSonuclarGizli[i] = true; });
     rakipAramaSecili = {};
-    rakipHaritaRenk = {};
-    haritaEklenenId = {};
     rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
     renderAramaSonuclari();
   });
@@ -2360,13 +2377,13 @@
     var btn = el('rakipSonuclarTopluEkleBtn');
     if (btn.disabled) return;
     btn.disabled = true;
-    // Sayfalama yüzünden seçili satırların hepsi DOM'da render edilmiş olmayabilir — şu an
-    // render edilmiş satırların butonlarını sırayla eşleştiriyoruz (rendered row i == orijinal
-    // dizideki index i, çünkü slice(0, N) sırayı bozmuyor); DOM'da olmayanlar için buton yok,
-    // sadece istek gönderilir.
+    // Gizlenmiş ("Seçilenleri Sil") satırlar yüzünden DOM pozisyonu artık gerçek dizi index'iyle
+    // birebir örtüşmeyebilir (2026-08-20) — her satırın kendi data-index'inden (bkz.
+    // renderAramaSonuclari) gerçek index'e göre eşleştiriyoruz. Sayfalama nedeniyle DOM'da hiç
+    // olmayan seçili satırlar için buton yok, sadece istek gönderilir.
     var gorunurButonlar = {};
-    Array.prototype.forEach.call(el('rakipSonuclar').querySelectorAll('.rakip-row:not(.head)'), function (rowEl, i) {
-      gorunurButonlar[i] = rowEl.querySelector('button');
+    Array.prototype.forEach.call(el('rakipSonuclar').querySelectorAll('.rakip-row:not(.head)'), function (rowEl) {
+      gorunurButonlar[rowEl.dataset.index] = rowEl.querySelector('button');
     });
     var indeksler = Object.keys(rakipAramaSecili).map(Number);
     var istekler = indeksler.map(function (i) {
@@ -2403,6 +2420,7 @@
       rakipAramaSecili = {};
       rakipHaritaRenk = {};
       haritaEklenenId = {};
+      rakipSonuclarGizli = {};
       renderAramaSonuclari();
       if (!places.length) { setStatus(el('rakipAraStatus'), 'Bu konum/yarıçapta sonuç bulunamadı.', ''); return; }
       var mesaj = places.length + ' sonuç bulundu.';
