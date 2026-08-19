@@ -19,4 +19,12 @@
 	"triggers": {
 		"crons": ["*/15 * * * *"],
 	},
+	// R2 HAS local emulation in @cloudflare/vitest-pool-workers (unlike AI above) — safe to
+	// declare here, tests get a real in-memory bucket, no wrangler login/remote proxy needed.
+	"r2_buckets": [
+		{
+			"binding": "MEDIA_BUCKET",
+			"bucket_name": "talk-and-heal-medya",
+		},
+	],
 }

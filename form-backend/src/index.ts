@@ -38,6 +38,7 @@ import {
 	handlePanelEventSil,
 } from './routes/events';
 import { handleBlogListe, handlePanelBlogListe, handlePanelBlogEkle, handlePanelBlogGuncelle, handlePanelBlogSil } from './routes/blog';
+import { handlePanelMedyaYukle, handleMedyaServis } from './routes/media';
 import {
 	runReminderSweep,
 	runSessionNoteFallback,
@@ -56,6 +57,13 @@ export default {
 
 		if (request.method === 'OPTIONS') {
 			return new Response(null, { headers: corsHeaders(request) });
+		}
+
+		// GET /media/:key (Madde 5/6, 2026-08-19) — değişken path segmenti taşıdığı için aşağıdaki
+		// switch'in tam-eşleşme desenine uymuyor, o yüzden switch'e girmeden önce ayrıca kontrol
+		// ediliyor. PUBLIC — bloglara/etkinliklere gömülen <img> src'i.
+		if (request.method === 'GET' && url.pathname.startsWith('/media/')) {
+			return handleMedyaServis(request, env);
 		}
 
 		switch (key) {
@@ -147,6 +155,8 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handlePanelBlogGuncelle(request, env);
 			case 'POST /panel/blog-posts-sil':
 				return (await requirePanelAuth(request, env)) ?? handlePanelBlogSil(request, env);
+			case 'POST /panel/medya-yukle':
+				return (await requirePanelAuth(request, env)) ?? handlePanelMedyaYukle(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}

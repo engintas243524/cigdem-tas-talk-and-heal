@@ -30,6 +30,9 @@ export interface Env {
 	// 10. Aşama (İzleme, 2026-08-19): shared secret Uptime Kuma's generic webhook must pass as
 	// ?secret=... — without this, anyone who finds the URL could trigger paid WhatsApp sends.
 	UPTIME_WEBHOOK_SECRET: string;
+	// Blog/Etkinlik medya deposu (Madde 5/6, 2026-08-19, kullanıcı onayı) — R2 bucket, bkz.
+	// lib/media.ts + routes/media.ts.
+	MEDIA_BUCKET: R2Bucket;
 }
 
 export interface BookingRequest {

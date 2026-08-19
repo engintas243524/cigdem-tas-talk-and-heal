@@ -201,7 +201,12 @@
     </div>
     <div class="field hidden" id="eventGorselUrlField">
       <label for="eventGorselUrl">Görsel Linki</label>
-      <input type="text" id="eventGorselUrl" placeholder="https://... (zaten barındırdığın bir görselin linki)" />
+      <div class="row">
+        <input type="text" id="eventGorselUrl" class="grow" placeholder="https://... ya da aşağıdan cihazdan yükle" />
+        <label class="btn-secondary" for="eventGorselDosya">Cihazdan Yükle</label>
+        <input type="file" id="eventGorselDosya" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" />
+      </div>
+      <p class="status" id="eventGorselYukleStatus"></p>
     </div>
     <div class="actions">
       <button class="btn-primary" id="eventAddBtn" type="button">Ekle</button>
@@ -288,7 +293,12 @@
     </div>
     <div class="field hidden" id="blogGorselUrlField">
       <label for="blogGorselUrl">Görsel Linki</label>
-      <input type="text" id="blogGorselUrl" placeholder="https://... (zaten barındırdığın bir görselin linki)" />
+      <div class="row">
+        <input type="text" id="blogGorselUrl" class="grow" placeholder="https://... ya da aşağıdan cihazdan yükle" />
+        <label class="btn-secondary" for="blogGorselDosya">Cihazdan Yükle</label>
+        <input type="file" id="blogGorselDosya" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" />
+      </div>
+      <p class="status" id="blogGorselYukleStatus"></p>
     </div>
     <!-- Gerçek video dosyası yükleme değil — YouTube'a yüklenen videonun linki (bkz. config.ts
          BLOG_COLUMNS notu: bu proje henüz bir dosya depolama altyapısı kurmadı). -->
@@ -1074,6 +1084,43 @@
   });
   blogIceAktarDropZone.addEventListener('drop', function (e) {
     if (e.dataTransfer && e.dataTransfer.files) Array.prototype.forEach.call(e.dataTransfer.files, blogDosyaIceAktar);
+  });
+
+  // Cihazdan görsel yükleme (2026-08-19, kullanıcı onayı: Cloudflare R2 kuruldu) — dosyayı
+  // base64'e çevirip /panel/medya-yukle'ye POST eder, dönen R2 URL'ini ilgili "Görsel Linki"
+  // metin kutusuna otomatik yazar. Etkinlikler ve Blog Paneli'nde AYNI fonksiyon reuse ediliyor.
+  function medyaYukleVeAlanaYaz(file, urlInputEl, statusEl) {
+    var izinliTurler = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (izinliTurler.indexOf(file.type) === -1) {
+      setStatus(statusEl, 'Desteklenmeyen görsel türü. Sadece JPEG/PNG/WEBP/GIF.', 'err');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setStatus(statusEl, 'Görsel çok büyük (azami 8MB).', 'err');
+      return;
+    }
+    setStatus(statusEl, file.name + ' yükleniyor...', '');
+    var reader = new FileReader();
+    reader.onload = function () {
+      var base64 = String(reader.result).split(',')[1];
+      authFetch('/panel/medya-yukle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ veri: base64, mimeType: file.type }) })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          if (!res.ok) { setStatus(statusEl, res.data.error || 'Yüklenemedi.', 'err'); return; }
+          urlInputEl.value = res.data.url;
+          setStatus(statusEl, 'Yüklendi.', 'ok');
+        })
+        .catch(function (e) { if (e.message !== 'unauthorized') setStatus(statusEl, 'Yüklenemedi, tekrar deneyin.', 'err'); });
+    };
+    reader.readAsDataURL(file);
+  }
+  el('eventGorselDosya').addEventListener('change', function () {
+    if (this.files[0]) medyaYukleVeAlanaYaz(this.files[0], el('eventGorselUrl'), el('eventGorselYukleStatus'));
+    this.value = '';
+  });
+  el('blogGorselDosya').addEventListener('change', function () {
+    if (this.files[0]) medyaYukleVeAlanaYaz(this.files[0], el('blogGorselUrl'), el('blogGorselYukleStatus'));
+    this.value = '';
   });
 
   // Resume an existing session-token on reload.

@@ -22,6 +22,16 @@
 	"ai": {
 		"binding": "AI",
 	},
+	// Blog/Etkinlik medya deposu (Madde 5/6, 2026-08-19, kullanıcı onayı) — R2 free tier
+	// (10GB/1M-op ücretsiz), egress ücreti yok. Dosyalar Worker'ın kendi GET /media/:key
+	// rotasından servis ediliyor (lib/media.ts, routes/media.ts) — ayrı bir r2.dev/custom domain
+	// kurulumu gerekmedi.
+	"r2_buckets": [
+		{
+			"binding": "MEDIA_BUCKET",
+			"bucket_name": "talk-and-heal-medya",
+		},
+	],
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

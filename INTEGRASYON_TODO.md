@@ -2349,4 +2349,18 @@ test edildi (`npm test` 352/352 yeşil, `tsc --noEmit` temiz) — detaylar:
   yaşanmıştı) — **öneri: Cloudflare R2**, beklenen maliyet $0/ay. Kullanıcı onayı gelince
   `wrangler r2 bucket create` + binding + gerçek dosya yükleme akışı eklenecek.
 
-Değişiklikler henüz push edilmedi — commit/push kararı kullanıcıya sunulacak tablo sonrası.
+Değişiklikler push edildi (`202a994`) ve backend deploy edildi, sonuç tablo halinde sunuldu.
+
+**R2 kararı onaylandı ve kuruldu (2026-08-19, aynı gün, kullanıcı onayı sonrası):** Bucket
+`talk-and-heal-medya` oluşturuldu (`wrangler r2 bucket create`), `MEDIA_BUCKET` binding'i
+wrangler.jsonc + wrangler.test.jsonc'a eklendi (test'ler R2'nin yerel emülasyonunu kullanıyor,
+`wrangler login` gerekmiyor). Yeni: `lib/media.ts` (yükleme/URL üretimi), `routes/media.ts`
+(`POST /panel/medya-yukle` + `GET /media/:key` — ikincisi index.ts'in flat switch'ine
+sığmadığı için prefix kontrolüyle ayrıca yönlendiriliyor). Kapsam BİLEREK sadece görsel
+(JPEG/PNG/WEBP/GIF, azami 8MB) — video hâlâ YouTube linki üzerinden (Madde 6/5'teki videoUrl),
+bir telefon videosu ücretsiz 10GB'ı hızla tüketebileceği için bu gerçek bir dezavantaj değil.
+Panel formlarına (Etkinlikler + Blog) "Cihazdan Yükle" dosya seçici eklendi, yüklenince R2 URL'i
+otomatik "Görsel Linki" kutusuna yazılıyor (URL yapıştırma seçeneği de duruyor, ikisi bir arada).
+`test/media.spec.ts` (6 test, gerçek yükle+servis roundtrip'i dahil) + tüm suite 358/358 yeşil,
+`tsc --noEmit` temiz. Backend deploy edildi, binding canlıda doğrulandı
+(`env.MEDIA_BUCKET (talk-and-heal-medya) R2 Bucket`).
