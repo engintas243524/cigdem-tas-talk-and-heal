@@ -2409,3 +2409,13 @@ otomatik "Görsel Linki" kutusuna yazılıyor (URL yapıştırma seçeneği de d
 **Durum:** Kullanım limiti yaklaştığı için bu oturumda UYGULANMADI, sadece kapsam netleştirildi
 ve birebir kaydedildi. Bir sonraki oturumda buradan devam edilecek — önce Madde 1 (hızlı),
 sonra Madde 2'nin geniş-ekran CSS Grid/flex mimarisi + state senkronizasyonu.
+
+**Durum güncellemesi (2026-08-20): TAMAMLANDI.** Madde 1 (arama kriterleri kalıcılığı — adres/
+terim/yarıçap/azami sonuç artık `rakipAramaBaglam` üzerinden forma geri yazılıyor) ve Madde 2
+(geniş ekranda yatay/çok kolonlu mimari + tam çift yönlü harita/arama-sonuçları/Kayıtlı-Rakipler
+renk senkronizasyonu) iki ayrı commit'te (`41ec5f1`, `b003d5a`) uygulandı ve push edildi. Görsel
+doğrulama (Chrome uzantısı bu oturumda bağlı değildi) yapılamadı — bir sonraki oturumda geniş
+ekranda gerçek tarayıcıda kontrol edilmeli, özellikle: (1) 3 kolonlu grid'in gerçekten
+`min-aspect-ratio:1/1` + `min-width:900px` eşiğinde tetiklendiği, (2) harita/arama-sonuçları/
+Kayıtlı-Rakipler renk senkronunun her 3 yönde de (ekle→mavi, harita-tıkla-sil→kırmızı,
+Kayıtlı-Rakipler'den-toplu-sil→kırmızı) gerçekten çalıştığı.
