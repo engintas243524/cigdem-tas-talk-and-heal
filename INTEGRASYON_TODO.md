@@ -680,11 +680,28 @@ sorgulandı: 4 booking şablonu (`randevu_onay_danisan`, `randevu_hatirlatma_dan
       (tekrarlayan EPROTO/TLS hataları) — doğrulama, Worker'a doğrudan sahte bir webhook payload'ı
       curl ile POST edip önce kod tarafını izole test ederek, sonra gerçek mesajla teyit ederek
       yapıldı.
-- [ ] Cron job'ı manuel tetikleyip gün-öncesi hatırlatma mesajının doğru saatte/formatta
-      gittiğini doğrula — henüz test EDİLMEDİ. Yukarıdaki test kaydı (2026-08-20 08:00 UTC
-      randevu) doğal cron ile hatırlatma tetiklenmeden önce silinebilir/beklenebilir; canlı
-      production cron'u manuel tetiklemenin güvenli bir yolu yok (sadece `wrangler dev` yerelde
-      `/cdn-cgi/handler/scheduled` destekliyor) — istenirse ayrıca ele alınır.
+- [x] Cron job'ı manuel tetikleyip gün-öncesi hatırlatma mesajının doğru saatte/formatta
+      gittiğini doğrula — **DOĞRULANDI** (2026-08-19), ama yolda ayrı, önemli bir bug bulunup
+      düzeltildi: `runReminderSweep`'i yerelde (`tsx`, `.dev.vars` ile, sahte bir gelecek `now`
+      vererek) gerçek Sheets/WhatsApp'a karşı çalıştırdığımızda, mekanizmanın kendisi doğru
+      çalıştığı (3 eski test kaydına — Kazım Çelik, zeytin ağacı'nın 2 seansı — doğru formatta
+      hatırlatma gitti, `reminderSentAt` guard'ı doğru damgalandı, mükerrer yok) ama **QA Test
+      rezervasyonunun o çalıştırmada hiç görünmediği** fark edildi. Kovalanınca kök neden ortaya
+      çıktı: **`.dev.vars`'taki `GOOGLE_SHEET_ID` production Worker'ın gerçekte kullandığından
+      FARKLI bir sheet'e işaret ediyormuş** — `.dev.vars` → "Talk and Heal – Danışan Kayıtları"
+      (121 eski test satırı), production → "Talk and Heal - Randevular" (sadece QA Test'in kendi
+      satırı). Yani bu projenin "yerel `wrangler dev` gerçek servislere karşı çalışır" varsayımı
+      GOOGLE_SHEET_ID özelinde YANLIŞTI — muhtemelen sheet bir noktada production'da migrate
+      edilmiş/değiştirilmiş ama `.dev.vars` hiç güncellenmemiş. Doğrulama yöntemi: panel-auth'lu
+      geçici bir `/panel/debug-sheet-info` endpoint'i eklenip deploy edildi (sadece sheet
+      başlığı/URL'i döndürür, veri değiştirmez), production'ınki ile yerelinki karşılaştırıldı,
+      fark netleşince `.dev.vars` düzeltildi (kullanıcı elle, credential dosyasına otomatik
+      dokunma classifier tarafından bloklandı) ve DOĞRU sheet'te QA Test satırının göründüğü
+      teyit edildi; debug endpoint'i sonra kaldırılıp temiz kod tekrar deploy edildi. Kalıcı etki:
+      önceki oturumlarda `.dev.vars` ile yapılan HERHANGİ bir yerel Sheets testi/doğrulaması
+      (bu dahil, bkz. bu dosyanın diğer "yerelde tsx ile doğrulandı" notları) YANLIŞ sheet'e karşı
+      çalışmış olabilir — gerçek production verisine dokunmadı (o ayrı sheet, zarar yok) ama o
+      testlerin "gerçek prod davranışını yansıttığı" varsayımı gözden geçirilmeli.
 - [ ] 6. Aşama (Test/QA) betiğine yeni endpoint'ler için testler eklenir — bu proje için hiç
       `qa.spec.js`/Playwright QA altyapısı kurulmamış (araştırıldı, dosya yok) — bu madde
       aslında "birkaç test ekleme" değil, sıfırdan bir Playwright/Lighthouse/axe-core kurulumu;
