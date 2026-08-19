@@ -644,6 +644,13 @@ export const EVENTS_COLUMNS = [
 	'ctaLabelEn',
 	'ctaLabelTr',
 	'ctaHref',
+	// Madde 6 (2026-08-19, kullanıcı isteği) — sona eklendi (mevcut kolonları kaydırmamak için,
+	// bkz. CLAUDE.md "yeni kolon" kuralı). gorunum: 'metin' | 'gorsel' | 'ikisi'. gorselUrl şimdilik
+	// gerçek dosya yükleme DEĞİL, Çiğdem'in zaten barındırdığı bir görselin linki — bu projede henüz
+	// bir dosya depolama altyapısı (R2/Drive) kurulmadığı için (bkz. INTEGRASYON_TODO.md Madde 5),
+	// en basit/gerçek çalışan çözüm bu; gerçek "cihazdan yükle" akışı o karar netleşince eklenecek.
+	'gorunum',
+	'gorselUrl',
 ] as const;
 
 export const EVENTS_COLUMN_LABELS: Record<(typeof EVENTS_COLUMNS)[number], string> = {
@@ -661,4 +668,48 @@ export const EVENTS_COLUMN_LABELS: Record<(typeof EVENTS_COLUMNS)[number], strin
 	ctaLabelEn: 'Buton Metni (EN)',
 	ctaLabelTr: 'Buton Metni (TR)',
 	ctaHref: 'Buton Linki',
+	gorunum: 'Görünüm (metin/gorsel/ikisi)',
+	gorselUrl: 'Görsel Linki',
+};
+
+// Blog İçerik Paneli (Madde 5, 2026-08-19, kullanıcı isteği) — Çiğdem'in blog.html'deki 4 gerçek
+// kategoriye (bkz. blog.html #blogGrid data-blog-category) kendi yazı/görsel/video içeriğini
+// eklemesi için. "Tümü" bir İÇERİK kategorisi değil, blog.html'in filtre görünümü — o yüzden
+// burada yok, sadece gerçek 4 kategori var. Slug'lar blog.html'deki data-blog-filter/
+// data-blog-category değerleriyle BİREBİR aynı olmalı (aksi halde yeni yazı hiçbir filtrede
+// görünmez) — bkz. assets/blog-box.js.
+export const BLOG_TAB_NAME = 'BlogYazilari';
+
+export const BLOG_CATEGORIES = ['academic-clinical', 'thought-pieces', 'creative-writing', 'videos-media'] as const;
+export type BlogCategory = (typeof BLOG_CATEGORIES)[number];
+
+export const BLOG_COLUMNS = [
+	'id',
+	'createdAtUtc',
+	'category',
+	'titleEn',
+	'titleTr',
+	'bodyEn',
+	'bodyTr',
+	// gorunum: 'metin' | 'gorsel' | 'ikisi' — events.ts ile AYNI desen/anlam (bkz. o dosyadaki not).
+	'gorunum',
+	'gorselUrl',
+	// videoUrl: YouTube linki (embed edilir) — "Video ve Medya" kategorisi için. Gerçek video
+	// dosyası YÜKLEME değil (bu proje henüz bir dosya depolama altyapısı kurmadı, bkz.
+	// INTEGRASYON_TODO.md Madde 5) — Çiğdem videoyu YouTube'a kendi yükler, buraya sadece linki
+	// yapıştırır. Bu aslında dezavantaj değil: YouTube barındırma zaten ücretsiz/standart.
+	'videoUrl',
+] as const;
+
+export const BLOG_COLUMN_LABELS: Record<(typeof BLOG_COLUMNS)[number], string> = {
+	id: 'ID',
+	createdAtUtc: 'Oluşturulma (UTC)',
+	category: 'Kategori',
+	titleEn: 'Başlık (EN)',
+	titleTr: 'Başlık (TR)',
+	bodyEn: 'Metin (EN)',
+	bodyTr: 'Metin (TR)',
+	gorunum: 'Görünüm (metin/gorsel/ikisi)',
+	gorselUrl: 'Görsel Linki',
+	videoUrl: 'Video Linki (YouTube)',
 };

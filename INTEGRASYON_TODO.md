@@ -2296,3 +2296,57 @@ Durum: BEKLİYOR — 2026-08-19 14:00 görüşmesinde sorulacak. **Güncelleme:*
 veri dizisi değil, gerçek self-service backend'le kuruldu (yukarı bakınız) — panelden gerçek
 etkinlik bilgisi girilince otomatik yayınlanır, ayrıca kod değişikliği gerekmez. Madde 3/4 hâlâ
 gerçek içerik/doğrulama bekliyor.
+
+---
+
+## Kullanıcı İsteği — 2026-08-19 (birebir, 7 maddelik liste, henüz uygulanmadı)
+
+> Şimdi aşağıdakileri bağlam ve öncelik hiyerarşisi ile düzenle ve adım adım yapalım:
+> 1- Rakip analizi sayfasında rakip araması yapıldıktan sonra Sayfa refresh edildiğinde haritanın kaybolmaması gerekiyor. Bunu çözelim.
+> 2- İkincisi, haritada rakibin üzerine bir kere tıkladık mavi ve kayıtlı rakiplere eklendi. İkinci tıklama maviden kırmızıya dönüşü yaptı ama tekrar maviye döndürdüğümüzde altta rakiplere yine aynı rakip ikinci defa eklenmiş oluyor. Bunu da düzeltelim.
+> 3- Veri seti analizinde dosya yükle ekledikten sonra yüklenen dosyanın silinmesi için bir buton ekleyelim. Analiz yapılan her bölüm içinde bu dosya yükle'den sonra yüklenen dosyayı silecek bir buton olsun.
+> 4- Aynı rakibe ait Hem görsel hem de rakip aksiyon analizi tarafında üretilen raporlar ikisi de birbirinin birebir aynısı üretilmiş. Bu kabul edilebilir bir hata değil. İnsanlar görsel analiz istiyorsa görsel bir analiz yapılacak. Rakibin analizi yapılsın istiyorsa, buradan strateji çıkaracaksa, buna göre bir rapor hazırlanacak. Her ikisinin de analiz parametrelerini, raporlama parametrelerini tekrar bir gözden geçirip neden iki aynı rapor üretildiğini tespit edip bunları keskin bir çizgiyle birbirinden ayırmak lazım. Elbette ki kesim kümesi olabilir analizlerin ama birebir aynı çıkması çok yanlış.
+> 5- Şimdi Çiğdem istediği zaman blog sayfasındaki tümü, akademik ve klinik, düşünce yazıları, yaratıcı yazın, video ve medya noktasına aynen etkinliklerde olduğu gibi manuel olarak kendisi otomatik dosyalar, yazılar, görseller, videolar yükleyebileceği bir panel oluşturmamız gerekiyor. Buraya girdiğinde karşısına tümü, akademik ve klinik, düşünce yazıları, yaratıcı yazın, video ve medya olarak farklı seçenekler çıkacak. Hangisine tıklarsa onunla ilgili ne girmek istiyorsa oraya veya sürükle bırakla, içe aktar şeklinde dosyaları ekleyebilecek, yazabilecek, düzenleyebilecek, translate edebilecek, sesli not alabilecek, mikrofon özelliği de bu noktada olması lazım, bir panel daha yapalım ki buradan gerekli eklemeleri yaptığında ekleye bastığında bunlar blog sayfasındaki kendileriyle ilgili başlıklar altında, alt sayfalar altında hemen güncellensin.
+> 6- Etkinlikler bölümüne metinle giriş yapmak yerine ikinci bir alternatif olarak da direkt etkinliğin görselinin eklenerek sayfada paylaşılmasını sağlamamız gerekiyor. İster metni sadece etkinlikler altında görünür, ister görsel görünür, isterse de her ikisi birden görünecek şekilde yeni bir tasarım yapalım.
+> 7- Etkinliği ekle dedikten sonra ana sayfada etkinliğin aslında linkini vermemize rağmen yerinizi ayırtın butonu ikinci oluşturduğumuz etkinlikte minik bir minicik yeşil bir buton olarak görünüyor ve tıkladığımızda 404 hatası veriyor. Bir daha söylüyorum biz gerekli linki yazıp öyle ekle dedik. Ayrıca panele döndüğümüzde en altta etkinlikler yer alıyor.
+> 7- Etkinlik paneli sayfasında en altta kayıtlı herhangi bir Etkinliğin herhangi birisine tıkladığımızda bize etkinlikle ilgili bütün verileri yukarıdaki ilgili kutulara otomatik olarak tekrar doldurup onlar üzerinde gerekli düzenlemeleri tekrardan yapıp etkinlik ile alakalı yeni işlevsel ekleme veya çıkarmalar yapmaya olanak sağlayacak şekilde bir buton tasarımı da yapalım, sadece sil butonu olmasın.
+
+**Durum:** Henüz üzerinde çalışılmadı — bağlam+öncelik hiyerarşisiyle sıralanıp adım adım
+uygulanacak (kullanıcı isteği). Kullanıcının orijinal listesinde madde numarası 7 iki kez
+kullanılmış (iki farklı istek) — birebir metin bu şekilde korunuyor, sıralama/planlama
+aşamasında ayrı ele alınacak.
+
+**Durum güncellemesi (2026-08-19, auto mod uygulaması):** Madde 1,2,3,4,6,7a,7b TAMAMLANDI ve
+test edildi (`npm test` 352/352 yeşil, `tsc --noEmit` temiz) — detaylar:
+- Madde 1: `rakipAramaStateKaydet/Yukle` (sessionStorage) — arama sonrası refresh'te harita artık
+  kaybolmuyor, Google Places'e tekrar ücretli istek atmıyor.
+- Madde 2: `haritaCemberTiklandi` artık renk/id'yi SADECE istek başarıyla dönünce güncelliyor +
+  `haritaIslemKilit` ile aynı rakip için art arda tıklamayı kilitliyor — mükerrer ekleme
+  yarış-durumu kapandı.
+- Madde 3: "Yüklenenleri Sil" butonu (dal + karşılaştırma bölümlerinin ikisinde de).
+- Madde 4: `ICERIK_STRATEJI_SYSTEM_PROMPT`/`AKSIYON_ANALIZ_SYSTEM_PROMPT`'a karşılıklı
+  "bunu ÜRETME, o diğer rapora ait" hariç-tutma cümleleri eklendi.
+- Madde 6: `events.ts`'e `gorunum`/`gorselUrl` kolonları, panel formunda metin/görsel/ikisi seçimi.
+- Madde 7a: `normalizeUrl` (form-backend/src/lib/url.ts) — şemasız link artık otomatik `https://`
+  alıyor, 404 kökeni kapandı. Panel formundaki iki kısayol butonu kaldırılıp header'a taşınmıştı
+  (önceki oturum), bu oturumda ayrıca `.event-cta` "minicik" boyut override'ı kaldırıldı + görünüm
+  değişince `window.scrollTo(0,0)`.
+- Madde 7b: `/panel/events-guncelle` + panelde bir etkinliğe tıklayınca formun dolup "Güncelle"
+  moduna geçmesi.
+- **Madde 5 KISMİ TAMAMLANDI, bir karar bekliyor:** Blog İçerik Paneli (kategori seçimi, TR/EN
+  başlık+metin, mikrofon dikte — mevcut `panel-voice.js` yeniden kullanıldı, TR→EN çeviri —
+  mevcut `/translate` proxy yeniden kullanıldı, dosya sürükle-bırak metin içe aktarma — mevcut
+  `/panel/rakip-analizi/ice-aktar` yeniden kullanıldı, görsel URL alanı, YouTube video embed)
+  TAMAMEN ÇALIŞIR durumda (`form-backend/src/routes/blog.ts`, `lib/blogSheets.ts`,
+  `assets/blog-box.js`, panel.html "Blog Paneli" görünümü). **AÇIK KALAN TEK NOKTA:** cihazdan
+  doğrudan görsel/video DOSYASI yükleme — bu projede henüz bir dosya depolama altyapısı (R2/Drive)
+  yok, o yüzden şu an görsel/video "zaten barındırılan bir linki yapıştır" şeklinde çalışıyor
+  (events.ts Madde 6 ile aynı pragmatik çözüm). Maliyet/performans karşılaştırması (kullanıcının
+  `feedback_arac_arama_maliyet_performans_marj_protokolu` kuralı gereği): **Cloudflare R2**
+  (10GB/1M-op ücretsiz katman, backend zaten Cloudflare Workers'ta çalıştığı için sıfır yeni
+  entegrasyon, egress ücreti yok) vs **Google Drive API** (mevcut Google Cloud projesiyle aynı
+  hesap ama public dosya sunumu için tasarlanmamış, geçmişte "iki hesap karışıklığı" sorunu
+  yaşanmıştı) — **öneri: Cloudflare R2**, beklenen maliyet $0/ay. Kullanıcı onayı gelince
+  `wrangler r2 bucket create` + binding + gerçek dosya yükleme akışı eklenecek.
+
+Değişiklikler henüz push edilmedi — commit/push kararı kullanıcıya sunulacak tablo sonrası.

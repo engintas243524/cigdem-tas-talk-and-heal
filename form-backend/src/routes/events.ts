@@ -1,5 +1,14 @@
 import { errorResponse, json } from '../lib/http';
-import { ensureEventsTab, appendEventRow, getAllEventRows, deleteEventRows, emptyEventRow } from '../lib/eventsSheets';
+import {
+	ensureEventsTab,
+	appendEventRow,
+	updateEventRow,
+	getAllEventRows,
+	deleteEventRows,
+	emptyEventRow,
+	type EventRow,
+} from '../lib/eventsSheets';
+import { normalizeUrl } from '../lib/url';
 import { EVENTS_CATEGORIES, type EventCategory } from '../config';
 import type { Env } from '../types';
 
@@ -27,6 +36,11 @@ export async function handleEventsListe(request: Request, env: Env): Promise<Res
 			ctaLabelEn: row.ctaLabelEn,
 			ctaLabelTr: row.ctaLabelTr,
 			ctaHref: row.ctaHref,
+			// Eski satırlarda (Madde 6 öncesi) bu kolon boş olabilir — 'metin' varsayılanı geriye
+			// dönük uyumluluk için (events-box.js bunu 'metin' gibi davranıyor zaten, ama açıkça
+			// döndürmek daha sağlam).
+			gorunum: row.gorunum || 'metin',
+			gorselUrl: row.gorselUrl,
 		}))
 		.sort((a, b) => a.dateTimeEn.localeCompare(b.dateTimeEn));
 	return json({ events }, request);
@@ -40,6 +54,62 @@ export async function handlePanelEventsListe(request: Request, env: Env): Promis
 	return json({ events }, request);
 }
 
+type EventAlanlari = Pick<
+	EventRow,
+	| 'category'
+	| 'titleEn'
+	| 'titleTr'
+	| 'dateTimeEn'
+	| 'dateTimeTr'
+	| 'formatEn'
+	| 'formatTr'
+	| 'descriptionEn'
+	| 'descriptionTr'
+	| 'ctaLabelEn'
+	| 'ctaLabelTr'
+	| 'ctaHref'
+	| 'gorunum'
+	| 'gorselUrl'
+>;
+
+const EVENT_GORUNUM_DEGERLERI = ['metin', 'gorsel', 'ikisi'] as const;
+
+// Hem ekleme hem güncelleme aynı alan setini/doğrulamasını paylaşıyor (2026-08-19) — iki ayrı
+// yerde birbirinden sapabilecek doğrulama mantığı tutmamak için tek fonksiyon.
+function eventAlanlariniDogrulaVeAyikla(body: Record<string, unknown>): { hata: string } | { alanlar: EventAlanlari } {
+	const category = String(body.category ?? '');
+	if (!EVENTS_CATEGORIES.includes(category as EventCategory)) return { hata: 'Geçersiz kategori.' };
+	const titleEn = String(body.titleEn ?? '').trim();
+	const titleTr = String(body.titleTr ?? '').trim();
+	if (!titleEn || !titleTr) return { hata: 'Başlık (EN ve TR) gerekli.' };
+	const ctaHrefRaw = String(body.ctaHref ?? '').trim();
+	if (!ctaHrefRaw) return { hata: 'Buton linki gerekli.' };
+	const gorunumRaw = String(body.gorunum ?? 'metin');
+	const gorunum = (EVENT_GORUNUM_DEGERLERI as readonly string[]).includes(gorunumRaw) ? gorunumRaw : 'metin';
+	const gorselUrlRaw = String(body.gorselUrl ?? '').trim();
+	if ((gorunum === 'gorsel' || gorunum === 'ikisi') && !gorselUrlRaw) {
+		return { hata: 'Bu görünüm için görsel linki gerekli.' };
+	}
+	return {
+		alanlar: {
+			category,
+			titleEn,
+			titleTr,
+			dateTimeEn: String(body.dateTimeEn ?? '').trim(),
+			dateTimeTr: String(body.dateTimeTr ?? '').trim(),
+			formatEn: String(body.formatEn ?? '').trim(),
+			formatTr: String(body.formatTr ?? '').trim(),
+			descriptionEn: String(body.descriptionEn ?? '').trim(),
+			descriptionTr: String(body.descriptionTr ?? '').trim(),
+			ctaLabelEn: String(body.ctaLabelEn ?? '').trim(),
+			ctaLabelTr: String(body.ctaLabelTr ?? '').trim(),
+			ctaHref: normalizeUrl(ctaHrefRaw),
+			gorunum,
+			gorselUrl: gorselUrlRaw ? normalizeUrl(gorselUrlRaw) : '',
+		},
+	};
+}
+
 // POST /panel/events { category, titleEn, titleTr, dateTimeEn, dateTimeTr, formatEn, formatTr,
 // descriptionEn, descriptionTr, ctaLabelEn, ctaLabelTr, ctaHref }
 export async function handlePanelEventEkle(request: Request, env: Env): Promise<Response> {
@@ -50,35 +120,42 @@ export async function handlePanelEventEkle(request: Request, env: Env): Promise<
 		return errorResponse(request, 400, 'Geçersiz istek.');
 	}
 
-	const category = String(body.category ?? '');
-	if (!EVENTS_CATEGORIES.includes(category as EventCategory)) {
-		return errorResponse(request, 400, 'Geçersiz kategori.');
-	}
-	const titleEn = String(body.titleEn ?? '').trim();
-	const titleTr = String(body.titleTr ?? '').trim();
-	if (!titleEn || !titleTr) return errorResponse(request, 400, 'Başlık (EN ve TR) gerekli.');
-	const ctaHref = String(body.ctaHref ?? '').trim();
-	if (!ctaHref) return errorResponse(request, 400, 'Buton linki gerekli.');
+	const sonuc = eventAlanlariniDogrulaVeAyikla(body);
+	if ('hata' in sonuc) return errorResponse(request, 400, sonuc.hata);
 
 	await ensureEventsTab(env);
 	const row = emptyEventRow();
 	row.id = newId();
 	row.createdAtUtc = new Date().toISOString();
-	row.category = category;
-	row.titleEn = titleEn;
-	row.titleTr = titleTr;
-	row.dateTimeEn = String(body.dateTimeEn ?? '').trim();
-	row.dateTimeTr = String(body.dateTimeTr ?? '').trim();
-	row.formatEn = String(body.formatEn ?? '').trim();
-	row.formatTr = String(body.formatTr ?? '').trim();
-	row.descriptionEn = String(body.descriptionEn ?? '').trim();
-	row.descriptionTr = String(body.descriptionTr ?? '').trim();
-	row.ctaLabelEn = String(body.ctaLabelEn ?? '').trim();
-	row.ctaLabelTr = String(body.ctaLabelTr ?? '').trim();
-	row.ctaHref = ctaHref;
+	Object.assign(row, sonuc.alanlar);
 
 	const rowNumber = await appendEventRow(env, row);
 	return json({ id: row.id, rowNumber }, request);
+}
+
+// POST /panel/events-guncelle { id, category, titleEn, titleTr, dateTimeEn, dateTimeTr, formatEn,
+// formatTr, descriptionEn, descriptionTr, ctaLabelEn, ctaLabelTr, ctaHref } — panelde kayıtlı bir
+// etkinliğe tıklayınca formu doldurup düzenleyebilme (2026-08-19, kullanıcı isteği, Madde 7b).
+export async function handlePanelEventGuncelle(request: Request, env: Env): Promise<Response> {
+	let body: Record<string, unknown>;
+	try {
+		body = (await request.json()) as Record<string, unknown>;
+	} catch {
+		return errorResponse(request, 400, 'Geçersiz istek.');
+	}
+	const id = String(body.id ?? '');
+	if (!id) return errorResponse(request, 400, 'Etkinlik id gerekli.');
+
+	const sonuc = eventAlanlariniDogrulaVeAyikla(body);
+	if ('hata' in sonuc) return errorResponse(request, 400, sonuc.hata);
+
+	await ensureEventsTab(env);
+	const rows = await getAllEventRows(env);
+	const bulunan = rows.find(({ row }) => row.id === id);
+	if (!bulunan) return errorResponse(request, 404, 'Etkinlik bulunamadı.');
+
+	await updateEventRow(env, bulunan.rowNumber, bulunan.row, sonuc.alanlar);
+	return json({ id }, request);
 }
 
 // POST /panel/events-sil { id }

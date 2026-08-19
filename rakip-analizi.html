@@ -219,6 +219,7 @@
       </div>
       <p class="muted hidden" id="dalKarsilastirmaLink"><a href="#rakipTakipField">Zaman içi karşılaştırma raporu (grafikli) mi istiyorsun? →</a></p>
       <button class="btn-secondary" id="dalIceAktarBtn" type="button">Dosya Yükle</button>
+      <button class="btn-secondary hidden" id="dalIceAktarTemizleBtn" type="button" title="Yüklenen tüm dosya/link/metinleri kaldır">Yüklenenleri Sil</button>
       <button class="btn-primary" id="dalGonderBtn" type="button">Rapor Üret</button>
       <div class="status" id="dalStatus"></div>
       <!-- Madde 4 (2026-08-18, kullanıcı isteği): birden çok rapor art arda üretilebildiği için
@@ -349,6 +350,7 @@
         </select>
       </div>
       <button class="btn-secondary" id="karsilastirmaIceAktarBtn" type="button">Dosya Yükle</button>
+      <button class="btn-secondary hidden" id="karsilastirmaIceAktarTemizleBtn" type="button" title="Yüklenen tüm dosya/link/metinleri kaldır">Yüklenenleri Sil</button>
       <button class="btn-primary" id="karsilastirmaUretBtn" type="button">Karşılaştırma Raporu Üret</button>
       <div class="status" id="karsilastirmaStatus"></div>
       <div id="karsilastirmaNarratif" class="muted" style="white-space:pre-wrap;"></div>
@@ -1691,7 +1693,7 @@
     }
   }
 
-  function showApp() { raLoginView.classList.add('hidden'); rakipAnaliziSection.classList.remove('hidden'); loadRakipListe(); loadKullanimSayaci(); loadRakipTakip(); }
+  function showApp() { raLoginView.classList.add('hidden'); rakipAnaliziSection.classList.remove('hidden'); loadRakipListe(); loadKullanimSayaci(); loadRakipTakip(); rakipAramaStateYukle(); }
   function showLogin() { rakipAnaliziSection.classList.add('hidden'); raLoginView.classList.remove('hidden'); }
 
   function setStatus(elm, msg, kind) {
@@ -1937,6 +1939,37 @@
   var haritaMarkerlar = {}; // dizideki index -> google.maps.Marker
   var rakipHaritaRenk = {}; // dizideki index -> 'blue' | 'red' (beyaz = hiç kaydı yok) — TEK renk kaynağı
   var haritaEklenenId = {}; // dizideki index -> haritadan tıklanarak Kayıtlı Rakipler'e eklenen rakibin id'si (silmek için gerekli)
+  var haritaIslemKilit = {}; // dizideki index -> true iken o rakip için ekle/sil isteği hâlâ sürüyor demektir
+
+  // Sayfa refresh'inde harita/arama sonuçlarının kaybolmaması için (2026-08-19, kullanıcı
+  // isteği) — bu 6 state değişkeni tamamen bellek-içiydi, F5'te sıfırlanıyordu. sessionStorage
+  // (sekme kapanınca temizlenir, tıpkı panelToken gibi) kullanıyoruz; localStorage DEĞİL, çünkü
+  // bu veri geçici bir "son arama" görünümü — kalıcı bir kayıt değil. Google Places'e tekrar
+  // ücretli istek atmadan (maliyet), son sonuç kümesini olduğu gibi geri çiziyor.
+  var RAKIP_ARAMA_STATE_KEY = 'rakipAramaState_v1';
+  function rakipAramaStateKaydet() {
+    try {
+      sessionStorage.setItem(RAKIP_ARAMA_STATE_KEY, JSON.stringify({
+        baglam: rakipAramaBaglam, sonuclar: rakipAramaSonuclariCache, secili: rakipAramaSecili,
+        renk: rakipHaritaRenk, eklenenId: haritaEklenenId, sayfalama: rakipAramaState,
+      }));
+    } catch (e) { /* sessionStorage dolu/erişilemez olabilir — sadece harita kalıcılığı, sessizce vazgeç */ }
+  }
+  function rakipAramaStateYukle() {
+    var raw;
+    try { raw = sessionStorage.getItem(RAKIP_ARAMA_STATE_KEY); } catch (e) { return; }
+    if (!raw) return;
+    var data;
+    try { data = JSON.parse(raw); } catch (e) { return; }
+    if (!data || !data.sonuclar || !data.sonuclar.length) return;
+    rakipAramaBaglam = data.baglam || null;
+    rakipAramaSonuclariCache = data.sonuclar || [];
+    rakipAramaSecili = data.secili || {};
+    rakipHaritaRenk = data.renk || {};
+    haritaEklenenId = data.eklenenId || {};
+    rakipAramaState = data.sayfalama || { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
+    renderAramaSonuclari();
+  }
   var haritaInfoWindow = null;
   var haritaYaricapCemberi = null; // google.maps.Circle — arama yarıçapını gösteren yanıp sönen çember
   var haritaYaricapPulseTimer = null;
@@ -2001,6 +2034,7 @@
     else { delete rakipAramaSecili[i]; rakipHaritaRenk[i] = 'red'; }
     updateRakipSonuclarTopluBtn();
     haritaMarkerRengiGuncelle(i);
+    rakipAramaStateKaydet();
   }
 
   // Haritada bir çembere tıklamak (2026-08-17, kullanıcı isteği) GERÇEK bir Kayıtlı Rakipler
@@ -2010,31 +2044,42 @@
   // backend'e İKİNCİ KEZ POST edilip Kayıtlı Rakipler'de mükerrer satır oluşturabilirdi. Bu yüzden
   // harita kendi id defterini (haritaEklenenId) tutuyor; checkbox/bulk akışları bundan bağımsız
   // çalışmaya devam ediyor.
+  //
+  // 2026-08-19 düzeltme: renk (rakipHaritaRenk) ve haritaEklenenId artık SADECE isteğin
+  // sunucudan başarılı dönüşünde güncelleniyor (önceden tıklanır tıklanmaz iyimser/optimistic
+  // güncelleniyordu). Ayrıca haritaIslemKilit[i] aynı rakip için önceki istek bitmeden ikinci
+  // tıklamayı yok sayıyor. Eski davranışta hızlı art arda tıklamada silme isteği henüz
+  // haritaEklenenId'yi doldurmamış ekleme isteğiyle çakışabiliyordu — sonuç, silme hiç
+  // gerçekleşmeden bir sonraki tıklamanın aynı rakibi ikinci kez POST etmesiydi (Kayıtlı
+  // Rakipler'de mükerrer satır). Kilit + yalnızca-başarıda-güncelle bu yarış durumunu kapatıyor.
   function haritaCemberTiklandi(i) {
+    if (haritaIslemKilit[i]) return;
     var p = rakipAramaSonuclariCache[i];
     if (rakipHaritaRenk[i] === 'blue') {
-      rakipHaritaRenk[i] = 'red';
-      haritaMarkerRengiGuncelle(i);
       var id = haritaEklenenId[i];
-      delete haritaEklenenId[i];
-      if (id) {
-        authFetch('/panel/rakip-analizi/rakip-sil', { method: 'POST', body: JSON.stringify({ ids: [id] }) })
-          .then(function () { loadRakipListe(); })
-          .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'den silinemedi, tekrar dene.", 'err'); });
-      }
-    } else if (p) {
-      rakipHaritaRenk[i] = 'blue';
-      haritaMarkerRengiGuncelle(i);
-      tekRakipEkle(p).then(function (data) {
-        haritaEklenenId[i] = data && data.id;
-        loadRakipListe();
-      }).catch(function (e) {
-        if (e.message !== 'unauthorized') {
+      if (!id) return; // ekleme isteği henüz sonuçlanmadıysa silinecek bir kayıt yok
+      haritaIslemKilit[i] = true;
+      authFetch('/panel/rakip-analizi/rakip-sil', { method: 'POST', body: JSON.stringify({ ids: [id] }) })
+        .then(function () {
           rakipHaritaRenk[i] = 'red';
+          delete haritaEklenenId[i];
           haritaMarkerRengiGuncelle(i);
-          setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'e eklenemedi, tekrar dene.", 'err');
-        }
-      });
+          rakipAramaStateKaydet();
+          return loadRakipListe();
+        })
+        .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'den silinemedi, tekrar dene.", 'err'); })
+        .then(function () { haritaIslemKilit[i] = false; }, function () { haritaIslemKilit[i] = false; });
+    } else if (p) {
+      haritaIslemKilit[i] = true;
+      tekRakipEkle(p).then(function (data) {
+        rakipHaritaRenk[i] = 'blue';
+        haritaEklenenId[i] = data && data.id;
+        haritaMarkerRengiGuncelle(i);
+        rakipAramaStateKaydet();
+        return loadRakipListe();
+      }).catch(function (e) {
+        if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'e eklenemedi, tekrar dene.", 'err');
+      }).then(function () { haritaIslemKilit[i] = false; }, function () { haritaIslemKilit[i] = false; });
     }
   }
 
@@ -2172,6 +2217,7 @@
     el('rakipSonuclarBaslik').classList.toggle('hidden', places.length === 0);
     updateRakipSonuclarTopluBtn();
     haritaCiz();
+    rakipAramaStateKaydet();
     if (!places.length) { toggleWrap.innerHTML = ''; manuelSayfalama.innerHTML = ''; return; }
 
     var tumSecili = places.length > 0 && places.every(function (p, i) { return !!rakipAramaSecili[i]; });
@@ -2248,6 +2294,7 @@
       loadRakipListe();
       updateRakipSonuclarTopluBtn();
       haritaCiz();
+      rakipAramaStateKaydet();
     }).finally(function () { btn.disabled = false; });
   });
 
@@ -2341,7 +2388,20 @@
     var etiket = hazir ? 'Dosya Yükle (' + hazir + ')' : 'Dosya Yükle';
     el('dalIceAktarBtn').textContent = etiket;
     el('karsilastirmaIceAktarBtn').textContent = etiket;
+    // Madde 3 (2026-08-19, kullanıcı isteği): modalı tekrar açmadan, bölümün kendi içinden tek
+    // tıkla yüklenen tüm kaynakları (dosya/link/metin) kaldırabilmek için — hiçbir şey
+    // yüklenmemişken buton gizli, en az bir kaynak olduğunda görünür.
+    var varMi = iceAktarilanlar.length > 0;
+    el('dalIceAktarTemizleBtn').classList.toggle('hidden', !varMi);
+    el('karsilastirmaIceAktarTemizleBtn').classList.toggle('hidden', !varMi);
   }
+
+  function iceAktarHepsiniTemizle() {
+    iceAktarilanlar = [];
+    iceAktarListesiCiz();
+  }
+  el('dalIceAktarTemizleBtn').addEventListener('click', iceAktarHepsiniTemizle);
+  el('karsilastirmaIceAktarTemizleBtn').addEventListener('click', iceAktarHepsiniTemizle);
 
   function iceAktarListesiCiz() {
     var wrap = el('iceAktarListe');

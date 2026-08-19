@@ -369,7 +369,14 @@ tarihine göre) görsel/video içerik trendlerini (ör. hangi format/platform ö
 türü daha çok etkileşim alıyor) araştırmak için 2-4 hedefli arama yap. Aramaları verimli kullan
 (aynı şeyi tekrar tekrar arama), bulduğun somut/güncel bilgiyi öneriler içinde açıkça belirt (ör.
 "son aylarda X formatı öne çıkıyor" gibi). Hiçbir güncel sonuç bulamazsan bunu belirtip genel
-bilginle devam et, ama önce mutlaka aramayı dene.${ICERIK_GORSEL_VIDEO_DETAY_TALIMATI}${ICERIK_ETIK_UYARI_METNI}${RAPOR_YAPISI_TALIMATI}`;
+bilginle devam et, ama önce mutlaka aramayı dene.
+Bu rapor Talk and Heal'in AYRI bir "Aksiyon/Hedef Analizi" raporu da var — o rapor sayısal iş
+hedefleri/yol haritası üretiyor. Bu ikisinin birbirinden AYRIŞMASI çok önemli (2026-08-19, kullanıcı
+geri bildirimi: ikisi birbirine çok benzer/aynı çıkmıştı). Bu yüzden SEN bu raporda KESİNLİKLE:
+sayısal randevu/gelir hedefi, haftalık/aylık/3-6-9-12 aylık zaman ufku, "hedef" veya "yol haritası"
+başlıklı bir bölüm ÜRETME — bunlar tamamen diğer rapora ait. Bölüm başlıkların içerik/format bazlı
+olsun (ör. "## Instagram Reels Fikri", "## Blog Yazısı Fikri" gibi somut platform/format adları),
+asla zaman ufku veya iş hedefi bazlı olmasın.${ICERIK_GORSEL_VIDEO_DETAY_TALIMATI}${ICERIK_ETIK_UYARI_METNI}${RAPOR_YAPISI_TALIMATI}`;
 
 export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
@@ -590,7 +597,14 @@ Eğer önceki bir dönemin hedefi verilmişse, "neredeydik / ne yaptık / nerede
 realizasyonu değerlendir; sapma varsa nedenini analiz edip bir sonraki dönem için düzeltilmiş
 hedef/yol haritası öner. Türkçe yaz, somut ve ölçülebilir ol. Sade, gündelik bir dil kullan —
 pazarlama/iş jargonu, uzun karmaşık cümleler ve süslü terimlerden kaçın; hiç bu alanda uzman
-olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.${RAPOR_YAPISI_TALIMATI}`;
+olmayan sıradan bir okuyucunun tek okuyuşta anlayacağı, kısa cümlelerle yaz.
+Bu rapor Talk and Heal'in AYRI bir "Görsel/Video Stratejisi" raporu da var — o rapor sosyal medya
+içerik/post fikirleri üretiyor. Bu ikisinin birbirinden AYRIŞMASI çok önemli (2026-08-19, kullanıcı
+geri bildirimi: ikisi birbirine çok benzer/aynı çıkmıştı). Bu yüzden SEN bu raporda KESİNLİKLE: hazır
+sosyal medya gönderi metni, video senaryosu/replik, kompozisyon/font/renk önerisi ÜRETME — bunlar
+tamamen diğer rapora ait. Bölüm başlıkların zaman ufku ve iş hedefi bazlı olsun (ör. "## Bu Ay",
+"## Önümüzdeki 3 Ay", "## Rakip Karşısında Konumlanma" gibi somut zaman/hedef başlıkları), asla
+içerik fikri/format bazlı olmasın.${RAPOR_YAPISI_TALIMATI}`;
 
 // POST /panel/rakip-analizi/aksiyon-analiz { yorum, rakipIds?, parametreler? } — booking
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses

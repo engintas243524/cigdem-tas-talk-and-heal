@@ -30,7 +30,14 @@ import {
 } from './routes/rakipAnalizi';
 import { handleRakipTakipDurum, handleRakipTakipUret, handleRakipTakipAyar, handleRakipTakipKarsilastirma } from './routes/rakipTakip';
 import { handleKullanimLimitArttir } from './routes/kullanimLimit';
-import { handleEventsListe, handlePanelEventsListe, handlePanelEventEkle, handlePanelEventSil } from './routes/events';
+import {
+	handleEventsListe,
+	handlePanelEventsListe,
+	handlePanelEventEkle,
+	handlePanelEventGuncelle,
+	handlePanelEventSil,
+} from './routes/events';
+import { handleBlogListe, handlePanelBlogListe, handlePanelBlogEkle, handlePanelBlogGuncelle, handlePanelBlogSil } from './routes/blog';
 import {
 	runReminderSweep,
 	runSessionNoteFallback,
@@ -124,8 +131,22 @@ export default {
 				return (await requirePanelAuth(request, env)) ?? handlePanelEventsListe(request, env);
 			case 'POST /panel/events':
 				return (await requirePanelAuth(request, env)) ?? handlePanelEventEkle(request, env);
+			case 'POST /panel/events-guncelle':
+				return (await requirePanelAuth(request, env)) ?? handlePanelEventGuncelle(request, env);
 			case 'POST /panel/events-sil':
 				return (await requirePanelAuth(request, env)) ?? handlePanelEventSil(request, env);
+			// Blog İçerik Paneli (Madde 5, 2026-08-19) — Etkinlikler ile aynı public-read/panel-gated-
+			// write deseni.
+			case 'GET /blog-posts':
+				return handleBlogListe(request, env);
+			case 'GET /panel/blog-posts':
+				return (await requirePanelAuth(request, env)) ?? handlePanelBlogListe(request, env);
+			case 'POST /panel/blog-posts':
+				return (await requirePanelAuth(request, env)) ?? handlePanelBlogEkle(request, env);
+			case 'POST /panel/blog-posts-guncelle':
+				return (await requirePanelAuth(request, env)) ?? handlePanelBlogGuncelle(request, env);
+			case 'POST /panel/blog-posts-sil':
+				return (await requirePanelAuth(request, env)) ?? handlePanelBlogSil(request, env);
 			default:
 				return new Response('Not Found', { status: 404 });
 		}

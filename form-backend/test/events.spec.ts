@@ -111,6 +111,86 @@ describe('POST /panel/events', () => {
 	});
 });
 
+describe('POST /panel/events - ctaHref/gorsel normalization (2026-08-19)', () => {
+	it('prepends https:// to a scheme-less link so the homepage anchor never resolves as a relative path', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/events', {
+			method: 'POST',
+			body: JSON.stringify({ ...samplePayload, ctaHref: 'talkandheal.co.uk/masterclass' }),
+		});
+		expect(response.status).toBe(200);
+		const listResponse = await plainRequest('/events');
+		const data = (await listResponse.json()) as { events: { ctaHref: string }[] };
+		expect(data.events[0].ctaHref).toBe('https://talkandheal.co.uk/masterclass');
+	});
+
+	it('leaves a link with an existing scheme (mailto:) untouched', async () => {
+		stubApis();
+		await authedRequest('/panel/events', { method: 'POST', body: JSON.stringify(samplePayload) });
+		const listResponse = await plainRequest('/events');
+		const data = (await listResponse.json()) as { events: { ctaHref: string }[] };
+		expect(data.events[0].ctaHref).toBe('mailto:test@example.com');
+	});
+
+	it('rejects gorunum: gorsel without a gorselUrl (validation runs before the row is ever appended)', async () => {
+		stubApis();
+		const noImage = await authedRequest('/panel/events', {
+			method: 'POST',
+			body: JSON.stringify({ ...samplePayload, gorunum: 'gorsel' }),
+		});
+		expect(noImage.status).toBe(400);
+		const listResponse = await plainRequest('/events');
+		const data = (await listResponse.json()) as { events: unknown[] };
+		expect(data.events).toHaveLength(0);
+	});
+
+	it('defaults gorunum to metin when omitted, and normalizes a scheme-less gorselUrl', async () => {
+		stubApis();
+		await authedRequest('/panel/events', { method: 'POST', body: JSON.stringify(samplePayload) });
+		const withImage = await authedRequest('/panel/events', {
+			method: 'POST',
+			body: JSON.stringify({ ...samplePayload, gorunum: 'gorsel', gorselUrl: 'cdn.example.com/etkinlik.jpg' }),
+		});
+		expect(withImage.status).toBe(200);
+		const listResponse = await plainRequest('/events');
+		const data = (await listResponse.json()) as { events: { gorunum: string; gorselUrl: string }[] };
+		expect(data.events.find((e) => e.gorunum === 'metin')).toBeTruthy();
+		const gorselEvent = data.events.find((e) => e.gorunum === 'gorsel');
+		expect(gorselEvent?.gorselUrl).toBe('https://cdn.example.com/etkinlik.jpg');
+	});
+});
+
+describe('POST /panel/events-guncelle', () => {
+	it('updates an existing event by id', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/events', { method: 'POST', body: JSON.stringify(samplePayload) });
+		const id = ((await created.json()) as { id: string }).id;
+
+		const response = await authedRequest('/panel/events-guncelle', {
+			method: 'POST',
+			body: JSON.stringify({ ...samplePayload, id, titleEn: 'Updated Title' }),
+		});
+		expect(response.status).toBe(200);
+		const data = (await response.json()) as { id: string };
+		expect(data.id).toBe(id);
+	});
+
+	it('404s for an unknown id', async () => {
+		stubApis();
+		const response = await authedRequest('/panel/events-guncelle', {
+			method: 'POST',
+			body: JSON.stringify({ ...samplePayload, id: 'does-not-exist' }),
+		});
+		expect(response.status).toBe(404);
+	});
+
+	it('rejects requests without a valid panel token', async () => {
+		stubApis();
+		const response = await plainRequest('/panel/events-guncelle', { method: 'POST', body: JSON.stringify({ ...samplePayload, id: 'x' }) });
+		expect(response.status).toBe(401);
+	});
+});
+
 describe('GET /events (public)', () => {
 	it('lists events without requiring auth, omitting internal fields', async () => {
 		stubApis();

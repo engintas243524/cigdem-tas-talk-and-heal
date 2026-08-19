@@ -52,10 +52,25 @@
     meta.appendChild(bilingualSpan(ev.formatEn, ev.formatTr));
     card.appendChild(meta);
 
-    var desc = document.createElement('p');
-    desc.className = 'event-desc';
-    desc.appendChild(bilingualSpan(ev.descriptionEn, ev.descriptionTr));
-    card.appendChild(desc);
+    // Madde 6 (2026-08-19, kullanıcı isteği): panelden seçilen görünüme göre görsel/metin/ikisi.
+    // Eski etkinlik satırlarında (Madde 6 öncesi) gorunum boş gelir — backend zaten 'metin'
+    // varsayılanı döndürüyor (bkz. events.ts handleEventsListe), burada ayrıca || 'metin' ile
+    // ikinci bir güvenlik katmanı.
+    var gorunum = ev.gorunum || 'metin';
+    if ((gorunum === 'gorsel' || gorunum === 'ikisi') && ev.gorselUrl) {
+      var img = document.createElement('img');
+      img.className = 'event-image';
+      img.src = ev.gorselUrl;
+      img.alt = ev.titleEn || ev.titleTr || '';
+      img.loading = 'lazy';
+      card.appendChild(img);
+    }
+    if (gorunum !== 'gorsel') {
+      var desc = document.createElement('p');
+      desc.className = 'event-desc';
+      desc.appendChild(bilingualSpan(ev.descriptionEn, ev.descriptionTr));
+      card.appendChild(desc);
+    }
 
     var cta = document.createElement('a');
     cta.className = 'btn btn-primary event-cta';

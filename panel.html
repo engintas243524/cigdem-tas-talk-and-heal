@@ -188,13 +188,123 @@
       <label for="eventCtaHref">Buton Linki</label>
       <input type="text" id="eventCtaHref" placeholder="mailto:... veya https://..." />
     </div>
+    <!-- Madde 6 (2026-08-19, kullanıcı isteği): kartta metin mi, görsel mi, ikisi birden mi
+         görünsün seçimi. gorselUrl şimdilik bir dosya yükleme DEĞİL, zaten barındırılan bir
+         görselin linki (bkz. events.ts'teki not — bu projede henüz dosya depolama altyapısı yok). -->
+    <div class="field">
+      <label>Kartta Görünsün</label>
+      <div class="row">
+        <label><input type="radio" name="eventGorunum" value="metin" checked> Sadece metin</label>
+        <label><input type="radio" name="eventGorunum" value="gorsel"> Sadece görsel</label>
+        <label><input type="radio" name="eventGorunum" value="ikisi"> İkisi de</label>
+      </div>
+    </div>
+    <div class="field hidden" id="eventGorselUrlField">
+      <label for="eventGorselUrl">Görsel Linki</label>
+      <input type="text" id="eventGorselUrl" placeholder="https://... (zaten barındırdığın bir görselin linki)" />
+    </div>
     <div class="actions">
       <button class="btn-primary" id="eventAddBtn" type="button">Ekle</button>
+      <button class="btn-secondary hidden" id="eventDuzenlemeIptalBtn" type="button">Düzenlemeyi İptal Et</button>
     </div>
     <div class="status" id="eventFormStatus"></div>
 
     <h2>Mevcut Etkinlikler</h2>
     <div id="eventsList"></div>
+  </section>
+
+  <!-- BLOG PANELİ (Madde 5, 2026-08-19, kullanıcı isteği) -->
+  <section id="blogView" class="hidden">
+    <h1>Blog Paneli</h1>
+    <div class="actions">
+      <button class="btn-secondary" id="blogBackBtn" type="button">← Geri</button>
+    </div>
+
+    <div class="field">
+      <label for="blogCategory">Kategori</label>
+      <select id="blogCategory">
+        <option value="academic-clinical">Akademik ve Klinik</option>
+        <option value="thought-pieces">Düşünce Yazıları</option>
+        <option value="creative-writing">Yaratıcı Yazın</option>
+        <option value="videos-media">Video ve Medya</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="blogTitleTr">Başlık (TR)</label>
+      <input type="text" id="blogTitleTr" />
+    </div>
+    <div class="field">
+      <label for="blogTitleEn">Başlık (EN)</label>
+      <div class="row">
+        <input type="text" id="blogTitleEn" class="grow" />
+        <button class="btn-secondary" id="blogTitleCeviriBtn" type="button" title="TR'den İngilizce'ye çevir">TR→EN</button>
+      </div>
+    </div>
+
+    <!-- Sürükle-bırak/içe aktar (kullanıcı isteği, birebir: "sürükle bırakla, içe aktar") — panelde
+         zaten kanıtlanmış belge-metin-çıkarma altyapısı (/panel/rakip-analizi/ice-aktar,
+         belgeCikar.ts) yeniden kullanılıyor, yeni bir backend uç noktası gerekmedi. Çıkarılan metin
+         doğrudan Metin (TR) kutusuna yazılır. -->
+    <div class="field">
+      <label for="blogBodyTr">Metin (TR) — yaz, mikrofonla dikte et ya da dosya sürükle-bırak</label>
+      <div id="blogIceAktarDropZone" class="drop-zone">
+        <p>Dosya sürükle bırak ya da <label for="blogIceAktarFileInput" class="drop-zone-link">seç</label> — metni otomatik buraya aktarır</p>
+        <!-- PDF kasıtlı olarak yok — belgeCikar.ts PDF metin çıkarmayı desteklemiyor (rakip-analizi
+             tarafında PDF'ler Claude'a doğrudan native document olarak gidiyor, burada öyle bir akış
+             yok, o yüzden PDF sürüklemek sadece hataya düşer). -->
+        <p class="hint">TXT, MD, DOCX, CSV, PPTX, EPUB</p>
+        <input type="file" id="blogIceAktarFileInput" accept=".txt,.md,.docx,.csv,.pptx,.epub" class="hidden" />
+      </div>
+      <div class="row">
+        <textarea id="blogBodyTr" class="grow" placeholder="Yazının Türkçe metni..."></textarea>
+        <div class="mic-lang-toggle" id="blogMicLangToggle">
+          <button type="button" data-lang="tr" class="active">TR</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+        <button class="icon-btn mic-btn" id="blogMicBtn" type="button" title="Sesli dikte (Chrome)" aria-label="Sesli dikte">
+          <span class="mic-icon" aria-hidden="true">🎤</span>
+          <span class="mic-wave" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        </button>
+      </div>
+      <p class="muted" id="blogMicHint"></p>
+      <p class="status" id="blogIceAktarStatus"></p>
+    </div>
+    <div class="field">
+      <label for="blogBodyEn">Metin (EN)</label>
+      <div class="row">
+        <textarea id="blogBodyEn" class="grow" placeholder="Yazının İngilizce metni... (ya da TR yazıp yandaki çevir butonunu kullan)"></textarea>
+        <button class="btn-secondary" id="blogBodyCeviriBtn" type="button" title="TR'den İngilizce'ye çevir">TR→EN</button>
+      </div>
+    </div>
+
+    <!-- events.html'deki gorunum/gorselUrl ile birebir aynı desen. -->
+    <div class="field">
+      <label>Kartta Görünsün</label>
+      <div class="row">
+        <label><input type="radio" name="blogGorunum" value="metin" checked> Sadece metin</label>
+        <label><input type="radio" name="blogGorunum" value="gorsel"> Sadece görsel</label>
+        <label><input type="radio" name="blogGorunum" value="ikisi"> İkisi de</label>
+      </div>
+    </div>
+    <div class="field hidden" id="blogGorselUrlField">
+      <label for="blogGorselUrl">Görsel Linki</label>
+      <input type="text" id="blogGorselUrl" placeholder="https://... (zaten barındırdığın bir görselin linki)" />
+    </div>
+    <!-- Gerçek video dosyası yükleme değil — YouTube'a yüklenen videonun linki (bkz. config.ts
+         BLOG_COLUMNS notu: bu proje henüz bir dosya depolama altyapısı kurmadı). -->
+    <div class="field">
+      <label for="blogVideoUrl">Video Linki (YouTube, opsiyonel)</label>
+      <input type="text" id="blogVideoUrl" placeholder="https://youtube.com/watch?v=... ya da youtu.be/..." />
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" id="blogAddBtn" type="button">Ekle</button>
+      <button class="btn-secondary hidden" id="blogDuzenlemeIptalBtn" type="button">Düzenlemeyi İptal Et</button>
+    </div>
+    <div class="status" id="blogFormStatus"></div>
+
+    <h2>Mevcut Yazılar</h2>
+    <div id="blogList"></div>
   </section>
 
 </div>
@@ -257,7 +367,7 @@
       // same password on every visit regardless of this flag's presence.
       localStorage.setItem('panelAccess', '1');
       el('pw').value = ''; showPanel();
-      if (wantsEventsView()) { enterEventsView(); } else { loadPending(); }
+      if (wantsEventsView()) { enterEventsView(); } else if (wantsBlogView()) { enterBlogView(); } else { loadPending(); }
     }).catch(function () { setStatus(el('loginStatus'), 'Parola hatalı.', 'err'); });
   });
   el('pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') el('loginBtn').click(); });
@@ -590,13 +700,63 @@
 
   var EVENT_FIELDS = [
     'eventTitleEn', 'eventTitleTr', 'eventDateTimeEn', 'eventDateTimeTr', 'eventFormatEn', 'eventFormatTr',
-    'eventDescriptionEn', 'eventDescriptionTr', 'eventCtaLabelEn', 'eventCtaLabelTr', 'eventCtaHref',
+    'eventDescriptionEn', 'eventDescriptionTr', 'eventCtaLabelEn', 'eventCtaLabelTr', 'eventCtaHref', 'eventGorselUrl',
   ];
+
+  // Madde 7b (2026-08-19, kullanıcı isteği): null iken "Ekle" (yeni etkinlik), bir id iken
+  // "Güncelle" (mevcut etkinliği düzenleme) modundayız — aynı form, iki mod.
+  var duzenlenenEventId = null;
+
+  function eventGorselAlaniniGuncelle() {
+    var secili = document.querySelector('input[name="eventGorunum"]:checked').value;
+    el('eventGorselUrlField').classList.toggle('hidden', secili === 'metin');
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="eventGorunum"]'), function (r) {
+    r.addEventListener('change', eventGorselAlaniniGuncelle);
+  });
+
+  function duzenlemeModunuBitir() {
+    duzenlenenEventId = null;
+    el('eventAddBtn').textContent = 'Ekle';
+    el('eventDuzenlemeIptalBtn').classList.add('hidden');
+  }
 
   function clearEventForm() {
     EVENT_FIELDS.forEach(function (id) { el(id).value = ''; });
     el('eventCategory').value = 'workshop';
+    var metinRadio = document.querySelector('input[name="eventGorunum"][value="metin"]');
+    if (metinRadio) metinRadio.checked = true;
+    eventGorselAlaniniGuncelle();
+    duzenlemeModunuBitir();
   }
+
+  // Madde 7b: kayıtlı bir etkinliğe tıklayınca tüm alanları yukarıdaki forma geri doldurur, o
+  // etkinlik üzerinde düzenleme/yeni ekleme-çıkarma yapılabilsin diye. "Sadece sil butonu
+  // olmasın" (kullanıcı isteği, birebir) — satırın kendisi tıklanabilir, Sil ayrı bir buton.
+  function eventDuzenlemeyeYukle(ev) {
+    el('eventCategory').value = ev.category;
+    el('eventTitleEn').value = ev.titleEn;
+    el('eventTitleTr').value = ev.titleTr;
+    el('eventDateTimeEn').value = ev.dateTimeEn;
+    el('eventDateTimeTr').value = ev.dateTimeTr;
+    el('eventFormatEn').value = ev.formatEn;
+    el('eventFormatTr').value = ev.formatTr;
+    el('eventDescriptionEn').value = ev.descriptionEn;
+    el('eventDescriptionTr').value = ev.descriptionTr;
+    el('eventCtaLabelEn').value = ev.ctaLabelEn;
+    el('eventCtaLabelTr').value = ev.ctaLabelTr;
+    el('eventCtaHref').value = ev.ctaHref;
+    el('eventGorselUrl').value = ev.gorselUrl || '';
+    var gorunumRadio = document.querySelector('input[name="eventGorunum"][value="' + (ev.gorunum || 'metin') + '"]');
+    if (gorunumRadio) gorunumRadio.checked = true;
+    eventGorselAlaniniGuncelle();
+    duzenlenenEventId = ev.id;
+    el('eventAddBtn').textContent = 'Güncelle';
+    el('eventDuzenlemeIptalBtn').classList.remove('hidden');
+    setStatus(el('eventFormStatus'), '"' + ev.titleTr + '" düzenleniyor.', '');
+    el('eventCategory').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  el('eventDuzenlemeIptalBtn').addEventListener('click', function () { clearEventForm(); setStatus(el('eventFormStatus'), '', ''); });
 
   function renderEventsList(events) {
     eventsList.innerHTML = '';
@@ -607,6 +767,9 @@
     events.forEach(function (ev) {
       var row = document.createElement('div');
       row.className = 'client';
+      row.style.cursor = 'pointer';
+      row.title = 'Düzenlemek için tıkla';
+      row.addEventListener('click', function () { eventDuzenlemeyeYukle(ev); });
       var title = document.createElement('div');
       title.className = 'client-name';
       title.textContent = '[' + (CATEGORY_LABEL_TR[ev.category] || ev.category) + '] ' + ev.titleTr;
@@ -619,10 +782,11 @@
       delBtn.type = 'button';
       delBtn.className = 'sess cancel-trigger';
       delBtn.textContent = 'Sil';
-      delBtn.addEventListener('click', function () {
+      delBtn.addEventListener('click', function (e) {
+        e.stopPropagation(); // satırın kendi tıklama (düzenleme) handler'ını tetiklemesin
         if (!window.confirm('"' + ev.titleTr + '" silinsin mi? Bu işlem geri alınamaz.')) return;
         authFetch('/panel/events-sil', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: ev.id }) })
-          .then(function (r) { if (!r.ok) throw new Error('sil-basarisiz'); return loadEvents(); })
+          .then(function (r) { if (!r.ok) throw new Error('sil-basarisiz'); if (duzenlenenEventId === ev.id) clearEventForm(); return loadEvents(); })
           .catch(function (e) { if (e.message !== 'unauthorized') window.alert('Silinemedi, tekrar deneyin.'); });
       });
       row.appendChild(delBtn);
@@ -645,11 +809,15 @@
   function enterEventsView() {
     panelView.classList.add('hidden');
     eventsView.classList.remove('hidden');
+    window.scrollTo(0, 0); // Madde 7a (2026-08-19): önceki scroll konumu korunursa form uzun
+                            // olduğu için görünüm "etkinlikler en altta" hissi veriyordu.
     loadEvents();
   }
   el('eventsBackBtn').addEventListener('click', function () {
     eventsView.classList.add('hidden');
     panelView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+    clearEventForm();
   });
 
   el('eventAddBtn').addEventListener('click', function () {
@@ -666,24 +834,252 @@
       ctaLabelEn: el('eventCtaLabelEn').value.trim(),
       ctaLabelTr: el('eventCtaLabelTr').value.trim(),
       ctaHref: el('eventCtaHref').value.trim(),
+      gorunum: document.querySelector('input[name="eventGorunum"]:checked').value,
+      gorselUrl: el('eventGorselUrl').value.trim(),
     };
     if (!payload.titleEn || !payload.titleTr) { setStatus(el('eventFormStatus'), 'Başlık (EN ve TR) gerekli.', 'err'); return; }
     if (!payload.ctaHref) { setStatus(el('eventFormStatus'), 'Buton linki gerekli.', 'err'); return; }
-    setStatus(el('eventFormStatus'), 'Ekleniyor...', '');
-    authFetch('/panel/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      .then(function (r) { if (!r.ok) throw new Error('ekle-basarisiz'); return r.json(); })
+    if (payload.gorunum !== 'metin' && !payload.gorselUrl) { setStatus(el('eventFormStatus'), 'Bu görünüm için görsel linki gerekli.', 'err'); return; }
+    var duzenlemeModu = !!duzenlenenEventId;
+    var path = duzenlemeModu ? '/panel/events-guncelle' : '/panel/events';
+    if (duzenlemeModu) payload.id = duzenlenenEventId;
+    setStatus(el('eventFormStatus'), duzenlemeModu ? 'Güncelleniyor...' : 'Ekleniyor...', '');
+    authFetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then(function (r) { if (!r.ok) throw new Error('kaydedilemedi'); return r.json(); })
       .then(function () {
-        setStatus(el('eventFormStatus'), 'Eklendi.', 'ok');
+        setStatus(el('eventFormStatus'), duzenlemeModu ? 'Güncellendi.' : 'Eklendi.', 'ok');
         clearEventForm();
         loadEvents();
       })
-      .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('eventFormStatus'), 'Eklenemedi, tekrar deneyin.', 'err'); });
+      .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('eventFormStatus'), 'Kaydedilemedi, tekrar deneyin.', 'err'); });
+  });
+
+  // --- Blog Paneli (Madde 5, 2026-08-19, kullanıcı isteği) — Etkinlikler ile birebir aynı
+  // ekle/güncelle/sil/tıkla-düzenle deseni (bkz. yukarıdaki Etkinlikler bloğu), farkı: metin
+  // (TR/EN) + kategori odaklı, mikrofon dikte + TR→EN çeviri + dosya sürükle-bırak metin
+  // içe aktarma ekleniyor.
+  var blogView = el('blogView');
+  var blogList = el('blogList');
+  var BLOG_CATEGORY_LABEL_TR = {
+    'academic-clinical': 'Akademik ve Klinik',
+    'thought-pieces': 'Düşünce Yazıları',
+    'creative-writing': 'Yaratıcı Yazın',
+    'videos-media': 'Video ve Medya',
+  };
+  var BLOG_FIELDS = ['blogTitleEn', 'blogTitleTr', 'blogBodyEn', 'blogBodyTr', 'blogGorselUrl', 'blogVideoUrl'];
+  var duzenlenenBlogId = null;
+
+  function blogGorselAlaniniGuncelle() {
+    var secili = document.querySelector('input[name="blogGorunum"]:checked').value;
+    el('blogGorselUrlField').classList.toggle('hidden', secili === 'metin');
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="blogGorunum"]'), function (r) {
+    r.addEventListener('change', blogGorselAlaniniGuncelle);
+  });
+
+  function blogDuzenlemeModunuBitir() {
+    duzenlenenBlogId = null;
+    el('blogAddBtn').textContent = 'Ekle';
+    el('blogDuzenlemeIptalBtn').classList.add('hidden');
+  }
+
+  function clearBlogForm() {
+    BLOG_FIELDS.forEach(function (id) { el(id).value = ''; });
+    el('blogCategory').value = 'academic-clinical';
+    var metinRadio = document.querySelector('input[name="blogGorunum"][value="metin"]');
+    if (metinRadio) metinRadio.checked = true;
+    blogGorselAlaniniGuncelle();
+    blogDuzenlemeModunuBitir();
+  }
+
+  function blogDuzenlemeyeYukle(post) {
+    el('blogCategory').value = post.category;
+    el('blogTitleEn').value = post.titleEn;
+    el('blogTitleTr').value = post.titleTr;
+    el('blogBodyEn').value = post.bodyEn;
+    el('blogBodyTr').value = post.bodyTr;
+    el('blogGorselUrl').value = post.gorselUrl || '';
+    el('blogVideoUrl').value = post.videoUrl || '';
+    var gorunumRadio = document.querySelector('input[name="blogGorunum"][value="' + (post.gorunum || 'metin') + '"]');
+    if (gorunumRadio) gorunumRadio.checked = true;
+    blogGorselAlaniniGuncelle();
+    duzenlenenBlogId = post.id;
+    el('blogAddBtn').textContent = 'Güncelle';
+    el('blogDuzenlemeIptalBtn').classList.remove('hidden');
+    setStatus(el('blogFormStatus'), '"' + post.titleTr + '" düzenleniyor.', '');
+    el('blogCategory').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  el('blogDuzenlemeIptalBtn').addEventListener('click', function () { clearBlogForm(); setStatus(el('blogFormStatus'), '', ''); });
+
+  function renderBlogList(posts) {
+    blogList.innerHTML = '';
+    if (!posts.length) {
+      blogList.innerHTML = '<p class="muted">Henüz yazı eklenmedi.</p>';
+      return;
+    }
+    posts.forEach(function (post) {
+      var row = document.createElement('div');
+      row.className = 'client';
+      row.style.cursor = 'pointer';
+      row.title = 'Düzenlemek için tıkla';
+      row.addEventListener('click', function () { blogDuzenlemeyeYukle(post); });
+      var title = document.createElement('div');
+      title.className = 'client-name';
+      title.textContent = '[' + (BLOG_CATEGORY_LABEL_TR[post.category] || post.category) + '] ' + post.titleTr;
+      row.appendChild(title);
+      var delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'sess cancel-trigger';
+      delBtn.textContent = 'Sil';
+      delBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!window.confirm('"' + post.titleTr + '" silinsin mi? Bu işlem geri alınamaz.')) return;
+        authFetch('/panel/blog-posts-sil', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: post.id }) })
+          .then(function (r) { if (!r.ok) throw new Error('sil-basarisiz'); if (duzenlenenBlogId === post.id) clearBlogForm(); return loadBlogPosts(); })
+          .catch(function (e) { if (e.message !== 'unauthorized') window.alert('Silinemedi, tekrar deneyin.'); });
+      });
+      row.appendChild(delBtn);
+      blogList.appendChild(row);
+    });
+  }
+
+  function loadBlogPosts() {
+    blogList.innerHTML = '<p class="muted">Yükleniyor...</p>';
+    return authFetch('/panel/blog-posts').then(function (r) { return r.json(); }).then(function (data) {
+      renderBlogList(data.posts || []);
+    }).catch(function (e) {
+      if (e.message !== 'unauthorized') blogList.innerHTML = '<p class="muted">Liste yüklenemedi.</p>';
+    });
+  }
+
+  function wantsBlogView() {
+    return new URLSearchParams(window.location.search).get('view') === 'blog';
+  }
+  function enterBlogView() {
+    panelView.classList.add('hidden');
+    blogView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+    loadBlogPosts();
+  }
+  el('blogBackBtn').addEventListener('click', function () {
+    blogView.classList.add('hidden');
+    panelView.classList.remove('hidden');
+    window.scrollTo(0, 0);
+    clearBlogForm();
+  });
+
+  el('blogAddBtn').addEventListener('click', function () {
+    var payload = {
+      category: el('blogCategory').value,
+      titleEn: el('blogTitleEn').value.trim(),
+      titleTr: el('blogTitleTr').value.trim(),
+      bodyEn: el('blogBodyEn').value.trim(),
+      bodyTr: el('blogBodyTr').value.trim(),
+      gorunum: document.querySelector('input[name="blogGorunum"]:checked').value,
+      gorselUrl: el('blogGorselUrl').value.trim(),
+      videoUrl: el('blogVideoUrl').value.trim(),
+    };
+    if (!payload.titleEn || !payload.titleTr) { setStatus(el('blogFormStatus'), 'Başlık (EN ve TR) gerekli.', 'err'); return; }
+    if (!payload.bodyEn || !payload.bodyTr) { setStatus(el('blogFormStatus'), 'Metin (EN ve TR) gerekli.', 'err'); return; }
+    if (payload.gorunum !== 'metin' && !payload.gorselUrl) { setStatus(el('blogFormStatus'), 'Bu görünüm için görsel linki gerekli.', 'err'); return; }
+    var duzenlemeModu = !!duzenlenenBlogId;
+    var path = duzenlemeModu ? '/panel/blog-posts-guncelle' : '/panel/blog-posts';
+    if (duzenlemeModu) payload.id = duzenlenenBlogId;
+    setStatus(el('blogFormStatus'), duzenlemeModu ? 'Güncelleniyor...' : 'Ekleniyor...', '');
+    authFetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then(function (r) { if (!r.ok) throw new Error('kaydedilemedi'); return r.json(); })
+      .then(function () {
+        setStatus(el('blogFormStatus'), duzenlemeModu ? 'Güncellendi.' : 'Eklendi.', 'ok');
+        clearBlogForm();
+        loadBlogPosts();
+      })
+      .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('blogFormStatus'), 'Kaydedilemedi, tekrar deneyin.', 'err'); });
+  });
+
+  attachVoiceInput({
+    textareaEl: el('blogBodyTr'),
+    micBtnEl: el('blogMicBtn'),
+    micHintEl: el('blogMicHint'),
+    micLangToggleEl: el('blogMicLangToggle'),
+    localStorageKey: 'panelMicLang',
+  });
+
+  // TR→EN çeviri (kullanıcı isteği: "translate edebilecek") — form-backend'in zaten var olan
+  // /translate proxy'si (Google'ın keyless gtx uç noktası, booking.html'de aynı desenle
+  // kullanılıyor) yeniden kullanılıyor, yeni bir servis/maliyet eklenmiyor.
+  function translateText(text, tl) {
+    return fetch(API_BASE + '/translate?sl=auto&tl=' + tl + '&q=' + encodeURIComponent(text))
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (data) {
+        var segments = data && data[0];
+        if (!segments || !segments.length) throw new Error('bad translation response');
+        return segments.map(function (seg) { return seg[0]; }).join('');
+      });
+  }
+  el('blogTitleCeviriBtn').addEventListener('click', function () {
+    var kaynak = el('blogTitleTr').value.trim();
+    if (!kaynak) { setStatus(el('blogFormStatus'), 'Önce Başlık (TR) yazın.', 'err'); return; }
+    setStatus(el('blogFormStatus'), 'Çevriliyor...', '');
+    translateText(kaynak, 'en').then(function (en) {
+      el('blogTitleEn').value = en;
+      setStatus(el('blogFormStatus'), '', '');
+    }).catch(function () { setStatus(el('blogFormStatus'), 'Çeviri şu an yapılamadı, tekrar deneyin.', 'err'); });
+  });
+  el('blogBodyCeviriBtn').addEventListener('click', function () {
+    var kaynak = el('blogBodyTr').value.trim();
+    if (!kaynak) { setStatus(el('blogFormStatus'), 'Önce Metin (TR) yazın.', 'err'); return; }
+    setStatus(el('blogFormStatus'), 'Çevriliyor...', '');
+    translateText(kaynak, 'en').then(function (en) {
+      el('blogBodyEn').value = en;
+      setStatus(el('blogFormStatus'), '', '');
+    }).catch(function () { setStatus(el('blogFormStatus'), 'Çeviri şu an yapılamadı, tekrar deneyin.', 'err'); });
+  });
+
+  // Sürükle-bırak/dosya seç → metin çıkar → Metin (TR) kutusuna yaz. rakip-analizi.html'in İçe
+  // Aktar akışıyla AYNI backend uç noktasını (/panel/rakip-analizi/ice-aktar, belgeCikar.ts)
+  // kullanıyor — yeni bir endpoint gerekmedi, bu zaten genel amaçlı bir belge-metin-çıkarıcı.
+  var BLOG_ICE_AKTAR_UZANTILAR = ['txt', 'md', 'docx', 'csv', 'pptx', 'epub'];
+  function blogDosyaUzantisi(ad) { return ad.split('.').pop().toLowerCase(); }
+  function blogDosyaIceAktar(file) {
+    var uzanti = blogDosyaUzantisi(file.name);
+    if (BLOG_ICE_AKTAR_UZANTILAR.indexOf(uzanti) === -1) {
+      setStatus(el('blogIceAktarStatus'), file.name + ': desteklenmeyen dosya türü (.' + uzanti + ').', 'err');
+      return;
+    }
+    setStatus(el('blogIceAktarStatus'), file.name + ' aktarılıyor...', '');
+    var reader = new FileReader();
+    reader.onload = function () {
+      var base64 = String(reader.result).split(',')[1];
+      authFetch('/panel/rakip-analizi/ice-aktar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tur: 'dosya', dosyaAdi: file.name, uzanti: uzanti, veri: base64 }) })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+          if (!res.ok) { setStatus(el('blogIceAktarStatus'), res.data.error || 'okunamadı', 'err'); return; }
+          var bodyBox = el('blogBodyTr');
+          bodyBox.value = bodyBox.value ? (bodyBox.value + '\n\n' + res.data.metin) : res.data.metin;
+          setStatus(el('blogIceAktarStatus'), file.name + ' aktarıldı.', 'ok');
+        }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('blogIceAktarStatus'), 'okunamadı', 'err'); });
+    };
+    reader.readAsDataURL(file);
+  }
+  el('blogIceAktarFileInput').addEventListener('change', function () {
+    Array.prototype.forEach.call(this.files, blogDosyaIceAktar);
+    this.value = '';
+  });
+  var blogIceAktarDropZone = el('blogIceAktarDropZone');
+  ['dragover', 'dragenter'].forEach(function (evt) {
+    blogIceAktarDropZone.addEventListener(evt, function (e) { e.preventDefault(); blogIceAktarDropZone.classList.add('drag-over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (evt) {
+    blogIceAktarDropZone.addEventListener(evt, function (e) { e.preventDefault(); blogIceAktarDropZone.classList.remove('drag-over'); });
+  });
+  blogIceAktarDropZone.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) Array.prototype.forEach.call(e.dataTransfer.files, blogDosyaIceAktar);
   });
 
   // Resume an existing session-token on reload.
   if (token) {
     showPanel();
-    if (wantsEventsView()) { enterEventsView(); } else { loadPending(); }
+    if (wantsEventsView()) { enterEventsView(); } else if (wantsBlogView()) { enterBlogView(); } else { loadPending(); }
   } else { showLogin(); }
 })();
 </script>
