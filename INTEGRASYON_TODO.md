@@ -2264,6 +2264,12 @@ yukarıda) EK olarak, Website Implementation Brief'i uygularken çıkan sorular:
   konuşulmadı (maliyet karşılaştırması gerekiyor, `feedback_arac_arama_maliyet_performans_marj_protokolu`
   kuralına göre) — bu, Faz 6'nın Instagram sorusuyla kısmen örtüşüyor.
 
+Ayrıca (Çiğdem'e sorulacak bir şey DEĞİL, sadece bu görüşme civarında kullanıcıya hatırlatılacak
+kendi kontrolü): **dün gece (2026-08-18/19) hatırlatma cron testinde Selen'in WhatsApp'ına
+(447595455398) `hatirlatma_gonderildi_bildirimi` gerçekten geldi mi hiç teyit edilmedi** — kod
+yolu kanıtlı (aynı `sendTemplate` çağrısı, danışana giden mesajlarla birebir aynı akış) ama
+kullanıcı doğrulamadı, sorulduğunda hatırlat.
+
 Durum: BEKLİYOR — 2026-08-19 14:00 görüşmesinde sorulacak. **Güncelleme:** Madde 1 artık boş
 veri dizisi değil, gerçek self-service backend'le kuruldu (yukarı bakınız) — panelden gerçek
 etkinlik bilgisi girilince otomatik yayınlanır, ayrıca kod değişikliği gerekmez. Madde 3/4 hâlâ

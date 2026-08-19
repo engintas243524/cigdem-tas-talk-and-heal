@@ -98,8 +98,9 @@ Rendered sayfada yazıya tıklayıp direkt yazamazsın çünkü statik HTML — 
 - Logo: talkandheal.co.uk'un kendi sunucusundan temiz (çerçevesiz) bir PNG bulundu
   (`assets/logo-clean-candidate.png`) — kullanıcı verdiği çerçeveli/render'lı görselin yerine
   bunu kullanmayı planlıyoruz, teyit bekleniyor.
-- **Hatırlatma (kullanıcı isteği):** Uygun aşamada (UI/polish, deploy öncesi) siteye
-  Sophie Hutchins'in "Billow Gently" kompozisyonuna benzer telifsiz bir müzik eklenmesi
-  gündeme getirilecek.
+- [x] **Müzik — TAMAMLANMIŞ** (2026-08-19'da site üzerinden doğrulandı, stale "hatırlatma"
+  notu düzeltildi): `index.html`'de `.music-toggle` düğmesi + `assets/audio-player.js`
+  (2.5s crossfade'li, sessiz iki kopya ile seamless loop) + `assets/audio/zen-ambient.mp3`
+  gerçek dosyası (Jul 28) kurulu ve çalışıyor.
 - Yerel önizleme sunucusu: `python3 -m http.server 5173` (proje klasöründe) —
   http://localhost:5173/index.html — DevTools ile manuel inceleme/düzenleme için.
