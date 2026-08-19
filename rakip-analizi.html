@@ -1968,6 +1968,15 @@
     rakipHaritaRenk = data.renk || {};
     haritaEklenenId = data.eklenenId || {};
     rakipAramaState = data.sayfalama || { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
+    // 2026-08-20 düzeltme (kullanıcı geri bildirimi): harita/sonuçlar geri geliyordu ama arama
+    // kutuları (adres/terim/yarıçap/azami sonuç) boş kalıyordu — "kriterler siliniyor" hissi
+    // veriyordu. rakipAramaBaglam zaten bu değerleri tutuyor, sadece input'lara yazılmıyordu.
+    if (rakipAramaBaglam) {
+      if (el('rakipAdres')) el('rakipAdres').value = rakipAramaBaglam.adres || '';
+      if (el('rakipSorgu')) el('rakipSorgu').value = rakipAramaBaglam.sorgu || '';
+      if (el('rakipRadius')) el('rakipRadius').value = rakipAramaBaglam.radius || '';
+      if (el('rakipMaxSonuc') && rakipAramaBaglam.maxSonuc) el('rakipMaxSonuc').value = rakipAramaBaglam.maxSonuc;
+    }
     renderAramaSonuclari();
   }
   var haritaInfoWindow = null;
@@ -2310,7 +2319,7 @@
       loadKullanimSayaci();
       if (!res.ok) { setStatusLimit(el('rakipAraStatus'), res.data.error || 'Arama başarısız.', res.data.limitUrl); return; }
       var places = res.data.places || [];
-      rakipAramaBaglam = { adres: adres, sorgu: sorgu, radius: radius, zaman: new Date().toLocaleString('tr-TR'), merkez: res.data.merkez || null };
+      rakipAramaBaglam = { adres: adres, sorgu: sorgu, radius: radius, maxSonuc: maxSonuc, zaman: new Date().toLocaleString('tr-TR'), merkez: res.data.merkez || null };
       rakipAramaSonuclariCache = places;
       rakipAramaState = { visible: SAYFALAMA_ADIM, adim: SAYFALAMA_ADIM };
       rakipAramaSecili = {};
