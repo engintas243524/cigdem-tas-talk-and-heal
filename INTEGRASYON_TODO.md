@@ -715,7 +715,22 @@ sorgulandı: 4 booking şablonu (`randevu_onay_danisan`, `randevu_hatirlatma_dan
       banka bilgisi" kuralıyla aynı mantık. Sadece API anahtarı değişir, kod aynı kalır.
 - [ ] Yukarıdaki 4 madde tek tek Çiğdem'in bilgileriyle değiştirildi mi diye NOTES.md'deki
       checklist ile çapraz kontrol
-- [ ] 10. Aşama (İzleme/Uptime Kuma) yeni Worker endpoint'lerini de izleyecek şekilde genişletilir
+- [ ] 10. Aşama (İzleme/Uptime Kuma) — **2026-08-19'da başlandı:** proje için Uptime Kuma hiç
+      kurulmamış olduğu keşfedildi (dosya "genişletilir" diyordu, aslında sıfırdan kurulum
+      gerekiyor). Açık kaynak (Uptime Kuma, self-hosted, $0) vs UptimeRobot (free planda
+      webhook/WhatsApp yok, Team plan $38-45/ay) kıyaslandı, Uptime Kuma kazandı. Otomatik-düzeltme
+      yerine "zengin teşhis bildirimi" tercih edildi (kullanıcı onayı, gerekçe: bu sistemdeki
+      arızalar genelde 3.parti kesintisi ya da ince config hataları — otomatik "düzeltme" riskli).
+      **Kod tarafı hazır:** `POST /alert/uptime?secret=...` (form-backend), Uptime Kuma'nın DOWN
+      webhook'unu alıp `sistem_uyarisi_selen` şablonuyla (monitör adı + hata detayı + zaman) Selen'e
+      WhatsApp gönderiyor — deploy edildi, testler yeşil. **Kalanlar:** (1) `UPTIME_WEBHOOK_SECRET`
+      gerçek değeri üretilip `.dev.vars`'a + `wrangler secret put` ile production'a eklenecek
+      (kullanıcı elle yapacak, credential dosyasına otomatik dokunma classifier tarafından
+      bloklanıyor); (2) `sistem_uyarisi_selen` şablonu Meta'ya onaya gönderilecek; (3) Uptime
+      Kuma'nın nerede barınacağına karar verilecek (bu Mac'te Docker vs. ~$4-6/ay VPS); (4) kurulup
+      izlenecek endpoint listesi belirlenecek. Ayrıca: bu kalıp (Uptime Kuma + kendi Worker'a
+      webhook köprüsü) Sparrow müşterilerine de sunulabilir bir hizmet olarak işaretlendi (bkz.
+      Sparrow proje notları).
 - [ ] Çiğdem'in kendi gerçek Sheet'inde de (BE-25, 2026-07-23) not/özet sütunlarına wrap-text
       (metin kaydırma) + tüm başlıklara filtre uygulanmalı — bu bir Sheet ayarı olduğu için Google
       hesabı değişince otomatik taşınmaz, aynı `batchUpdate` adımı yeni Sheet'te tekrarlanmalı.
