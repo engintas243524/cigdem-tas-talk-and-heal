@@ -6,6 +6,7 @@ import { handleStripeWebhook } from './routes/stripe-webhook';
 import { handleCancelGet, handleCancelPost } from './routes/cancel';
 import { handleTranslate } from './routes/translate';
 import { handleFixText } from './routes/fix-text';
+import { handleUptimeWebhook } from './routes/alert';
 import {
 	handlePanelLogin,
 	handlePanelPending,
@@ -59,6 +60,8 @@ export default {
 				return handleWhatsappVerify(request, env);
 			case 'POST /webhook/whatsapp':
 				return handleWhatsappIncoming(request, env);
+			case 'POST /alert/uptime':
+				return handleUptimeWebhook(request, env);
 			case 'POST /webhook/stripe':
 				return handleStripeWebhook(request, env);
 			case 'GET /cancel':

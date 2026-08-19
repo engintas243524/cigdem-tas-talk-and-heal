@@ -27,6 +27,9 @@ export interface Env {
 	YOUTUBE_API_KEY: string;
 	// Workers AI binding — summarizes the client's free-text note (lib/summarize.ts).
 	AI: Ai;
+	// 10. Aşama (İzleme, 2026-08-19): shared secret Uptime Kuma's generic webhook must pass as
+	// ?secret=... — without this, anyone who finds the URL could trigger paid WhatsApp sends.
+	UPTIME_WEBHOOK_SECRET: string;
 }
 
 export interface BookingRequest {

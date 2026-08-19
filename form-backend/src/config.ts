@@ -60,6 +60,10 @@ export const WHATSAPP_TEMPLATES = {
 	// actually send. Single {{1}} variable holds Çiğdem's own freeform note (condolence/no-show/
 	// general concern), wrapped in enough static text to pass Meta's "not variable-only" body rule.
 	cancellationPersonalNote: 'iptal_kisisel_not_danisan',
+	// 10. Aşama (İzleme, 2026-08-19): Uptime Kuma'nın generic webhook'undan tetiklenir, Selen'e
+	// gider. Meta'ya henüz gönderilmedi — Uptime Kuma kurulup ilk gerçek kesinti testi yapılınca
+	// gönderilecek. {{1}}=monitör adı, {{2}}=hata detayı, {{3}}=zaman.
+	systemAlert: 'sistem_uyarisi_selen',
 } as const;
 
 // Confirmed against the real WABA via the Graph API message_templates endpoint (2026-07-22):
