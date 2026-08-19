@@ -31,10 +31,6 @@
   <!-- PANEL -->
   <section id="panelView" class="hidden">
     <h1>Seans Notu</h1>
-    <div class="actions">
-      <button class="btn-secondary" id="goRakipAnaliziBtn" type="button">Rakip Analizi</button>
-      <button class="btn-secondary" id="goEventsBtn" type="button">Etkinlikler</button>
-    </div>
 
     <div class="field">
       <label for="nameBox">Danışan (düzenlenebilir — yalnızca görüntü içindir)</label>
@@ -260,7 +256,8 @@
       // the "NOTES" nav link — cosmetic, never itself a credential; the panel still requires this
       // same password on every visit regardless of this flag's presence.
       localStorage.setItem('panelAccess', '1');
-      el('pw').value = ''; showPanel(); loadPending();
+      el('pw').value = ''; showPanel();
+      if (wantsEventsView()) { enterEventsView(); } else { loadPending(); }
     }).catch(function () { setStatus(el('loginStatus'), 'Parola hatalı.', 'err'); });
   });
   el('pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') el('loginBtn').click(); });
@@ -578,16 +575,15 @@
     localStorageKey: 'panelMicLang',
   });
 
-  // Rakip Analizi artık ayrı bir sayfa (rakip-analizi.html) — aynı 'panelToken' oturumunu
-  // paylaşıyor (sessionStorage aynı origin'de sayfalar arası korunur), o yüzden burada
-  // sadece yönlendirme yeterli, ayrı bir giriş ekranı gerekmiyor.
-  el('goRakipAnaliziBtn').addEventListener('click', function () {
-    window.location.href = 'rakip-analizi.html';
-  });
+  // Rakip Analizi ve Etkinlikler artık sadece header'daki gizli nav linkleriyle açılıyor
+  // (panelAccess localStorage bayrağı görünür kılıyor) — Not Paneli kendi işine (seans notu)
+  // odaklanır, bu iki kısayol panelView'den kaldırıldı (2026-08-19).
 
   // --- Etkinlikler (Website Implementation Brief Madde 1, 2026-08-18) ---
   // panelView'in yerine geçen üçüncü bir görünüm (loginView/panelView desenindeki gibi) — ayrı
   // bir sayfa açmıyoruz çünkü basit bir liste+form, rakip-analizi.html kadar karmaşık değil.
+  // Header'daki "Etkinlikler" linki panel.html?view=events'e gider, login sonrası (veya token
+  // zaten varsa) bu query param kontrol edilip doğrudan bu görünüme atlanıyor.
   var eventsView = el('eventsView');
   var eventsList = el('eventsList');
   var CATEGORY_LABEL_TR = { workshop: 'Atölye', masterclass: 'Ustalık Sınıfı' };
@@ -643,11 +639,14 @@
     });
   }
 
-  el('goEventsBtn').addEventListener('click', function () {
+  function wantsEventsView() {
+    return new URLSearchParams(window.location.search).get('view') === 'events';
+  }
+  function enterEventsView() {
     panelView.classList.add('hidden');
     eventsView.classList.remove('hidden');
     loadEvents();
-  });
+  }
   el('eventsBackBtn').addEventListener('click', function () {
     eventsView.classList.add('hidden');
     panelView.classList.remove('hidden');
@@ -682,7 +681,10 @@
   });
 
   // Resume an existing session-token on reload.
-  if (token) { showPanel(); loadPending(); } else { showLogin(); }
+  if (token) {
+    showPanel();
+    if (wantsEventsView()) { enterEventsView(); } else { loadPending(); }
+  } else { showLogin(); }
 })();
 </script>
 </body>
