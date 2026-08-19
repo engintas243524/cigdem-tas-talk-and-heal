@@ -1400,6 +1400,11 @@
         if (!res.ok) { setStatus(el('rakipSilStatus'), res.data.error || 'Silinemedi.', 'err'); return; }
         rakipListeSecili = {};
         setStatus(el('rakipSilStatus'), res.data.deleted + ' rakip silindi.', 'ok');
+        // Kayıtlı Rakipler'den silinen bu id'ler arama sonuçlarında/haritada da gösteriliyorsa
+        // (mavi kalmış olabilirler) kırmızıya senkronlanır (2026-08-20, Madde 2). renderAramaSonuclari
+        // hem tabloyu (Ekle butonu durumu) hem haritayı (haritaCiz) birlikte yeniden çizer.
+        haritaRenkKayitliRakiplerdenSilindi(ids);
+        renderAramaSonuclari();
         loadRakipListe();
       })
       .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipSilStatus'), 'Silinemedi.', 'err'); })
@@ -2102,8 +2107,11 @@
         .then(function () {
           rakipHaritaRenk[i] = 'red';
           delete haritaEklenenId[i];
-          haritaMarkerRengiGuncelle(i);
           rakipAramaStateKaydet();
+          // Arama Sonuçları'ndaki "Eklendi" butonu tekrar "Ekle"ye dönsün diye (2026-08-20,
+          // Madde 2 çift yönlü senkron) — haritaCiz() de bunun içinde çağrılıyor, ayrıca
+          // haritaMarkerRengiGuncelle çağırmaya gerek yok.
+          renderAramaSonuclari();
           return loadRakipListe();
         })
         .catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'den silinemedi, tekrar dene.", 'err'); })
@@ -2113,8 +2121,8 @@
       tekRakipEkle(p).then(function (data) {
         rakipHaritaRenk[i] = 'blue';
         haritaEklenenId[i] = data && data.id;
-        haritaMarkerRengiGuncelle(i);
         rakipAramaStateKaydet();
+        renderAramaSonuclari();
         return loadRakipListe();
       }).catch(function (e) {
         if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), "Kayıtlı Rakipler'e eklenemedi, tekrar dene.", 'err');
@@ -2223,7 +2231,13 @@
 
   // btn opsiyonel: toplu eklemede sayfalama nedeniyle DOM'da henüz render edilmemiş seçili
   // satırlar için buton yok, o durumda sadece istek gönderilir (görsel geri bildirim atlanır).
-  function tekRakipEkle(p, btn) {
+  // i (opsiyonel, 2026-08-20 — Madde 2 çift yönlü senkronizasyon, kullanıcı isteği): verilirse
+  // bu, rakipAramaSonuclariCache'teki index'tir — hangi YOLDAN eklenirse eklensin (satırdaki
+  // "Ekle" butonu, "Seçilenleri Ekle" toplu butonu, ya da haritaCemberTiklandi) harita
+  // marker'ı ve arama sonuçları rengi AYNI ANDA senkron kalsın diye. Önceden SADECE harita
+  // tıklaması bu senkronu yapıyordu — satır/toplu "Ekle" ile eklenen bir rakip haritada beyaz
+  // kalmaya devam ediyordu.
+  function tekRakipEkle(p, btn, i) {
     if (btn) { btn.disabled = true; btn.textContent = 'Ekleniyor...'; }
     return authFetch('/panel/rakip-analizi/rakip', {
       method: 'POST',
@@ -2231,11 +2245,37 @@
         isim: p.name, adres: p.address, kaynak: 'harita',
         aramaAdres: rakipAramaBaglam.adres, aramaSorgu: rakipAramaBaglam.sorgu, aramaRadiusMeters: rakipAramaBaglam.radius,
       }),
-    }).then(function (r) { return r.json(); }).then(function (data) { if (btn) btn.textContent = 'Eklendi'; return data; })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (btn) btn.textContent = 'Eklendi';
+      if (i !== undefined) {
+        rakipHaritaRenk[i] = 'blue';
+        haritaEklenenId[i] = data && data.id;
+        haritaMarkerRengiGuncelle(i);
+        rakipAramaStateKaydet();
+      }
+      return data;
+    })
       .catch(function (e) {
         if (btn && e.message !== 'unauthorized') { btn.disabled = false; btn.textContent = 'Ekle'; }
         throw e;
       });
+  }
+
+  // Kayıtlı Rakipler listesinden (bkz. rakipSilBtn) silinen id'ler, o an arama sonuçlarında da
+  // gösteriliyorsa haritayı/arama sonuçlarını kırmızıya senkronlar (2026-08-20, Madde 2).
+  function haritaRenkKayitliRakiplerdenSilindi(silinenIdler) {
+    var silinenSet = {};
+    silinenIdler.forEach(function (id) { silinenSet[id] = true; });
+    var degisti = false;
+    Object.keys(haritaEklenenId).forEach(function (i) {
+      if (silinenSet[haritaEklenenId[i]]) {
+        rakipHaritaRenk[i] = 'red';
+        delete haritaEklenenId[i];
+        haritaMarkerRengiGuncelle(i);
+        degisti = true;
+      }
+    });
+    if (degisti) rakipAramaStateKaydet();
   }
 
   function updateRakipSonuclarTopluBtn() {
@@ -2277,10 +2317,16 @@
       checkbox.checked = !!rakipAramaSecili[i];
       checkbox.addEventListener('change', function () { checkboxDegisti(i, checkbox.checked); });
       var addBtn = document.createElement('button');
-      addBtn.type = 'button'; addBtn.className = 'btn-secondary'; addBtn.textContent = 'Ekle';
+      addBtn.type = 'button'; addBtn.className = 'btn-secondary';
+      // 2026-08-20 (Madde 2, çift yönlü senkron): sayfa refresh sonrası state geri
+      // yüklendiğinde (rakipAramaStateYukle) haritaEklenenId[i] zaten dolu olabilir — bu
+      // durumda buton da "Eklendi" göstermeli, aksi halde harita mavi ama buton "Ekle" diyerek
+      // tutarsız görünürdü.
+      if (rakipHaritaRenk[i] === 'blue' && haritaEklenenId[i]) { addBtn.disabled = true; addBtn.textContent = 'Eklendi'; }
+      else { addBtn.textContent = 'Ekle'; }
       addBtn.addEventListener('click', function () {
         if (addBtn.disabled) return; // hızlı çift tıklamada aynı rakibi iki kez kaydetmeyi önler
-        tekRakipEkle(p, addBtn).then(function () { loadRakipListe(); }).catch(function () { /* addBtn zaten geri alındı */ });
+        tekRakipEkle(p, addBtn, i).then(function () { loadRakipListe(); }).catch(function () { /* addBtn zaten geri alındı */ });
       });
       aksiyonSpan.appendChild(checkbox); aksiyonSpan.appendChild(addBtn);
       row.appendChild(aksiyonSpan);
@@ -2324,12 +2370,14 @@
     });
     var indeksler = Object.keys(rakipAramaSecili).map(Number);
     var istekler = indeksler.map(function (i) {
-      return tekRakipEkle(rakipAramaSonuclariCache[i], gorunurButonlar[i]).catch(function () {});
+      // i geçirilince tekRakipEkle kendi içinde rakipHaritaRenk/haritaEklenenId'yi zaten
+      // günceller (2026-08-20, Madde 2 çift yönlü senkron) — bu yüzden aşağıda ARTIK bunları
+      // sıfırlamıyoruz, eskiden "Seçilenleri Ekle" sonrası tüm markerlar beyaza dönüyordu
+      // (kullanıcı şikayeti: haritada mavi görünmüyordu).
+      return tekRakipEkle(rakipAramaSonuclariCache[i], gorunurButonlar[i], i).catch(function () {});
     });
     Promise.all(istekler).then(function () {
       rakipAramaSecili = {};
-      rakipHaritaRenk = {};
-      haritaEklenenId = {};
       loadRakipListe();
       updateRakipSonuclarTopluBtn();
       haritaCiz();
