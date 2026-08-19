@@ -277,3 +277,36 @@ button { font-family: var(--font-body); cursor: pointer; border: none; border-ra
   writing-mode: vertical-lr; direction: rtl;
   accent-color: #3B82F6; background: transparent;
 }
+
+/* Rakip Analizi — geniş ekran (yatay) mimarisi (Madde 2, 2026-08-19/20, kullanıcı isteği).
+   Kullanıcının kriteri "genişliği yüksekliğinden büyük ekranlar" (aspect-ratio, sabit bir
+   piksel eşiği DEĞİL) — min-width:900px'i de EKLEDİK ki küçük yatay telefonlarda 3 kolon
+   sıkışıp kullanışsızlaşmasın (kullanıcının asıl niyeti "masaüstü/geniş ekran", aspect-ratio
+   bunun için verdiği ölçüttü). Dar ekranda/dikeyken .ra-layout hiç grid olmuyor, çocukları DOM
+   sırasıyla normal blok akışında alt alta dizilir — bu sıra zaten mantıklı bir mobil akış
+   (kullanım → sekmeler → aktif form → harita → sonuçlar → liste → analiz → takip). */
+@media (min-aspect-ratio: 1/1) and (min-width: 900px) {
+  .panel-wrap--rakip { max-width: 1400px; }
+  .ra-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--space-3);
+    align-items: start;
+    grid-template-areas:
+      "sekmeler sekmeler harita"
+      "form     form     harita"
+      "sonuclar liste    analiz"
+      "takip    takip    takip";
+  }
+  #raSekmelerWrap { grid-area: sekmeler; }
+  #rakipAramaField, #rakipEkleField { grid-area: form; margin-bottom: 0; }
+  #rakipHaritaWrap { grid-area: harita; }
+  #rakipHaritaWrap #rakipHarita { height: 100%; min-height: 420px; }
+  #rakipSonuclarField { grid-area: sonuclar; margin-bottom: 0; min-width: 0; }
+  #rakipListeField { grid-area: liste; margin-bottom: 0; min-width: 0; }
+  #raAnalizWrap { grid-area: analiz; min-width: 0; }
+  #rakipTakipField { grid-area: takip; margin-bottom: 0; }
+  /* Sonuç/liste/analiz kolonları uzun içerikte kendi içinde kaysın — sayfa tek bir dev sütun
+     olarak uzamasın (kullanıcının şikayet ettiği "yukarı aşağı git gel" tam olarak buydu). */
+  #rakipSonuclarField, #rakipListeField, #raAnalizWrap { max-height: 80vh; overflow-y: auto; }
+}

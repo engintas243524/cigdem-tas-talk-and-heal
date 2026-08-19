@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="panel.css?v=26">
 </head>
 <body>
-<div class="panel-wrap">
+<div class="panel-wrap panel-wrap--rakip">
 
   <!-- Standalone internal tool, own login screen — independent of panel.html (not nested inside
        it, not reached through it). Uses the SAME panel password/backend (one password to
@@ -46,6 +46,21 @@
       <div id="kullanimSayaci" class="kota-grid"></div>
     </div>
 
+    <!-- Geniş ekranda (yatay, bkz. panel.css .ra-layout) 7 çocuğu grid hücrelerine yerleştiren
+         ortak sarmalayıcı — dar ekranda düz blok akışına döner (grid hiç uygulanmaz), bu yüzden
+         DOM sırası dar ekran için de mantıklı bir yukarıdan-aşağı akış izliyor. -->
+    <div class="ra-layout">
+
+    <!-- Geniş ekran (yatay) mimarisi (Madde 2, 2026-08-19/20, kullanıcı isteği): "Konum ile
+         Rakip Ara" ve "Rakip Ekle" artık bu iki butonla seçilen SEKME'ler — sadece biri
+         görünür, tıpkı aşağıdaki dalIcerikBtn/dalAksiyonBtn deseni gibi (bkz. setRaSekme()).
+         Dar ekranda (dikey) bu buton çifti sade bir sekme değiştirici olarak kalır, mimari
+         zaten tek kolon akışa döner (bkz. panel.css'teki landscape media query). -->
+    <div class="actions" id="raSekmelerWrap">
+      <button class="btn-secondary active" id="raSekmeAraBtn" type="button">Konum ile Rakip Ara</button>
+      <button class="btn-secondary" id="raSekmeEkleBtn" type="button">Rakip Ekle</button>
+    </div>
+
     <div class="field tab-panel tab-ara" id="rakipAramaField">
       <h3>Konum ile Rakip Ara</h3>
       <input type="text" id="rakipAdres" placeholder="Adres veya semt (örn: Kadıköy, İstanbul)">
@@ -59,30 +74,9 @@
       </datalist>
       <button class="btn-secondary" id="rakipAraBtn" type="button">Ara</button>
       <div class="status" id="rakipAraStatus"></div>
-      <!-- Harita (2026-08-17, 2026-08-15+2026-08-17'de kaydedilen istekler): "X sonuç bulundu" ile
-           "Arama Sonuçları" arasında konumlanır (kullanıcı isteği). Numaralı, tıklanabilir daireler —
-           beyaz (dokunulmamış) → tıklanınca mavi (Kayıtlı Rakipler'e EKLENİR, gerçek backend POST) →
-           tekrar tıklanınca kırmızı (Kayıtlı Rakipler'den ÇIKARILIR, gerçek backend silme) — bkz.
-           haritaCemberTiklandi. Yarıçap kadar yanıp sönen bir çember + sol altta ölçek cetveli + sağda
-           dikey zoom scroll içerir. Google Maps JS script'i lazy-load — kullanıcı hiç arama yapmazsa
-           hiç indirilmiyor (bkz. haritaScriptYukle). -->
-      <div id="rakipHaritaWrap" class="hidden">
-        <div id="rakipHarita" style="height:420px;width:100%;margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden;position:relative;"></div>
-        <p class="muted" id="rakipHaritaNot">Haritada bir noktaya tıklamak o rakibi doğrudan Kayıtlı Rakipler'e ekler (mavi); tekrar tıklamak Kayıtlı Rakipler'den çıkarır (kırmızı). Kesikli daire, girdiğin arama yarıçapını gösterir.</p>
-      </div>
-      <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
-      <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
-      <div class="actions" id="rakipSonuclarToggleWrap"></div>
-      <div class="sayfalama-manuel" id="rakipSonuclarManuelSayfalama"></div>
-      <div class="actions">
-        <button class="btn-secondary hidden" id="rakipSonuclarTopluSilBtn" type="button">Seçilenleri Sil</button>
-      </div>
-      <div class="actions">
-        <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
-      </div>
     </div>
 
-    <div class="field tab-panel tab-ekle" id="rakipEkleField">
+    <div class="field tab-panel tab-ekle hidden" id="rakipEkleField">
       <h3>Rakip Ekle</h3>
       <div class="rakip-ekle-isim-satiri">
         <input type="text" id="rakipIsim" placeholder="Rakip ismi">
@@ -109,6 +103,35 @@
       <div class="status" id="rakipEkleStatus"></div>
     </div>
 
+    <!-- Harita (2026-08-17, kullanıcı isteği; 2026-08-19/20'de geniş ekranda "Konum ile Rakip
+         Ara"/"Rakip Ekle" sekmelerinin YANINDA her zaman görünür olacak şekilde ayrı bir grid
+         hücresine taşındı — bkz. panel.css .ra-layout). Numaralı, tıklanabilir daireler —
+         beyaz (dokunulmamış) → tıklanınca mavi (Kayıtlı Rakipler'e EKLENİR, gerçek backend POST) →
+         tekrar tıklanınca kırmızı (Kayıtlı Rakipler'den ÇIKARILIR, gerçek backend silme) — bkz.
+         haritaCemberTiklandi. Yarıçap kadar yanıp sönen bir çember + sol altta ölçek cetveli + sağda
+         dikey zoom scroll içerir. Google Maps JS script'i lazy-load — kullanıcı hiç arama yapmazsa
+         hiç indirilmiyor (bkz. haritaScriptYukle). -->
+    <div id="rakipHaritaWrap" class="hidden">
+      <div id="rakipHarita" style="height:420px;width:100%;margin-top:0.5rem;border-radius:var(--radius-sm);overflow:hidden;position:relative;"></div>
+      <p class="muted" id="rakipHaritaNot">Haritada bir noktaya tıklamak o rakibi doğrudan Kayıtlı Rakipler'e ekler (mavi); tekrar tıklamak Kayıtlı Rakipler'den çıkarır (kırmızı). Kesikli daire, girdiğin arama yarıçapını gösterir.</p>
+    </div>
+
+    <!-- "Arama Sonuçları" (2026-08-19/20'de "Konum ile Rakip Ara" bölümünden ayrı bir alana
+         çıkarıldı — geniş ekranda Kayıtlı Rakipler'in YANINDA görünsün diye, kullanıcı hangi
+         sekmeyle arama/ekleme yaparsa yapsın sonuç burada kalıcı kalır (bkz. Madde 2). -->
+    <div class="field tab-panel tab-ara" id="rakipSonuclarField">
+      <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
+      <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
+      <div class="actions" id="rakipSonuclarToggleWrap"></div>
+      <div class="sayfalama-manuel" id="rakipSonuclarManuelSayfalama"></div>
+      <div class="actions">
+        <button class="btn-secondary hidden" id="rakipSonuclarTopluSilBtn" type="button">Seçilenleri Sil</button>
+      </div>
+      <div class="actions">
+        <button class="btn-secondary hidden" id="rakipSonuclarTopluEkleBtn" type="button">Seçilenleri Ekle</button>
+      </div>
+    </div>
+
     <div class="field tab-panel tab-liste" id="rakipListeField">
       <h3>Kayıtlı Rakipler</h3>
       <p class="muted" id="rakipListeBos">Henüz kaydedilmiş rakip yok.</p>
@@ -123,6 +146,10 @@
       <div class="status" id="rakipSilStatus"></div>
     </div>
 
+    <!-- dalButonlarWrap + dalIstekField, geniş ekranda TEK grid hücresinde (analiz) yan yana
+         Arama Sonuçları/Kayıtlı Rakipler ile görünsün diye bu ortak sarmalayıcıya alındı
+         (Madde 2, 2026-08-19/20) — grid-area tek bir elemana uygulanabildiği için. -->
+    <div id="raAnalizWrap">
     <div class="actions" id="dalButonlarWrap">
       <button class="btn-secondary" id="dalIcerikBtn" type="button">Görsel/Video Stratejisi</button>
       <button class="btn-secondary" id="dalAksiyonBtn" type="button">Aksiyon/Hedef Analizi</button>
@@ -226,6 +253,7 @@
            tek bir üzerine-yazılan div yerine, her üretilen rapor kendi kartında (en yenisi en
            üstte) listeleniyor — kartlar raporKartiOlustur() ile JS'te dinamik oluşturuluyor. -->
       <div id="dalRaporGecmis"></div>
+    </div>
     </div>
 
     <!-- İçe Aktar modalı: rapor üretilmeden önce ek kaynak belge/link/metin eklemek için.
@@ -359,6 +387,8 @@
         <button class="btn-secondary" id="karsilastirmaIndirBtn" type="button">İndir (PDF)</button>
       </div>
     </div>
+
+    </div><!-- /.ra-layout -->
   </section>
 
 </div>
@@ -2340,6 +2370,24 @@
       setStatus(el('rakipAraStatus'), mesaj, 'ok');
     }).catch(function (e) { if (e.message !== 'unauthorized') setStatus(el('rakipAraStatus'), 'Harita şu an yüklenemedi, manuel giriş yapabilirsin.', 'err'); });
   });
+
+  // "Konum ile Rakip Ara" / "Rakip Ekle" sekme geçişi (Madde 2, 2026-08-19/20, kullanıcı
+  // isteği) — setDal() ile birebir aynı desen (buton .active + panel .hidden toggle).
+  var RA_SEKME_KEY = 'rakipAnaliziSekme_v1';
+  function setRaSekme(sekme) {
+    el('raSekmeAraBtn').classList.toggle('active', sekme === 'ara');
+    el('raSekmeEkleBtn').classList.toggle('active', sekme === 'ekle');
+    el('rakipAramaField').classList.toggle('hidden', sekme !== 'ara');
+    el('rakipEkleField').classList.toggle('hidden', sekme !== 'ekle');
+    try { sessionStorage.setItem(RA_SEKME_KEY, sekme); } catch (e) { /* önemsiz, sadece son sekme tercihi */ }
+  }
+  el('raSekmeAraBtn').addEventListener('click', function () { setRaSekme('ara'); });
+  el('raSekmeEkleBtn').addEventListener('click', function () { setRaSekme('ekle'); });
+  (function () {
+    var kayitliSekme;
+    try { kayitliSekme = sessionStorage.getItem(RA_SEKME_KEY); } catch (e) { kayitliSekme = null; }
+    setRaSekme(kayitliSekme === 'ekle' ? 'ekle' : 'ara');
+  })();
 
   var currentDal = 'icerikStrateji';
   function setDal(dal) {
