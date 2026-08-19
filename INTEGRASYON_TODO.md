@@ -36,9 +36,10 @@ olduğu adım bitmediği için) · `[x]` test edilip çalıştığı doğruland�
       sonra ülke → IANA timezone eşlemesiyle (basit statik tablo) yerel 13:00'ün UTC karşılığı
       hesaplanacak. **Bilinçli sınır:** birden fazla saat dilimi olan ülkelerde (ABD, Rusya vb.)
       en yaygın/başkent dilimi kullanılacak, sorun çıkarsa detaylandırılır.
-- [ ] **WhatsApp mesaj şablonları Meta onayına gönderilecek (yeni):** utility kategorisindeki
-      şablon mesajlar (ödeme onayı, hatırlatma) Meta Business Manager'da önceden onaylanmalı —
-      bu bir kurulum adımı, anlık değil, süre alabilir. Phase 1'e eklendi.
+- [x] **WhatsApp mesaj şablonları Meta onayına gönderilecek — YAPILMIŞ, stale checkbox
+      2026-08-19'da düzeltildi (Graph API `message_templates` canlı sorgusuyla doğrulandı,
+      7/7 şablon `APPROVED`):** utility kategorisindeki şablon mesajlar (ödeme onayı, hatırlatma)
+      Meta Business Manager'da önceden onaylandı. Phase 1'e eklendi.
 - [ ] **KRİTİK — test→gerçek hesap geçişinde sorun yaşamamak için (2026-07-21):** Şablonlar
       Meta'da telefon numarasına değil **WABA'ya (WhatsApp Business Account)** bağlı onaylanıyor.
       Çiğdem'in gerçek numarası **AYNI test WABA'sına** eklenirse onaylı şablonlar oradan kalır,
@@ -136,22 +137,17 @@ Sheets-log + Selen-bildirimi tetikleyicisini çalıştırır şeklinde uygulanac
       numarada çalışmıyor (ikisi karşılıklı dışlayıcı). Onun yerine karşılama mesajı Phase 2'de
       **webhook tetikli serbest-metin yanıt** olarak yazılacak (bkz. Phase 2) — bu da ücretsiz,
       hatta daha esnek (dinamik içerik mümkün), sadece kod gerektiriyor.
-- [ ] **Utility şablon mesajlarını Meta'ya onaya gönder — 4 şablon (2026-07-21 netleşen tam liste),
-      hepsi İngilizce (site varsayılan diliyle tutarlı):**
-      1. [~] `randevu_onay_danisan` — danışana, ödeme sonrası hemen. **GÖNDERİLDİ (2026-07-21),
-         durum: Değerlendiriliyor (In Review).** WhatsApp Manager → Mesaj şablonları'nda görünüyor.
-      2. [~] `randevu_hatirlatma_danisan` — danışana, randevudan 1 gün önce yerel 13:00.
-         **GÖNDERİLDİ (2026-07-21), durum: Değerlendiriliyor.**
-      3. [~] `yeni_randevu_bildirimi` — Selen'e, yeni randevu geldiğinde (Sorun Özeti dahil,
-         kullanıcı onayladı 2026-07-21). **GÖNDERİLDİ (2026-07-21, düzeltilmiş haliyle — sabit
-         kapanış cümlesi eklendi), durum: Değerlendiriliyor.**
-      4. [~] `hatirlatma_gonderildi_bildirimi` — Selen'e, hatırlatma danışana gittiğinde.
-         **GÖNDERİLDİ (2026-07-21), durum: Değerlendiriliyor.**
-      **Sonuç: 4/4 şablon gönderildi (2026-07-21), hepsi "Değerlendiriliyor" durumunda. Onay
-      bildirimini (Aktif-Kaliteli olunca) bir sonraki oturumda WhatsApp Manager'dan kontrol et.**
-      **GÜNCELLEME (2026-07-22): Kullanıcı WhatsApp Manager'da bu şablonların "Değerlendiriliyor"
-      durumundan çıkıp aktifleştiğini bildirdi.** Aşağıdaki "GERİ DÖNÜLECEK" maddesindeki gerçek
-      uçtan uca doğrulama artık yapılabilir (Selen'in gerçek numarasıyla).
+- [x] **Utility şablon mesajlarını Meta'ya onaya gönder — 4 şablon (2026-07-21 netleşen tam liste),
+      hepsi İngilizce (site varsayılan diliyle tutarlı) — TAMAMI APPROVED, stale checkbox
+      2026-08-19'da düzeltildi (Graph API canlı sorgusuyla teyit edildi):**
+      1. [x] `randevu_onay_danisan` — danışana, ödeme sonrası hemen. **APPROVED.**
+      2. [x] `randevu_hatirlatma_danisan` — danışana, randevudan 1 gün önce yerel 13:00. **APPROVED.**
+      3. [x] `yeni_randevu_bildirimi` — Selen'e, yeni randevu geldiğinde (Sorun Özeti dahil,
+         kullanıcı onayladı 2026-07-21). **APPROVED.**
+      4. [x] `hatirlatma_gonderildi_bildirimi` — Selen'e, hatırlatma danışana gittiğinde. **APPROVED.**
+      **Sonuç: 4/4 şablon APPROVED** — hepsi 2026-08-19'da Graph API `message_templates`
+      sorgusuyla canlı doğrulandı (ayrıca 3 iptal şablonu da APPROVED: `iptal_onay_danisan`,
+      `iptal_bildirimi_selen`, `iptal_kisisel_not_danisan` — toplam 7/7).
       Tam metinler aşağıdaki "WhatsApp Mesaj Şablonları" bölümünde. Onay süresi olabileceğinden
       erkenden başlatılmalı. Karşılama/booking-sayfası-linki mesajı şablon DEĞİL (yukarıya bkz).
 
@@ -1047,16 +1043,13 @@ Parantez içindeki numara, yukarıdaki birebir listedeki orijinal madde numaras�
     - `lib/cancellation.ts`/`routes/panel.ts`: `clientMessage` opsiyonel alanı Sheet'e yazılıyor,
       dolu ise ayrı bir WhatsApp şablonuyla (izole try/catch, mevcut iptal onayını asla etkilemez)
       danışana gönderiliyor.
-    - **Yeni Meta şablonu `iptal_kisisel_not_danisan` API üzerinden gönderildi (2026-08-10, durum:
-      PENDING)** — gövde: sabit giriş/kapanış metni + tek `{{1}}` değişkeni (Çiğdem'in serbest
-      metni). Onay gelene kadar bu özellik gerçek WhatsApp göndermez (kod hazır, WhatsApp Manager'da
-      "Değerlendiriliyor" durumunu kontrol et).
+    - **Yeni Meta şablonu `iptal_kisisel_not_danisan` — APPROVED (2026-08-19'da Graph API
+      canlı sorgusuyla doğrulandı, stale "Değerlendiriliyor" notu düzeltildi).** Gövde: sabit
+      giriş/kapanış metni + tek `{{1}}` değişkeni (Çiğdem'in serbest metni). Özellik artık gerçek
+      WhatsApp gönderiyor, kullanıcıya 2026-08-19'da haber verildi (kullanıcının açık isteği,
+      2026-08-10/11 — takip artık kapandı).
     - 2 yeni test (137/137 yeşil), `tsc`/`prettier` temiz. Backend deploy edildi, frontend push
       edildi (CDN yayılımı birkaç dakika sürebilir).
-    - **TAKİP GEREKİYOR:** `iptal_kisisel_not_danisan` şablonu WhatsApp Manager'da "Değerlendiriliyor"
-      durumunda — aktif olunca kullanıcıya haber verilecek (kullanıcının açık isteği, 2026-08-10/11).
-      Otomatik arka plan izleme yok, bir sonraki oturumda veya kontrol istendiğinde WhatsApp
-      Manager'dan bakılacak.
 12. (8) ⏭️ ATLANDI (2026-08-11, kullanıcı kararı) — Çiğdem'in bilgisayarında İngilizce dikte bozuk
     çıkıyor (Selen'in bilgisayarında Türkçe dikte sorunsuz). Kullanıcının değerlendirmesi: bu ilk
     kez iki farklı bilgisayardan ve iki farklı ülkeden bağlanılması + henüz canlıya alınmamış,
@@ -2225,10 +2218,20 @@ Kullanıcının ilettiği, Çiğdem'den gelen metin (birebir, İngilizce orijina
 > Approved Insurance Providers: Bupa, AXA Health, Aviva.
 > Social Media Icons: LinkedIn, Instagram, YouTube.
 
-Durum: SIRAYA ALINDI, henüz başlanmadı. Kullanıcı "uygun bir anda halletmek için sıraya al" dedi —
-şu an öncelik Faz 6 (Instagram API). Not: Madde 3 (Social Media Integration, üçüncü-parti widget
-aggregator) muhtemelen Faz 6 ile örtüşüyor/ilişkili — Faz 6'ya başlarken bu madde ile çapraz
-kontrol edilmeli.
+**Durum (2026-08-19'da güncellendi, stale idi):**
+- **Madde 1 (Dynamic Event Box) — TAMAMLANDI**, hatta plandan daha kapsamlı: sadece boş-diziyle
+  iskelet değil, tam self-service CRUD (`Etkinlikler` Sheets sekmesi, public `GET /events`,
+  panel-korumalı `POST /panel/events` + `POST /panel/events-sil`, `panel.html`'de form) kuruldu.
+  İlk tasarım (hero+services'e beyaz kart) kullanıcı geri bildirimiyle değiştirildi — artık
+  about/approach gibi tam genişlikte bir zig-bölümü (`#etkinlikler`), footer'ın hemen üstünde,
+  içerik boşken tüm bölüm gizli. Gerçek test verisiyle uçtan uca doğrulandı (panel'den ekle →
+  ana sayfada görün → panel'den sil).
+- **Madde 2 (Blog Categories) — TAMAMLANDI**: `blog.html`'de 5 kategori filtre butonu
+  (All/Academic & Clinical/Thought Pieces/Creative Writing/Videos & Media), mevcut 3 yazı
+  kategorilere atandı, boş kategori mesajı eklendi.
+- **Madde 3 (Social Media Integration) ve Madde 4 (Logo/Trust Bar) — hâlâ BEKLİYOR**, aşağıdaki
+  2026-08-19 14:00 görüşmesine bağlı (hesap linkleri, widget seçimi, gerçek akreditasyon
+  doğrulaması olmadan içerik eklenemez).
 
 ### Faz 6 (Instagram API) — BLOKE, Çiğdem'den bilgi/aksiyon bekleniyor (2026-08-18)
 
@@ -2261,5 +2264,7 @@ yukarıda) EK olarak, Website Implementation Brief'i uygularken çıkan sorular:
   konuşulmadı (maliyet karşılaştırması gerekiyor, `feedback_arac_arama_maliyet_performans_marj_protokolu`
   kuralına göre) — bu, Faz 6'nın Instagram sorusuyla kısmen örtüşüyor.
 
-Durum: BEKLİYOR — 2026-08-19 14:00 görüşmesinde sorulacak, cevap gelene kadar Madde 1'in kod
-iskeleti boş veri dizisiyle kurulabilir ama Madde 3/4 gerçek içerikle tamamlanamaz.
+Durum: BEKLİYOR — 2026-08-19 14:00 görüşmesinde sorulacak. **Güncelleme:** Madde 1 artık boş
+veri dizisi değil, gerçek self-service backend'le kuruldu (yukarı bakınız) — panelden gerçek
+etkinlik bilgisi girilince otomatik yayınlanır, ayrıca kod değişikliği gerekmez. Madde 3/4 hâlâ
+gerçek içerik/doğrulama bekliyor.
