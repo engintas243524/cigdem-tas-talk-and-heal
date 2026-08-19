@@ -2364,3 +2364,48 @@ otomatik "Görsel Linki" kutusuna yazılıyor (URL yapıştırma seçeneği de d
 `test/media.spec.ts` (6 test, gerçek yükle+servis roundtrip'i dahil) + tüm suite 358/358 yeşil,
 `tsc --noEmit` temiz. Backend deploy edildi, binding canlıda doğrulandı
 (`env.MEDIA_BUCKET (talk-and-heal-medya) R2 Bucket`).
+
+---
+
+## Kullanıcı İsteği — 2026-08-19/20 — Rakip Analizi sayfası yeniden mimari (birebir, henüz UYGULANMADI)
+
+> 1- konum ile aramada sayfanın refresh edilmesinde haritanın kalması iyi ama arama kriterleri siliniyor, onların da kalması lazım
+> 2- ayrıca rakip analizi sayfasında yukarıdan aşağı mimarimiz kullanıcı için iyi değil, harita ile ara rakip ara alt alta kafa karıştırıcı, bu ikisinini birer seçenek olarak aynı satırda olması lazım ve bunların altında hangisi ile arama yapılırsa arama sonuçları gelmeli, arama sonuçlarının yanına da kayırlı rakipler gelmeli ve bu 3 akışta elde edilen verilerin tek bir sayfa görüntüsünde görünmesi lazım, aksi hale harita ile ya da rakip ara ile yapılan arama sonuçlarını görmek için sayfayı aşağı kaydırmak yukarı kaydırmak ve seçilen rakiplerin kayıtlı rakiplere eklenip eklenmediğini görmek için de ayrıca sayfada yukarı aşağı kaymak kullanıcı deneyimi açısından çok kullanışsız, aynı şey Görsel ve aksiyon analiz raporları için de geçerli oraya da aramalar sonucu elde edilen kayıtlı rakiplerin seçilmesi ile eklemelerin veya çıkarmaların eklendiği/çıkarıldığının görülebilmesi için kullanıcı deneyimi açısından yukarı aşağı git gel çok kullanışsın, bu durum silsile halinde otomatik rakip takibi için de geçerli ama bu en sonda olması daha doğal diğerlerine göre. Yani dikine mimari çok kullanışsız, o nedenle yatay ve birçoğunda yapılan işlemin hemn diğerindeki etkisinin gözlemlenebileceği bir mimari tasarlamamız lazım. Umarım anlatabilmişimdir.
+
+**Netleştirme sorusuna kullanıcının verdiği birebir cevap (2026-08-20):**
+
+> genişliği yüksekliğinden pixel olarak daha büyük değere sahip ekranlı cihazlarda sayfa
+> mimarisi: en solda yanyana iki seçenek olarak aynı görsel ve rakip analiz de olduğu gibi Konum
+> ile Rakip Ara + Rakip Ekle bölümlerini aynı satırda iki seçenek/sekme yapıp, altlarında arama
+> sonuçları + Kayıtlı Rakipler + Görsel/Video Stratejisi/Aksiyon/Hedef Analizi yan yana göster
+> ama Konum ile Rakip Ara + Rakip Ekle nin yanında harita daima görünür olacak arama
+> yapıldığında haritada görünür olacak, bu arada haritada çıkan rakiplerden ilk tıklamada mavi,
+> ikinci tıklamda kırmızı olana ve bu mavi/kırmızıya göre kayıtlı rakipler listesine eklenen ve
+> çıkan raakipler, aynı şekilde kayıtlı rakipler listesindeyken de listeden çıkarıldıklarında
+> haritada mavi olan renk kırmızı, kayılı arama sonuçları listesinde olan ama haritada renksiz
+> olan rakip de arama sonuçlarından eklendiğinde haritada mavi ya da arama sonuçlarından
+> silindiğinde renksiz ya da mavi olan rakip de kırmızı olabilsin. En altta da Otomatik Rakip
+> Takibi olsun.
+
+**Çözümlenmiş kapsam (bu iki metinden çıkarılan):**
+1. **Madde 1 (küçük, hızlı):** `rakipAramaStateKaydet/Yukle` (2026-08-19'da eklendi) sadece
+   sonuç/harita state'ini kaydediyor — form alanlarını (`#rakipAdres`, `#rakipSorgu`,
+   `#rakipRadius`, `#rakipMaxSonuc`) KAYDETMİYOR/GERİ YÜKLEMİYOR. Bunları da aynı sessionStorage
+   nesnesine ekleyip sayfa yüklenirken input'lara yazmak yeterli.
+2. **Madde 2 (büyük, geniş ekran mimarisi):**
+   - Geniş ekranda (width > height, media query) sol üstte "Konum ile Rakip Ara" / "Rakip Ekle"
+     iki sekme (tab) olarak yan yana; yanlarında (sağda) harita HER ZAMAN görünür, arama
+     yapılınca güncellenir.
+   - Bunların ALTINDA: Arama Sonuçları + Kayıtlı Rakipler + Görsel/Video Stratejisi + Aksiyon/
+     Hedef Analizi bölümleri yan yana (çoklu kolon).
+   - En altta: Otomatik Rakip Takibi (sıralı/ayrı kalabilir).
+   - **Tam çift yönlü renk/state senkronizasyonu** (şu an sadece harita→liste yönü kısmen var):
+     haritada tıklama ↔ arama sonuçları listesindeki checkbox/Ekle butonu ↔ Kayıtlı Rakipler
+     listesinden çıkarma — HANGİSİNDEN yapılırsa yapılsın, diğer ikisi de senkron güncellenmeli
+     (mavi=kayıtlı, kırmızı=kayıtlıyken çıkarıldı, renksiz=hiç kayıtlı olmadı).
+   - Dar ekranda (mobil) muhtemelen mevcut dikine akış korunacak (kullanıcı sadece "genişliği
+     yüksekliğinden büyük ekranlarda" dedi) — mobil davranışı ayrıca teyit edilmeli.
+
+**Durum:** Kullanım limiti yaklaştığı için bu oturumda UYGULANMADI, sadece kapsam netleştirildi
+ve birebir kaydedildi. Bir sonraki oturumda buradan devam edilecek — önce Madde 1 (hızlı),
+sonra Madde 2'nin geniş-ekran CSS Grid/flex mimarisi + state senkronizasyonu.
