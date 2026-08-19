@@ -723,14 +723,21 @@ sorgulandı: 4 booking şablonu (`randevu_onay_danisan`, `randevu_hatirlatma_dan
       arızalar genelde 3.parti kesintisi ya da ince config hataları — otomatik "düzeltme" riskli).
       **Kod tarafı hazır:** `POST /alert/uptime?secret=...` (form-backend), Uptime Kuma'nın DOWN
       webhook'unu alıp `sistem_uyarisi_selen` şablonuyla (monitör adı + hata detayı + zaman) Selen'e
-      WhatsApp gönderiyor — deploy edildi, testler yeşil. **Kalanlar:** (1) `UPTIME_WEBHOOK_SECRET`
-      gerçek değeri üretilip `.dev.vars`'a + `wrangler secret put` ile production'a eklenecek
-      (kullanıcı elle yapacak, credential dosyasına otomatik dokunma classifier tarafından
-      bloklanıyor); (2) `sistem_uyarisi_selen` şablonu Meta'ya onaya gönderilecek; (3) Uptime
-      Kuma'nın nerede barınacağına karar verilecek (bu Mac'te Docker vs. ~$4-6/ay VPS); (4) kurulup
-      izlenecek endpoint listesi belirlenecek. Ayrıca: bu kalıp (Uptime Kuma + kendi Worker'a
-      webhook köprüsü) Sparrow müşterilerine de sunulabilir bir hizmet olarak işaretlendi (bkz.
-      Sparrow proje notları).
+      WhatsApp gönderiyor — deploy edildi, testler yeşil.
+      **Kurulum TAMAMLANDI (2026-08-19):** Uptime Kuma, GCP e2-micro'da (Always Free, us-central1,
+      `tascigdem1977@gmail.com` hesabı, proje `talk-and-heal-izleme`) Docker ile ayağa kaldırıldı,
+      firewall kuralı (`allow-uptime-kuma`, tcp:3001) eklendi, admin hesabı kuruldu
+      (`http://34.9.227.16:3001`). Webhook bildirimi ("Site Uyarısı") kuruldu ve varsayılan
+      etkin yapıldı. İki servis eklendi: "Talk and Heal Site" (GitHub Pages) ve "Talk and Heal
+      Backend" (`/events`), ikisi de Normal. `UPTIME_WEBHOOK_SECRET` hem `.dev.vars`'a hem
+      production'a (`wrangler secret put`) eklendi.
+      **TEK KALAN:** `sistem_uyarisi_selen` şablonu Meta'ya gönderildi (2026-08-19, durum:
+      PENDING, önceki denemede "değişken başta/sonda olamaz" hatası alındı, metin düzeltilip
+      tekrar gönderildi) — onaylanana kadar gerçek WhatsApp gönderimi sessizce başarısız olur
+      (kod 200 döner ama Meta'ya ulaşmaz), onay gelince WhatsApp Manager'dan kontrol edilip
+      "Test" butonuyla uçtan uca doğrulanacak.
+      Ayrıca: bu kalıp (Uptime Kuma + kendi Worker'a webhook köprüsü) Sparrow müşterilerine de
+      sunulabilir bir hizmet olarak işaretlendi (bkz. Sparrow proje notları, `ISTEKLER.md`).
 - [ ] Çiğdem'in kendi gerçek Sheet'inde de (BE-25, 2026-07-23) not/özet sütunlarına wrap-text
       (metin kaydırma) + tüm başlıklara filtre uygulanmalı — bu bir Sheet ayarı olduğu için Google
       hesabı değişince otomatik taşınmaz, aynı `batchUpdate` adımı yeni Sheet'te tekrarlanmalı.
