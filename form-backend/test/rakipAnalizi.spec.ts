@@ -17,8 +17,24 @@ const testEnv = {
 	YOUTUBE_API_KEY: 'test-key',
 } as typeof env;
 
+// Gerçek Google Sheets'te her sekme (RakipAnalizi, KullanımKaydı, KullanımLimitleri, Raporlar)
+// kendi satırlarını tutar. Bu stub eskiden HEPSİ için TEK ortak `sheetsAppended` dizisi
+// kullanıyordu — ör. bir rapor üretiminde getKullanimOzet()'in KullanımLimitleri sekmesine yazdığı
+// seed satırlar, hemen ardından getAllRakipAnalizRows()'un RakipAnalizi sekmesini okurken yanlışlıkla
+// "rakip" satırı sanılıyordu (dip not özelliği eklenene kadar bu görünmüyordu çünkü hiçbir test
+// rakipler listesinin İÇERİĞİNİ rapor çıktısında doğrulamıyordu). Artık sekme adına göre ayrı
+// diziler tutuluyor; `sheetsAppended` geriye dönük uyumluluk için RakipAnalizi sekmesinin dizisiyle
+// AYNI referansı gösteriyor (bu dosyadaki mevcut testlerin çoğu doğrudan onu indeksliyor).
 function stubApis(opts: { anthropicText?: string } = {}) {
-	const sheetsAppended: string[][] = [];
+	const tabRows: Record<string, string[][]> = { RakipAnalizi: [] };
+	const sheetsAppended = tabRows.RakipAnalizi;
+	function tabAdiCikar(url: string): string {
+		const decoded = decodeURIComponent(url);
+		const match = decoded.match(/\/values\/([^!]+)!/);
+		const tab = match ? match[1] : 'RakipAnalizi';
+		if (!tabRows[tab]) tabRows[tab] = [];
+		return tab;
+	}
 	const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 		const url = String(input);
 		const method = init?.method ?? 'GET';
@@ -34,6 +50,9 @@ function stubApis(opts: { anthropicText?: string } = {}) {
 			);
 		}
 		if (url.includes(':batchUpdate')) {
+			// deleteDimension sadece rakip-sil (RakipAnalizi sekmesi) tarafından kullanılıyor bu
+			// dosyadaki testlerde — stub başka sekme için bu isteği ayırt etmiyor, bilerek RakipAnalizi
+			// dizisine uygulanıyor.
 			const body = init?.body ? JSON.parse(init.body as string) : {};
 			for (const req of body.requests ?? []) {
 				if (req.deleteDimension) {
@@ -44,26 +63,29 @@ function stubApis(opts: { anthropicText?: string } = {}) {
 			return new Response('{}', { status: 200 });
 		}
 		if (url.includes(':append') && method === 'POST') {
+			const tab = tabAdiCikar(url);
+			const rows = tabRows[tab];
 			const body = JSON.parse(init!.body as string);
-			sheetsAppended.push(body.values[0]);
-			return new Response(
-				JSON.stringify({ updates: { updatedRange: `RakipAnalizi!A${sheetsAppended.length + 1}:I${sheetsAppended.length + 1}` } }),
-				{
-					status: 200,
-				},
-			);
+			rows.push(body.values[0]);
+			return new Response(JSON.stringify({ updates: { updatedRange: `${tab}!A${rows.length + 1}:I${rows.length + 1}` } }), {
+				status: 200,
+			});
 		}
 		if (url.includes('/values/') && method === 'PUT') {
 			// rakip-duzelt (updateRakipAnalizRow) tek bir satırı YERİNDE günceller — range'deki satır
 			// numarasını (ör. !A3) sheetsAppended[1]'e eşleyip o satırı gerçekten üzerine yazıyoruz,
 			// aksi halde bu stub PUT'u sessizce yutar ve düzeltme hiç kalıcı olmamış gibi görünür.
+			// Header-row yazımları (!A1:...1) satır 1'i hedefler, rowNumber>=2 şartı bunları atlar.
+			const tab = tabAdiCikar(url);
+			const rows = tabRows[tab];
 			const rowMatch = decodeURIComponent(url).match(/!A(\d+)/);
 			const rowNumber = rowMatch ? Number(rowMatch[1]) : null;
 			const body = JSON.parse(init!.body as string) as { values: string[][] };
-			if (rowNumber && rowNumber >= 2) sheetsAppended[rowNumber - 2] = body.values[0];
+			if (rowNumber && rowNumber >= 2) rows[rowNumber - 2] = body.values[0];
 			return new Response('{}', { status: 200 });
 		}
-		if (url.includes('/values/') && method === 'GET') return new Response(JSON.stringify({ values: sheetsAppended }), { status: 200 });
+		if (url.includes('/values/') && method === 'GET')
+			return new Response(JSON.stringify({ values: tabRows[tabAdiCikar(url)] }), { status: 200 });
 		if (url.includes('places.googleapis.com')) {
 			return new Response(
 				JSON.stringify({
@@ -103,7 +125,7 @@ function stubApis(opts: { anthropicText?: string } = {}) {
 		throw new Error(`Unexpected fetch in test: ${method} ${url}`);
 	});
 	vi.stubGlobal('fetch', fetchMock);
-	return { sheetsAppended, fetchMock };
+	return { sheetsAppended, fetchMock, tabRows };
 }
 
 async function authedRequest(path: string, init: RequestInit = {}) {
@@ -531,7 +553,12 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		});
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as { rapor: string };
-		expect(data.rapor).toBe('Üretilen rapor metni.');
+		// Rapor metnine, hangi rakip(ler)/parametrelerle üretildiğini gösteren deterministik bir dip
+		// not ekleniyor (2026-08-20, kullanıcı isteği) — hiç rakip kaydı yokken bunu netçe belirtmeli.
+		expect(data.rapor).toContain('Üretilen rapor metni.');
+		expect(data.rapor).toContain('Dip not — bu raporun dayandığı veri');
+		expect(data.rapor).toContain('Kullanılan rakip(ler): Rakip verisi yok (henüz kayıtlı rakip eklenmemiş)');
+		expect(data.rapor).toContain('Odaklanılan analiz parametreleri: Tüm parametreler (belirli bir odak seçilmedi)');
 	});
 
 	it('returns an empty etikBayraklari for a clean report', async () => {
@@ -591,7 +618,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			body: JSON.stringify({ isim: 'Seçilmeyen Rakip', kaynak: 'manuel' }),
 		});
 
-		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+		const raporResponse = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
 			method: 'POST',
 			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [secilecekId] }),
 		});
@@ -600,6 +627,11 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).toContain('Seçilen Rakip');
 		expect(anthropicBody.messages[0].content).not.toContain('Seçilmeyen Rakip');
+
+		// Dip not da aynı ayrımı yansıtmalı — kullanıcı raporun HANGİ rakibe dayandığını görebilsin.
+		const raporData = (await raporResponse.json()) as { rapor: string };
+		expect(raporData.rapor).toContain('Kullanılan rakip(ler): Seçilen Rakip');
+		expect(raporData.rapor).not.toContain('Seçilmeyen Rakip');
 	});
 
 	it('includes İçe Aktar (kaynakBelgeler) text in the prompt', async () => {
@@ -627,9 +659,10 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 	});
 
 	it("rejects with 402 once this month's icerikStrateji quota (12) is full, without calling Claude", async () => {
-		const { sheetsAppended, fetchMock } = stubApis();
+		const { tabRows, fetchMock } = stubApis();
 		const now = new Date().toISOString();
-		for (let i = 0; i < 12; i++) sheetsAppended.push([`k${i}`, now, 'icerikStrateji', 'önceki rapor']);
+		const kullanimKaydi = (tabRows.KullanimKaydi ??= []);
+		for (let i = 0; i < 12; i++) kullanimKaydi.push([`k${i}`, now, 'icerikStrateji', 'önceki rapor']);
 
 		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
 			method: 'POST',
@@ -651,7 +684,12 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		});
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as { rapor: string };
-		expect(data.rapor).toBe('Üretilen rapor metni.');
+		// aksiyonAnaliz'de icerikStrateji'nin aksine rakipIds boşken rakip verisi HİÇ kullanılmıyor —
+		// dip notun bunu ayrı bir ifadeyle belirtmesi gerekiyor (bkz. handleIcerikStrateji'deki dip
+		// not testiyle karşılaştır, orada "TÜM kayıtlı rakipler kullanıldı" deniyor).
+		expect(data.rapor).toContain('Üretilen rapor metni.');
+		expect(data.rapor).toContain('Dip not — bu raporun dayandığı veri');
+		expect(data.rapor).toContain('Kullanılan rakip(ler): Rakip seçilmedi (rakip karşılaştırması yapılmadı)');
 	});
 
 	it('flags a report containing a BACP-regime banned pattern via the deterministic ethics gate', async () => {
@@ -692,9 +730,10 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 	});
 
 	it("rejects with 402 once this month's aksiyonAnaliz quota (13) is full, without calling Claude", async () => {
-		const { sheetsAppended, fetchMock } = stubApis();
+		const { tabRows, fetchMock } = stubApis();
 		const now = new Date().toISOString();
-		for (let i = 0; i < 13; i++) sheetsAppended.push([`k${i}`, now, 'aksiyonAnaliz', 'önceki rapor']);
+		const kullanimKaydi = (tabRows.KullanimKaydi ??= []);
+		for (let i = 0; i < 13; i++) kullanimKaydi.push([`k${i}`, now, 'aksiyonAnaliz', 'önceki rapor']);
 
 		const response = await authedRequest('/panel/rakip-analizi/aksiyon-analiz', {
 			method: 'POST',

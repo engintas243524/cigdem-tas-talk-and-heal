@@ -2326,6 +2326,17 @@ test edildi (`npm test` 352/352 yeşil, `tsc --noEmit` temiz) — detaylar:
 - Madde 3: "Yüklenenleri Sil" butonu (dal + karşılaştırma bölümlerinin ikisinde de).
 - Madde 4: `ICERIK_STRATEJI_SYSTEM_PROMPT`/`AKSIYON_ANALIZ_SYSTEM_PROMPT`'a karşılıklı
   "bunu ÜRETME, o diğer rapora ait" hariç-tutma cümleleri eklendi.
+  **Canlı doğrulama (2026-08-20): TAMAMLANDI.** Kullanıcı onayıyla gerçek Claude API'sine aynı
+  test isteğiyle ("Önümüzdeki hafta için Instagram ve blog içerik fikirleri öner.") her iki
+  endpoint'e de canlı istek atıldı (~$0.20-0.25 maliyet, aylık kotadan 1'er hak). Sonuç: raporlar
+  gerçekten ayrışıyor — Görsel/Video Stratejisi somut Instagram/blog fikirleri + tam konuşma
+  metni + tasarım detayı üretti, hiç sayısal hedef/zaman ufku içermedi; Aksiyon/Hedef Analizi
+  Bu Hafta/Bu Ay/3 Ay/6-12 Ay başlıklarıyla sayısal hedefler verdi, içerik önerisine hiç girmedi
+  (raporun kendisi bile "içerik fikirleri için diğer rapora bak" diye yönlendirme yaptı). İki
+  rapor PDF'e çevrilip (`pandoc` → Chrome headless print-to-pdf, LaTeX kurulu olmadığı için)
+  kullanıcıya masaüstüne indirilip gönderildi, kullanıcının incelemesi bekleniyor. Prompt-seviyesi
+  ayrışma + canlı çıktı karşılaştırması netleşti; kullanıcı geri bildirimi gelince gerekirse
+  güncellenecek.
 - Madde 6: `events.ts`'e `gorunum`/`gorselUrl` kolonları, panel formunda metin/görsel/ikisi seçimi.
 - Madde 7a: `normalizeUrl` (form-backend/src/lib/url.ts) — şemasız link artık otomatik `https://`
   alıyor, 404 kökeni kapandı. Panel formundaki iki kısayol butonu kaldırılıp header'a taşınmıştı
@@ -2419,3 +2430,8 @@ ekranda gerçek tarayıcıda kontrol edilmeli, özellikle: (1) 3 kolonlu grid'in
 `min-aspect-ratio:1/1` + `min-width:900px` eşiğinde tetiklendiği, (2) harita/arama-sonuçları/
 Kayıtlı-Rakipler renk senkronunun her 3 yönde de (ekle→mavi, harita-tıkla-sil→kırmızı,
 Kayıtlı-Rakipler'den-toplu-sil→kırmızı) gerçekten çalıştığı.
+
+**Görsel doğrulama (2026-08-20): TAMAMLANDI, kullanıcı tarafından onaylandı.** Selen canlı sitede
+geniş ekranda kontrol etti ("kontrol ettim, sorun yok") — 3 kolonlu grid + sekmeler + her-zaman-
+görünür harita + en altta Otomatik Rakip Takibi mimarisi doğru render oluyor. Madde 1 ve Madde 2
+artık tamamen kapalı, ek aksiyon gerekmiyor.

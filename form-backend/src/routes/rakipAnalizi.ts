@@ -424,6 +424,23 @@ export function rakipOzetOlustur(
 	return parametreSatiri + satirlar.join('\n');
 }
 
+function parametreReferansSatiri(parametreler: string[]): string {
+	const odaklanilacakParametreler = parametreler.filter((p) => p in ANALIZ_PARAMETRE_ACIKLAMALARI);
+	return odaklanilacakParametreler.length
+		? odaklanilacakParametreler.map((p) => ANALIZ_PARAMETRE_ACIKLAMALARI[p]).join('; ')
+		: 'Tüm parametreler (belirli bir odak seçilmedi)';
+}
+
+// Kullanıcı isteği (2026-08-20, birebir): rapor hangi rakip(ler) ve hangi parametrelere dayanarak
+// üretildiğini görünür şekilde belirtsin — kullanıcı eksik/fazla rakip veya parametre ekleyip
+// çıkararak bir sonraki raporu daha isabetli/nokta atışı hale getirebilsin. Deterministik/kod
+// seviyesinde üretiliyor (LLM'e bırakılmıyor) ki her zaman GERÇEK seçime birebir uysun, halüsinasyon
+// riski olmasın. Rapor metnine (dolayısıyla PDF/WhatsApp/e-posta/Paylaş çıktısına ve Raporlar
+// arşivine) eklenmesi için generateReport'tan hemen sonra çağrılıp rapor metnine eklenir.
+function raporReferansNotuOlustur(rakipSatiri: string, parametreler: string[]): string {
+	return `\n\n---\n**Dip not — bu raporun dayandığı veri:**\n- Kullanılan rakip(ler): ${rakipSatiri}\n- Odaklanılan analiz parametreleri: ${parametreReferansSatiri(parametreler)}\n\n_Eksik ya da fazla bir rakip/parametre varsa ekleyip çıkararak bir sonraki raporu daha isabetli hale getirebilirsin._`;
+}
+
 // İçe Aktar (Faz D1) ile eklenen metin kaynaklarını (docx/pptx/epub/txt/md/csv/web linki/yapıştırılan
 // metin — pdf'ler burada yok, onlar generateReport'a ayrı bir document content block olarak gidiyor)
 // rapor promptuna ekler.
@@ -541,6 +558,20 @@ denemeye değer): ${JSON.stringify(konuTrendleri.map((k) => ({ konu: k.konu, sko
 		}
 		return errorResponse(request, 502, 'Rapor şu an üretilemedi, lütfen tekrar dene.', err);
 	}
+
+	// Dip not — hangi rakip(ler) kullanıldı. Bu dalda rakipIds boşsa (2026-08-15 kararı, bkz.
+	// ICERIK_STRATEJI_SYSTEM_PROMPT'un üstündeki not) rakip rakip analiz YAPILMAZ ama TÜM kayıtlı
+	// rakipler genel pazar bağlamı için kullanılır — rakipOzetOlustur'daki AYNI mantık, dip notta da
+	// bu ayrım netçe belirtilmeli, yoksa kullanıcı "rakip seçmedim" derken aslında hepsinin
+	// kullanıldığını fark etmez.
+	const dipnotRakipler = rakipIds.length ? rakipler.filter(({ row }) => rakipIds.includes(row.id)) : rakipler;
+	const dipnotRakipSatiri = !dipnotRakipler.length
+		? 'Rakip verisi yok (henüz kayıtlı rakip eklenmemiş)'
+		: rakipIds.length
+			? dipnotRakipler.map(({ row }) => row.isim).join(', ')
+			: `${dipnotRakipler.map(({ row }) => row.isim).join(', ')} (rakip seçilmedi — genel pazar bağlamı için TÜM kayıtlı rakipler kullanıldı)`;
+	rapor = `${rapor}${raporReferansNotuOlustur(dipnotRakipSatiri, parametreler)}`;
+
 	await logKullanim(env, 'icerikStrateji', istek.slice(0, 200));
 
 	// Kullanıcı kararı (2026-08-15): raporlar artık RakipAnalizi sekmesine satır olarak
@@ -675,6 +706,15 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 		}
 		return errorResponse(request, 502, 'Analiz şu an üretilemedi, lütfen tekrar dene.', err);
 	}
+
+	// Dip not — bu dalda (aksiyonAnaliz) icerikStrateji'nin aksine rakipIds boşsa rakip verisi HİÇ
+	// kullanılmıyor (bkz. yukarıdaki rakipOzet ? ... : null satırı) — dip nottaki ayrım buna göre.
+	const dipnotSeciliRakipler = rakipRows.filter(({ row }) => rakipIds.includes(row.id));
+	const dipnotRakipSatiri = dipnotSeciliRakipler.length
+		? dipnotSeciliRakipler.map(({ row }) => row.isim).join(', ')
+		: 'Rakip seçilmedi (rakip karşılaştırması yapılmadı)';
+	rapor = `${rapor}${raporReferansNotuOlustur(dipnotRakipSatiri, parametreler)}`;
+
 	await logKullanim(env, 'aksiyonAnaliz', yorum.slice(0, 200));
 
 	// "Grafik Verisi" hesaplama — bkz. handleRakipTakipKarsilastirma'daki AYNI desen/yorumlar
