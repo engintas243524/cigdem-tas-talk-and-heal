@@ -2435,3 +2435,45 @@ Kayıtlı-Rakipler'den-toplu-sil→kırmızı) gerçekten çalıştığı.
 geniş ekranda kontrol etti ("kontrol ettim, sorun yok") — 3 kolonlu grid + sekmeler + her-zaman-
 görünür harita + en altta Otomatik Rakip Takibi mimarisi doğru render oluyor. Madde 1 ve Madde 2
 artık tamamen kapalı, ek aksiyon gerekmiyor.
+
+---
+
+## OTURUM DEVİR NOTU (2026-08-20) — bu terminal kapatılıp paralel/yan terminalde devam edilecek
+
+Kullanıcı bu (mevcut) terminali kapatıp yan terminaldeki oturumda devam edecek. Bu bölüm, o
+oturumun "nerede kalmıştık" sorusuna tertemiz cevap verebilmesi için bırakıldı — **git/deploy
+durumu bu tarihte gerçek ve günceldir**, aşağıdaki başlıklar kod içinde arandığında doğrulanabilir.
+
+**Bu oturumda tamamlanan (hepsi commit+push+deploy edildi):**
+1. **Rapor "kaynak dip notu"** — Görsel/Video Stratejisi ve Aksiyon/Hedef Analizi raporlarının
+   sonuna, hangi rakip(ler)/parametrelerle üretildiğini gösteren deterministik dip not eklendi
+   (`form-backend/src/routes/rakipAnalizi.ts`, `raporReferansNotuOlustur()`). Detay: hata
+   günlüğü `talk-and-heal-hata-gunlugu/05-Backend-Entegrasyon/05-backend-entegrasyon.md` BE-109.
+   Test ederken bulunan test-stub sekme-karışması hatası da düzeltildi (`test/rakipAnalizi.spec.ts`).
+   `npm test` 358/358, `tsc --noEmit`/`prettier --check` temiz. **Commit:** `a283e2e`. **Deploy:**
+   `wrangler deploy` başarılı, Version ID `08f48918-0822-4992-b707-6cc6354b7f2b`.
+2. Madde 1 (arama kriterleri kalıcılığı) ve Madde 2 (geniş ekran grid mimarisi + tam çift yönlü
+   renk senkronu) — yukarıdaki iki not'a bakınız, kullanıcı tarafından canlıda görsel olarak
+   doğrulandı.
+3. Madde 4 (iki rapor türünün gerçekten ayrışması) — gerçek Claude API çağrısıyla canlı test
+   edildi (masaüstüne PDF+markdown teslim edildi), sonuç: gerçekten ayrışıyor.
+
+**Açık/bekleyen (bir sonraki adım için):**
+- **Deploy sonrası canlı sanity-check yapılamadı.** `wrangler deploy` başarıyla tamamlandıktan
+  hemen sonra bu terminalden `form-backend.engintass19-358.workers.dev`'e atılan ek doğrulama
+  istekleri Cloudflare'in bot-koruması tarafından TLS seviyesinde reddedildi (muhtemelen aynı
+  oturumda o ana kadar atılan yoğun otomatik istek hacmi yüzünden — GitHub gibi başka siteler
+  sorunsuz açılıyordu, sadece bu worker domaini reddetti). Kod deploy'dan ÖNCE zaten gerçek API
+  çağrısıyla doğrulanmıştı, bu yüzden risk düşük, ama **ilk fırsatta gerçek tarayıcıdan
+  (panel şifresiyle) bir rapor üretilip dip notun göründüğü teyit edilmeli.**
+- `talk-and-heal-test-data.csv` (repo kökünde, untracked) hâlâ duruyor — bu dosya ÖNCEKİ bir
+  paralel oturumdan (2026-08-17) kalma sentetik test verisi, gerçek müşteri verisi değil
+  (`test_cs_*` Stripe ID'leri, `@example-test.talkandheal.local` e-postaları). Silinmedi çünkü
+  sahibi belirsizdi — yan terminaldeki oturum ihtiyacı yoksa silebilir.
+- Bu konuşmada ayrıca ele alınan ama Talk & Heal koduna dokunmayan, alakasız konular: Sparrow
+  reposunda `OpenCut/` klasörünün secret taraması (henüz yapılmadı, istenirse ayrı ele alınmalı),
+  ve bu terminaldeki Claude in Chrome tarayıcı uzantısı bağlantı sorunu (Talk & Heal'le ilgisiz,
+  bu terminale özgü bir araç sorunu — yan terminalde tekrar denemeye gerek yok).
+
+**Git durumu (bu notun yazıldığı an):** `main` branch, origin ile senkron, çalışma dizini temiz
+(yukarıdaki untracked CSV hariç).
