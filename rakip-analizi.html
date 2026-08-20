@@ -122,7 +122,7 @@
          çıkarıldı — geniş ekranda Kayıtlı Rakipler'in YANINDA görünsün diye, kullanıcı hangi
          sekmeyle arama/ekleme yaparsa yapsın sonuç burada kalıcı kalır (bkz. Madde 2). -->
     <div class="field tab-panel tab-ara" id="rakipSonuclarField">
-      <h3 id="rakipSonuclarBaslik" class="hidden">Arama Sonuçları</h3>
+      <h3 id="rakipSonuclarBaslik">Arama Sonuçları</h3>
       <p class="muted" id="rakipSonuclarBos">Henüz gösterilecek arama sonucu yok — "Konum ile Rakip Ara" ile bir arama yap.</p>
       <div class="rakip-table aksiyon-kolonlu" id="rakipSonuclar"></div>
       <div class="actions" id="rakipSonuclarToggleWrap"></div>
@@ -2326,7 +2326,6 @@
     var gorunurIndeksler = [];
     places.forEach(function (p, i) { if (!rakipSonuclarGizli[i]) gorunurIndeksler.push(i); });
     list.innerHTML = '';
-    el('rakipSonuclarBaslik').classList.toggle('hidden', gorunurIndeksler.length === 0);
     el('rakipSonuclarBos').classList.toggle('hidden', gorunurIndeksler.length > 0);
     updateRakipSonuclarTopluBtn();
     haritaCiz();
