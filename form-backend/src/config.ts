@@ -282,6 +282,13 @@ export const RAKIP_ANALIZI_COLUMNS = [
 	'aramaAdres', // arama kutusuna girilen adres/semt
 	'aramaSorgu', // arama terimi (ör. "avukat")
 	'aramaRadiusMeters', // seçilen yarıçap
+	// Sona eklendi (2026-08-23) — kaynak='harita' satırlarında Google'ın kalıcı Place ID'si. Rating/
+	// yorum SAYISI gibi Google verisi burada TUTULMUYOR (sadece bu tekil kimlik saklanabilir, o da
+	// süresiz — Google Maps Platform ToS'ta Place ID istisna, bkz. lib/places.ts#getPlaceReviews'in
+	// üstündeki not). Amaç: rapor üretimi anında (googlePuani parametresi seçiliyken) bu rakibin
+	// GÜNCEL yorum METNİNİ canlı çekebilmek — yorum metninin kendisi hiçbir zaman bu sekmeye ya da
+	// başka bir sekmeye yazılmaz, sadece o anki Claude çağrısının promptuna girip atılır.
+	'placeId',
 ] as const;
 
 export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[number], string> = {
@@ -297,6 +304,7 @@ export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[
 	aramaAdres: 'Arama Adresi',
 	aramaSorgu: 'Arama Terimi',
 	aramaRadiusMeters: 'Arama Yarıçapı (m)',
+	placeId: 'Google Place ID',
 };
 
 // Rakip Analizi ekranının kullanım kotası/sayaç sistemi (2026-08-15, icerikStrateji/aksiyonAnaliz
@@ -341,6 +349,16 @@ export const KULLANIM_KATEGORILERI = {
 	// search.list (200 ünite) + 1 videos.list (~2 ünite) çağrısı yapıyor — 1000/ay ≈ 202.000 ünite,
 	// günlük 10.000 ünitelik büdçenin aylık (300.000) toplamının altında, cömert ama sınırsız değil.
 	konuTrendBulma: { etiket: 'Konu/Trend Bulma (YouTube)', aylikLimit: 1000 as number | null },
+	// Yorum METNİ analizi (2026-08-23, kullanıcı isteği) — Places API (New) Place Details çağrısı,
+	// SADECE 'reviews' alanı istendiğinde Google'ı "Enterprise + Atmosphere" SKU'suna düşürüyor:
+	// ayda ilk 1.000 istek ücretsiz, sonrası ~$25/1.000 istek (kaynak: woosmap.com/blog/
+	// google-places-api-pricing, 2026-08-23'te doğrulandı — Google'ın kendi fiyat sayfası tabloyu
+	// harici bir linke yönlendiriyor, kesin güncel rakam Çiğdem'in GCP faturalama konsolunda ayrıca
+	// teyit edilmeli). adresBulma/rakipArama'nın AKSİNE bu SKU gerçekten ücretli — yine de limit
+	// 1.000'lik ücretsiz dilimin epey altında tutuldu (icerikStrateji+aksiyonAnaliz limiti ayda en
+	// fazla ~25 rapor, rapor başına en fazla birkaç rakip seçilir → gerçekçi üst sınır ~150/ay,
+	// 300 iki kat güvenlik payı bırakıyor) — normal kullanımda hiçbir zaman $0'ın üstüne çıkmamalı.
+	rakipYorumAnalizi: { etiket: 'Rakip Yorum Metni Analizi (Google Places)', aylikLimit: 300 as number | null },
 } as const;
 
 export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;

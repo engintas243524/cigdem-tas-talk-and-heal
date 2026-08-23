@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 
 const PLACES_API = 'https://places.googleapis.com/v1/places:searchText';
+const PLACE_DETAILS_API = 'https://places.googleapis.com/v1/places';
 
 export interface NearbyPlace {
 	placeId: string;
@@ -227,4 +228,44 @@ export async function searchCompetitorsInArea(
 		sayfaSayisi: toplamSayfaSayisi,
 		grid: { uygulandi: true, boyut, kapsananYaricapMetre, istenenYaricapMetre: radiusMeters, sinirlandirildiMi },
 	};
+}
+
+export interface PlaceReview {
+	text: string;
+	rating: number | null;
+	publishTime: string | null;
+}
+
+interface RawApiReview {
+	text?: { text?: string };
+	rating?: number;
+	publishTime?: string;
+}
+
+// Yorum METNİ, rating/userRatingCount'un aksine (searchCompetitorsInArea'da toplu çekilip
+// rakipBulmaSiralama.ts'nin sıralama formülüne giriyor) HİÇ TOPLU çekilmiyor ve HİÇ SAKLANMIYOR —
+// Google Maps Platform ToS'u (cloud.google.com/maps-platform/terms/maps-service-terms §3.2.3)
+// puan/yorum/foto gibi "Atmosphere" alanlarının kalıcı depolanmasını yasaklıyor (aynı kısıt
+// Sparrow'un RakipTakip modülü için de doğrulanmıştı, bkz. proje hafızası
+// `project_rakiptakip_ajani` + `SPARROW_RAKIPTAKIP_CFO_VERI_KAYNAGI_ARASTIRMASI.md` §1.2). Bu
+// fonksiyon SADECE routes/rakipAnalizi.ts'in rapor üretimi anında, tek bir seçili rakip için,
+// canlı çağrılmalı — dönen metin doğrudan o anki Claude promptuna eklenip atılır, ASLA bir Sheet
+// satırına/sütununa yazılmaz. Google en fazla 5 yorum döner (kendi API sınırı, bizim seçimimiz
+// değil) — hangi 5'i döndüreceği Google'ın "en alakalı" sıralamasına bağlı.
+export async function getPlaceReviews(env: Env, placeId: string): Promise<PlaceReview[]> {
+	const response = await fetch(`${PLACE_DETAILS_API}/${encodeURIComponent(placeId)}`, {
+		headers: {
+			'x-goog-api-key': env.GOOGLE_PLACES_API_KEY,
+			'x-goog-fieldmask': 'reviews',
+		},
+	});
+	if (!response.ok) {
+		throw new Error(`Google Place Details call failed: ${response.status} ${await response.text()}`);
+	}
+	const data = (await response.json()) as { reviews?: RawApiReview[] };
+	return (data.reviews ?? []).map((r) => ({
+		text: r.text?.text ?? '',
+		rating: r.rating ?? null,
+		publishTime: r.publishTime ?? null,
+	}));
 }

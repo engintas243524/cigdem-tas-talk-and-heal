@@ -2477,3 +2477,41 @@ durumu bu tarihte gerçek ve günceldir**, aşağıdaki başlıklar kod içinde 
 
 **Git durumu (bu notun yazıldığı an):** `main` branch, origin ile senkron, çalışma dizini temiz
 (yukarıdaki untracked CSV hariç).
+
+---
+
+## Rakip Analizi — Google yorum METNİ ephemeral analizi eklendi (2026-08-23)
+
+Kullanıcı önce RakipTakip Ajanı (masaüstü, ayrı proje) + Apps Script tetikleyici kurulumu istedi;
+araştırma sonucu bu altyapının Talk & Heal'de zaten `wrangler.jsonc` cron'u (`runRakipTakipSweep`,
+15 dk) üzerinden canlı çalıştığı, Apps Script'e gerek olmadığı ortaya çıktı — kullanıcı onayıyla o
+yön terk edildi. Bunun yerine "Google puanı/yorum sayısı **ve içeriği**" parametresindeki "içerik"
+etiketinin karşılıksız olduğu (kod sadece rating+userRatingCount çekiyordu, yorum METNİ hiç
+çekilmiyordu) tespit edildi. Kullanıcı kararı: gerçekten kodla (canlı çek → Claude'a ver → asla
+saklama, Google Maps Platform ToS §3.2.3'ün izin verdiği tek kullanım şekli).
+
+**Yapılanlar (tsc/prettier/npm test hepsi temiz, 358/358):**
+- `form-backend/src/lib/places.ts` — `getPlaceReviews(env, placeId)`: Place Details (New) API,
+  `reviews` fieldMask, ephemeral (hiçbir yere yazılmıyor).
+- `form-backend/src/config.ts` — `RAKIP_ANALIZI_COLUMNS`'a sona `placeId` eklendi (Google'ın
+  kalıcı kimliği — yorum verisinin KENDİSİ değil); yeni kota kategorisi `rakipYorumAnalizi`
+  (ayda 300 istek güvenlik tavanı, Enterprise+Atmosphere SKU ~$25/1.000 istek, 1.000 ücretsiz/ay).
+- `form-backend/src/routes/rakipAnalizi.ts` — `handleRakipEkle` artık `placeId`'yi kaydediyor
+  (kaynak='harita'); yeni `rakipYorumBaglamiGetir()` hem `handleIcerikStrateji` hem
+  `handleAksiyonAnaliz`'e wire edildi — `googlePuani` parametresi seçiliyken, seçili rakip(ler)in
+  placeId'si varsa, canlı yorum metni çekilip promptun sonuna eklenir.
+- `rakip-analizi.html` — `tekRakipEkle` artık arama sonucundaki `p.placeId`'yi de POST ediyor
+  (tek çağrı noktası, 3 farklı "Ekle" yolu — tekli/toplu/harita-tıklama — hepsi buradan geçiyor).
+- `test/giderTakipSweep.spec.ts` — kota kategorisi sayısı 5→6 güncellendi (yeni kategori nedeniyle).
+
+**Sparrow'a da işlendi (kod değil, doküman):** aynı ephemeral desenin Sparrow'un hem kendi rakip
+takibinde hem müşteri-yüzü rakip modülünde (Faz 6) kullanılması gerektiği
+`Sparrow/SPARROW_RAKIPTAKIP_CFO_VERI_KAYNAGI_ARASTIRMASI.md` §1.2b'ye ve
+`RakipTakip-Ajani/KALDIGIMIZ_YER.md`'ye not edildi — 2026-08-22'deki "yorum metni analizi asla
+yapılmaz" kararının fazla geniş bir genelleme olduğu, asıl kısıtın sadece SAKLAMAYI yasakladığı
+düzeltildi.
+
+**Henüz yapılmadı:** kod deploy edilmedi (`wrangler deploy`), NOTES.md'deki `tascigdem1977@gmail.com`
+üzerinden Anthropic+Google Places API key alma adımı hâlâ açık — bu özellik gerçek anlamda
+çalışmadan önce zaten gerekliydi, yeni eklenen `GOOGLE_PLACES_API_KEY` kullanımı da aynı bekleyen
+adıma bağımlı.

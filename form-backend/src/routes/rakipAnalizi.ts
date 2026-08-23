@@ -9,7 +9,7 @@ import {
 	type RakipAnalizRow,
 } from '../lib/rakipSheets';
 import { generateReport, InsufficientCreditError } from '../lib/claude';
-import { searchCompetitorsInArea, OPTIMAL_RADIUS_METERS } from '../lib/places';
+import { searchCompetitorsInArea, getPlaceReviews, OPTIMAL_RADIUS_METERS } from '../lib/places';
 import { rakipHavuzunuSiralaVeKirp } from '../lib/rakipBulmaSiralama';
 import { geocodeAddress } from '../lib/geocoding';
 import { cleanDictation } from '../lib/textCleanup';
@@ -81,6 +81,7 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 		aramaAdres?: unknown;
 		aramaSorgu?: unknown;
 		aramaRadiusMeters?: unknown;
+		placeId?: unknown;
 	};
 	try {
 		body = (await request.json()) as typeof body;
@@ -108,6 +109,9 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 		row.aramaAdres = String(body.aramaAdres ?? '').trim();
 		row.aramaSorgu = String(body.aramaSorgu ?? '').trim();
 		row.aramaRadiusMeters = String(body.aramaRadiusMeters ?? '').trim();
+		// Google'ın kalıcı benzersiz kimliği — sadece bunu (yorum/puan verisinin kendisini DEĞİL)
+		// saklıyoruz, rapor üretimi anında canlı yorum çekebilmek için (bkz. lib/places.ts#getPlaceReviews).
+		row.placeId = String(body.placeId ?? '').trim();
 	}
 	const rowNumber = await appendRakipAnalizRow(env, row);
 	return json({ id: row.id, rowNumber }, request);
@@ -424,6 +428,44 @@ export function rakipOzetOlustur(
 	return parametreSatiri + satirlar.join('\n');
 }
 
+// Yorum METNİ ephemeral bağlamı (2026-08-23, kullanıcı isteği) — googlePuani parametresi
+// seçiliyken, placeId'si olan seçili rakip(ler) için Google'dan CANLI yorum metni çekilip
+// doğrudan bu rapor çağrısının promptuna eklenir. rakipOzetOlustur'un aksine bu fonksiyon hiçbir
+// Sheet'e YAZMAZ ve dönen metin çağrıdan sonra hiçbir yerde tutulmaz — Google Maps Platform
+// ToS'unun (bkz. lib/places.ts#getPlaceReviews'in üstündeki not) izin verdiği tek kullanım şekli
+// budur: canlı iste, göster/kullan, saklama. Bir rakibin çekimi başarısız olursa (kota, API hatası)
+// o rakip sessizce atlanır — bu bir zenginleştirme katmanı, raporun üretilmesini engellememeli
+// (konuTrendBulma'daki AYNI tasarım kararı).
+async function rakipYorumBaglamiGetir(
+	env: Env,
+	rakipler: { row: RakipAnalizRow }[],
+	rakipIds: string[],
+	parametreler: string[],
+): Promise<string> {
+	if (!parametreler.includes('googlePuani') || !rakipIds.length) return '';
+	const secililer = rakipler.filter(({ row }) => rakipIds.includes(row.id) && row.placeId);
+	if (!secililer.length) return '';
+	if (await kotaDolduMu(env, 'rakipYorumAnalizi')) return '';
+
+	const bloklar: string[] = [];
+	for (const { row } of secililer) {
+		try {
+			const yorumlar = await getPlaceReviews(env, row.placeId);
+			await logKullanim(env, 'rakipYorumAnalizi', row.isim);
+			if (!yorumlar.length) continue;
+			const ozet = yorumlar
+				.slice(0, 5)
+				.map((y) => `"${y.text.slice(0, 300)}"${y.rating !== null ? ` (${y.rating}/5)` : ''}`)
+				.join('\n');
+			bloklar.push(`${row.isim}:\n${ozet}`);
+		} catch (err) {
+			console.error(`rakipYorumBaglamiGetir başarısız oldu (${row.isim})`, err);
+		}
+	}
+	if (!bloklar.length) return '';
+	return `\n\nSeçilen rakip(ler)in güncel Google yorumları (yalnızca bu analiz için canlı çekildi, hiçbir yerde saklanmıyor):\n${bloklar.join('\n\n')}`;
+}
+
 function parametreReferansSatiri(parametreler: string[]): string {
 	const odaklanilacakParametreler = parametreler.filter((p) => p in ANALIZ_PARAMETRE_ACIKLAMALARI);
 	return odaklanilacakParametreler.length
@@ -539,8 +581,10 @@ denemeye değer): ${JSON.stringify(konuTrendleri.map((k) => ({ konu: k.konu, sko
 		}
 	}
 
+	const rakipYorumBaglami = await rakipYorumBaglamiGetir(env, rakipler, rakipIds, parametreler);
+
 	const userPrompt =
-		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}${konuTrendEki}\n\nÇiğdem'in isteği: ${istek}` +
+		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}${konuTrendEki}${rakipYorumBaglami}\n\nÇiğdem'in isteği: ${istek}` +
 		iceAktarPromptEki(kaynakBelgeler);
 
 	let rapor: string;
@@ -685,9 +729,11 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	await ensureRakipAnaliziTab(env);
 	const rakipRows = await getAllRakipAnalizRows(env);
 	const rakipOzet = rakipIds.length ? rakipOzetOlustur(rakipRows, rakipIds, parametreler) : null;
+	const rakipYorumBaglami = rakipIds.length ? await rakipYorumBaglamiGetir(env, rakipRows, rakipIds, parametreler) : '';
 	const userPrompt =
 		`Sayısal özet: ${sayisalOzet}` +
 		(rakipOzet ? `\n\nSeçilen rakip verisi:\n${rakipOzet}` : '') +
+		rakipYorumBaglami +
 		`\n\nÇiğdem'in yorumu: ${yorum}` +
 		iceAktarPromptEki(kaynakBelgeler);
 

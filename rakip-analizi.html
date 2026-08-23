@@ -2271,7 +2271,7 @@
     return authFetch('/panel/rakip-analizi/rakip', {
       method: 'POST',
       body: JSON.stringify({
-        isim: p.name, adres: p.address, kaynak: 'harita',
+        isim: p.name, adres: p.address, kaynak: 'harita', placeId: p.placeId,
         aramaAdres: rakipAramaBaglam.adres, aramaSorgu: rakipAramaBaglam.sorgu, aramaRadiusMeters: rakipAramaBaglam.radius,
       }),
     }).then(function (r) { return r.json(); }).then(function (data) {
