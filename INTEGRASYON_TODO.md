@@ -2511,7 +2511,52 @@ takibinde hem müşteri-yüzü rakip modülünde (Faz 6) kullanılması gerekti�
 yapılmaz" kararının fazla geniş bir genelleme olduğu, asıl kısıtın sadece SAKLAMAYI yasakladığı
 düzeltildi.
 
-**Henüz yapılmadı:** kod deploy edilmedi (`wrangler deploy`), NOTES.md'deki `tascigdem1977@gmail.com`
-üzerinden Anthropic+Google Places API key alma adımı hâlâ açık — bu özellik gerçek anlamda
-çalışmadan önce zaten gerekliydi, yeni eklenen `GOOGLE_PLACES_API_KEY` kullanımı da aynı bekleyen
-adıma bağımlı.
+**Commit+push+deploy TAMAMLANDI (2026-08-24):** commit `dbc7f6b`, origin'e push edildi, `wrangler
+deploy` başarılı — Version ID `07930fd4-b746-4034-8b1f-e71232a11140`. Cron (`*/15 * * * *`) ve R2/AI
+binding'leri sorunsuz göründü.
+
+**Henüz yapılmadı:** Gerçek panelden uçtan uca canlı sanity-check (login → gerçek bir rakip ara/ekle
+→ googlePuani işaretli Aksiyon/Hedef Analizi çalıştır → dip notta/rapor içinde yorum bağlamının
+kullanıldığını doğrula) — bu, panel şifresine ihtiyaç duyduğu için otomatik yapılamadı, kullanıcı
+tarafından ya da şifre paylaşılırsa tarayıcı otomasyonuyla yapılmalı. Ayrıca NOTES.md'deki
+`tascigdem1977@gmail.com` üzerinden Anthropic+Google Places API key alma adımı hâlâ açık — mevcut
+deploy şu an hangi hesabın key'iyle çalışıyorsa (muhtemelen Selen'in test hesabı) onunla çalışmaya
+devam ediyor, gerçek hesaba geçiş henüz yapılmadı.
+
+## Canlı sanity-check sonrası bulgular ve düzeltme (2026-08-24)
+
+Kullanıcının onayıyla yerel `wrangler dev` üzerinden (`.dev.vars`'ın prod ile aynı `PANEL_PASSWORD`/
+`GOOGLE_SHEET_ID` kullandığı doğrulanarak) gerçek bir uçtan uca test yapıldı: RakipAnalizi
+sekmesine 20 parametrenin tamamına değinen bir test rakibi (`kaynak:'manuel'`, placeId yok — bu
+yüzden yorum-metni özelliği bu testte tetiklenmedi, GOOGLE_PLACES_API_KEY yerelde tanımlı değil)
+eklenip gerçek bir Aksiyon/Hedef Analizi raporu üretildi, sonra test rakibi silindi.
+
+**Bulgu 1 — DÜZELTİLDİ:** `lib/claude.ts#generateReport`'ta `max_tokens: webSearch ? 8192 : 4096`
+idi — webSearch=false dalını (aksiyonAnaliz) kullanan gerçek testte, 20 parametre dolu bir
+rakiple, rapor "## Özet" + "## Rakip Karşısında Konumlanma" bölümlerinden sonra
+RAPOR_YAPISI_TALIMATI'nın istediği "## Bu Ay" gibi zaman ufku bölümlerine hiç ulaşmadan
+4096'da kesildi (`stop_reason` hiçbir yerde kontrol edilmiyor, kesik rapor sessizce dönüyor).
+Düzeltme: tek sabit `max_tokens: 8192` (her iki dal için) — aynı fix icerikStrateji'de
+2026-08-16'da zaten kanıtlanmıştı. **Kota dolu olduğu için (aşağıya bakınız) gerçek bir
+aksiyonAnaliz çağrısıyla YENİDEN doğrulanamadı** — mantık sağlam ama canlı teyit, kota
+açıldığında üretilecek ilk rapora kalıyor.
+
+**Bulgu 2 — kota yan etkisi, kullanıcı kararıyla DOKUNULMADI:** Test raporu `aksiyonAnaliz`
+kotasını muhtemelen 12/13'ten 13/13'e (tam dolu) çıkardı. Kullanıcı kararı: bu, gerçek bir $
+bütçe sınırı temsil ediyor — koddan (`KULLANIM_KATEGORILERI`) sahte şekilde artırılmayacak,
+sadece gerçek "Limiti Yükselt" akışıyla (kart ile ödeme) açılabilir. Kullanıcı test için ~$1
+yüklemeyi düşünüyor, henüz yapılmadı.
+
+**Bulgu 3 — kod hatası değil, test yönteminin doğal sonucu:** Üretilen rapor panelde ("Aksiyon/
+Hedef Analizi" altında) görünmedi çünkü API doğrudan backend'e (curl) çağrıldı, gerçek tarayıcı
+session'ından DEĞİL — `raporKartiOlustur` JS fonksiyonu hiç tetiklenmedi. Ayrıca doğrulandı:
+"Raporlar" sekmesi (arşiv, `appendRaporKaydi`) tamamen yaz-sadece — panelde onu geri okuyup
+gösteren HİÇBİR ekran/route yok (`grep` ile teyit edildi), bu önceden var olan bir tasarım
+sınırlaması. Rapor gerçekten üretildi ve Sheets'in "Raporlar" sekmesine yazıldı, sadece UI'da
+görünmüyor.
+
+**Bulgu 4 — geçiciydi, kod kaynaklı değil:** "Otomatik Rakip Takibi" bölümünde "Durum
+yüklenemedi" ve boş kota sayaçları kullanıcı tarafından bildirildi; `kullanim-ozet` ve
+`rakip-takip` endpoint'leri yerelden iki kez ayrı ayrı test edildi, ikisi de sorunsuz 200 döndü
+— backend'de bir regresyon yok. Kullanıcı sayfayı yeniledikten sonra sorunun geçici olduğunu
+doğruladı.

@@ -41,7 +41,13 @@ export async function generateReport(
 		// webSearch açıkken 4096 riskli — gerçek testte (2026-08-16) dynamic-filtering'li sürümde
 		// thinking+arama+rapor toplamı 4096'yı aşıp yanıtı ORTASINDA kesti (stop_reason: max_tokens).
 		// 8192'ye çıkarmak basic web_search ile (aşağıdaki not) sorunu tamamen çözdü, tam rapor üretti.
-		max_tokens: webSearch ? 8192 : 4096,
+		// webSearch=false dalı (aksiyonAnaliz) da aynı sınıra çekildi (2026-08-24) — 20 parametrenin
+		// tamamı dolu bir rakiple gerçek testte RAPOR_YAPISI_TALIMATI'nın istediği "## Bu Ay" gibi
+		// zaman ufku bölümlerine hiç ulaşmadan 4096'da kesildiği gözlendi (bkz. proje hafızası
+		// project_talk_and_heal_rakip_yorum_analizi). generateReport hiçbir yerde stop_reason'ı
+		// kontrol etmiyor (sadece 'refusal' özel işleniyor) — max_tokens'a çarpınca kesik rapor
+		// sessizce döner, bu yüzden ÜST SINIRI yükseltmek (fail sonrası retry değil) tek pratik çözüm.
+		max_tokens: 8192,
 		system: systemPrompt,
 		messages: [{ role: 'user', content: pdfBase64ler.length ? content : userPrompt }],
 	};
