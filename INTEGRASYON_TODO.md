@@ -2560,3 +2560,7 @@ yüklenemedi" ve boş kota sayaçları kullanıcı tarafından bildirildi; `kull
 `rakip-takip` endpoint'leri yerelden iki kez ayrı ayrı test edildi, ikisi de sorunsuz 200 döndü
 — backend'de bir regresyon yok. Kullanıcı sayfayı yeniledikten sonra sorunun geçici olduğunu
 doğruladı.
+
+**max_tokens düzeltmesi deploy edildi (2026-08-24):** commit `f6d793d`, push edildi, `wrangler
+deploy` başarılı — Version ID `0a7b53a9-77e7-4ce4-a1e8-415b5c0b939b`. Kota (aksiyonAnaliz 13/13
+dolu) açıldığında üretilecek ilk gerçek rapor, bu düzeltmenin canlı doğrulaması olacak.
