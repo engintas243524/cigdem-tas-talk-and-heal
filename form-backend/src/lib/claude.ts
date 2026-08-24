@@ -1,4 +1,5 @@
 import type { Env } from '../types';
+import { RAKIP_PLATFORM_LISTESI } from '../config';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-5';
@@ -84,4 +85,35 @@ export async function generateReport(
 		.join('\n\n');
 	if (!metin) throw new Error(`Claude API'den metin yanıtı alınamadı: ${JSON.stringify(data)}`);
 	return metin;
+}
+
+// Rakip Platform Tespiti (2026-08-25) — rakipYorumBaglamiGetir'in (routes/rakipAnalizi.ts) Google
+// Places yerine Claude'un web_search aracını kullanan eşdeğeri. generateReport rapor-seviyesi genel
+// bir sistem promptu + 8192 token'lık tam metin rapor üretmek için tasarlandı — burada TEK SATIRLIK
+// yapılandırılmış bir liste isteniyor, o yüzden ayrı/küçük bir çağrı.
+export async function platformTespitiYap(env: Env, rakipIsim: string, rakipAdres: string): Promise<string> {
+	const body = {
+		model: MODEL,
+		max_tokens: 512,
+		system: `Sana verilen işletmenin hangi sosyal medya/iş platformlarında aktif olduğunu web
+aramasıyla tespit et. SADECE şu listeden seç, başka platform adı uydurma:
+${RAKIP_PLATFORM_LISTESI.join(', ')}.
+Yanıtını TEK SATIRDA, virgülle ayrılmış platform adları olarak ver (ör. "Instagram, Facebook").
+Emin olmadığın bir platformu ASLA ekleme. Hiçbir platform bulamazsan tamamen boş yanıt ver — açıklama
+veya özür cümlesi yazma.`,
+		messages: [{ role: 'user', content: `İşletme: ${rakipIsim}${rakipAdres ? ` (${rakipAdres})` : ''}` }],
+		tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+	};
+	const response = await fetch(ANTHROPIC_API, {
+		method: 'POST',
+		headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+		body: JSON.stringify(body),
+	});
+	if (!response.ok) throw new Error(`platformTespitiYap API çağrısı başarısız: ${response.status}`);
+	const data = (await response.json()) as { content?: { type: string; text?: string }[] };
+	return (data.content ?? [])
+		.filter((b) => b.type === 'text' && b.text)
+		.map((b) => b.text)
+		.join(' ')
+		.trim();
 }
