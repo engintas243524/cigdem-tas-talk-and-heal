@@ -792,6 +792,101 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(reportBody.messages[0].content).not.toContain('UydurmaPlatform');
 	});
 
+	// LLM'in ham çıktısı kanonik olmak ZORUNDA değil — "TEK SATIRDA, virgülle" talimatı bir prompt
+	// ricası, garanti değil (bkz. proje hafızası: LLM prompt talimatları güvenlik sınırı sayılmaz).
+	// Küçük harfli/farklı büyük-küçük yazımlı ve satır sonuyla ayrılmış adlar da eşleşmeli.
+	it('matches platform names case-insensitively and accepts newline-separated output', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'instagram\nFACEBOOK' });
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Kanonik Testi Rakip', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		const reportCall = findReportCall(fetchMock);
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		// Çıktı sırası hâlâ aktifPlatformlarNormalize'ın (RAKIP_PLATFORM_LISTESI) sırası.
+		expect(reportBody.messages[0].content).toContain('Kanonik Testi Rakip: Facebook, Instagram');
+	});
+
+	// Rakip başına tespit PARALEL çalışmalı (2026-08-25) — sıralı döngüde her rakip ~10-30sn'yi
+	// rapor gecikmesine doğrusal olarak ekliyordu. Aynı anda uçuşta olan tespit çağrısı sayısını
+	// ölçüyoruz: sıralı bir uygulamada bu değer asla 1'i geçmez.
+	it('runs platform tespiti for multiple competitors concurrently, not sequentially', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const r1 = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Paralel Rakip A', kaynak: 'manuel' }),
+		});
+		const r1Id = ((await r1.json()) as { id: string }).id;
+		const r2 = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Paralel Rakip B', kaynak: 'manuel' }),
+		});
+		const r2Id = ((await r2.json()) as { id: string }).id;
+
+		let ucusta = 0;
+		let enFazlaEsZamanli = 0;
+		const original = fetchMock.getMockImplementation()!;
+		fetchMock.mockImplementation(async (input, init) => {
+			const url = String(input);
+			if (url.includes('api.anthropic.com') && init?.body && JSON.parse(init.body as string).max_tokens === 512) {
+				ucusta++;
+				enFazlaEsZamanli = Math.max(enFazlaEsZamanli, ucusta);
+				await new Promise((resolve) => setTimeout(resolve, 10));
+				ucusta--;
+				return new Response(JSON.stringify({ content: [{ type: 'text', text: 'Instagram' }] }), { status: 200 });
+			}
+			return original(input, init);
+		});
+
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [r1Id, r2Id] }),
+		});
+		expect(raporRes.status).toBe(200);
+		expect(enFazlaEsZamanli).toBe(2);
+
+		// Paralelleştirme çıktı SIRASINI değiştirmemeli (Promise.all girdi sırasını korur).
+		const reportBody = JSON.parse((findReportCall(fetchMock)[1] as RequestInit).body as string);
+		const metin = String(reportBody.messages[0].content);
+		expect(metin.indexOf('Paralel Rakip A: Instagram')).toBeLessThan(metin.indexOf('Paralel Rakip B: Instagram'));
+	});
+
+	// Subrequest regresyon koruması (BE-77/BE-81) — Cloudflare ücretsiz planında bir istek en fazla
+	// 50 subrequest yapabilir (bkz. lib/places.ts#MAX_GRID_DIMENSION'ın üstündeki aynı hesap).
+	// getKullanimOzet TEK ÇAĞRIDA 31 subrequest'e mal oluyor (bu testle ölçüldü: 2026-08-25'te
+	// rakipPlatformTespitiBaglamiGetir kendi özetini çekerken sayı 83'tü, özet parametreye
+	// çevrilince 52'ye düştü — aradaki 31 tam olarak bir getKullanimOzet çağrısı).
+	//
+	// Tavan 60: BİR getKullanimOzet çağrısının geri sızmasını (52 → 83) kesin yakalar, ±birkaç
+	// çağrılık gürültüde ötmez. 50'nin ALTINA çekilemiyor çünkü tek rakipli bu senaryo bugün 52'de —
+	// kalan aşım getKullanimOzet'in KENDİ iç maliyetinden geliyor (kategori başına
+	// ensureKullanimLimitTab + getAllKullanimLimitRows, efektifLimit ve sonKullanilanParaBirimi için
+	// AYRI AYRI). O refactor bu düzeltmenin kapsamı dışında bırakıldı (review'ın "önerilen takip"
+	// maddesi) — bu yorum, sayının neden hâlâ 50'nin üstünde olduğunun kaydıdır.
+	it('stays well under the Cloudflare subrequest ceiling for a one-competitor report', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Subrequest Testi Rakip', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+
+		// Rakip oluşturma AYRI bir istek — sadece rapor isteğinin kendi çağrılarını sayıyoruz.
+		const oncesi = fetchMock.mock.calls.length;
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		expect(raporRes.status).toBe(200);
+		const raporIstegiCagriSayisi = fetchMock.mock.calls.length - oncesi;
+		expect(raporIstegiCagriSayisi).toBeLessThan(60);
+	});
+
 	it('writes a Sheets cell note for each detected competitor', async () => {
 		const { fetchMock } = stubApis({ anthropicText: 'Facebook' });
 		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
@@ -1130,6 +1225,24 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		expect(data.rapor).toContain('Üretilen rapor metni.');
 		expect(data.rapor).toContain('Dip not — bu raporun dayandığı veri');
 		expect(data.rapor).toContain('Kullanılan rakip(ler): Rakip seçilmedi (rakip karşılaştırması yapılmadı)');
+	});
+
+	// Kota kontrolü kotaDolduMu'dan TEK getKullanimOzet okumasına çevrildi (2026-08-25, BE-77/BE-81
+	// düzeltmesi) — 402 davranışının birebir korunduğunu doğrular.
+	it('returns 402 when the monthly aksiyonAnaliz quota is already full', async () => {
+		const { tabRows } = stubApis();
+		const now = new Date().toISOString();
+		const kullanimKaydi = (tabRows.KullanimKaydi ??= []);
+		for (let i = 0; i < 13; i++) kullanimKaydi.push([`k${i}`, now, 'aksiyonAnaliz', 'önceki rapor']);
+
+		const response = await authedRequest('/panel/rakip-analizi/aksiyon-analiz', {
+			method: 'POST',
+			body: JSON.stringify({ yorum: 'Değerlendirme istiyorum' }),
+		});
+		expect(response.status).toBe(402);
+		const data = (await response.json()) as { error: string; limitUrl: string };
+		expect(data.error).toContain('Aksiyon/Hedef Analizi kotası doldu');
+		expect(data.limitUrl).toBeTruthy();
 	});
 
 	it('includes the platform envanteri talimatı in the system prompt', async () => {

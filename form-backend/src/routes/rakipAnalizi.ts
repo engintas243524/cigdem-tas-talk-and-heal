@@ -545,45 +545,73 @@ async function rakipYorumBaglamiGetir(
 // dolunca TAMAMEN atlamak yerine KISMİ İŞLEME yapar — kalan kota kadar rakip işlenir, gerisi rapora
 // açıkça not düşülerek atlanır (kullanıcı kararı: 20 rakiplik bir seçimde kota bir kısmını
 // engellese bile geri kalanı işlensin).
+//
+// `ozet` PARAMETRE olarak alınıyor, burada getKullanimOzet ÇAĞRILMIYOR (2026-08-25 düzeltmesi) —
+// getKullanimOzet her çağrıldığında arttırılabilir kategori başına birden fazla Sheets isteği atıyor
+// (~31 subrequest); rapor handler'ı zaten kendi kota kontrolü için bir kez çağırdığı için burada
+// İKİNCİ kez çağırmak tek bir rapor isteğini Cloudflare'ın 50 subrequest tavanına dayıyordu — bu,
+// hata günlüğündeki BE-77/BE-81'in ("Too many subrequests") birebir aynı senaryosu.
 async function rakipPlatformTespitiBaglamiGetir(
 	env: Env,
 	rakipler: { rowNumber: number; row: RakipAnalizRow }[],
 	rakipIds: string[],
+	ozet: Awaited<ReturnType<typeof getKullanimOzet>>,
 ): Promise<string> {
 	if (!rakipIds.length) return '';
 	const secililer = rakipler.filter(({ row }) => rakipIds.includes(row.id));
 	if (!secililer.length) return '';
 
-	const ozet = await getKullanimOzet(env);
 	const { kullanilan, aylikLimit } = ozet.rakipPlatformTespiti;
 	const kalanKota = aylikLimit === null ? Infinity : Math.max(0, aylikLimit - kullanilan);
 	const islenecekler = secililer.slice(0, kalanKota);
 	const atlananSayisi = secililer.length - islenecekler.length;
 
-	const bloklar: string[] = [];
-	for (const { rowNumber, row } of islenecekler) {
-		try {
-			const ham = await platformTespitiYap(env, row.isim, row.adres);
-			await logKullanim(env, 'rakipPlatformTespiti', row.isim);
-			if (!ham) continue;
-			const platformlarStr = aktifPlatformlarNormalize(
-				ham
-					.split(',')
-					.map((p) => p.trim())
-					.filter(Boolean),
-			);
-			if (!platformlarStr) continue;
-			const goruntu = platformlarStr.split(',').join(', ');
-			bloklar.push(`${row.isim}: ${goruntu}`);
+	// Rakip başına iş PARALEL (2026-08-25) — her tespit çağrısı 3 web aramasına kadar sürebiliyor
+	// (~10-30sn), sıralı döngüde N rakip rapor gecikmesine doğrusal olarak ekleniyordu. İşler
+	// birbirinden bağımsız: kota YUKARIDA bir kez hesaplandı (iterasyon başına yeniden bakılmıyor)
+	// ve her not yazımı AYRI bir hücreyi hedefliyor. Her rakip kendi hatasını KENDİ İÇİNDE yakalayıp
+	// null ile resolve oluyor — Promise.all'un bir reject'in diğerlerini iptal etmesi davranışına
+	// hiç girilmiyor, sıralı sürümün "yut ve devam et" semantiği aynen korunuyor.
+	const sonuclar = await Promise.all(
+		islenecekler.map(async ({ rowNumber, row }): Promise<string | null> => {
 			try {
-				await setAktifPlatformlarNotu(env, rowNumber, `LLM tespiti, ${new Date().toISOString().slice(0, 10)}: ${goruntu}`);
+				const ham = await platformTespitiYap(env, row.isim, row.adres);
+				// Kendi try/catch'inde (Global Constraint: her yan etki izole) — kota kaydının
+				// başarısız olması, ZATEN YAPILMIŞ (ve faturalanmış) bir tespiti çöpe atmamalı.
+				try {
+					await logKullanim(env, 'rakipPlatformTespiti', row.isim);
+				} catch (err) {
+					console.error(`logKullanim başarısız oldu (rakipPlatformTespiti, ${row.isim})`, err);
+				}
+				if (!ham) return null;
+				// LLM'in ham metni kanonik olmayabilir ("instagram", "INSTAGRAM") ve "TEK SATIRDA"
+				// talimatına rağmen satır sonuyla ayırabilir (prompt talimatı garanti değil) —
+				// aktifPlatformlarNormalize'a vermeden ÖNCE burada kanonikleştiriliyor. İzinli liste
+				// ve çıktı sırası hâlâ TEK kaynak olarak aktifPlatformlarNormalize'da kalıyor.
+				const tokenlar = ham
+					.split(/[,\n]/)
+					.map((p) => p.trim())
+					.filter(Boolean);
+				const kanonik = tokenlar
+					.map((t) => RAKIP_PLATFORM_LISTESI.find((p) => p.toLowerCase() === t.toLowerCase()))
+					.filter((p): p is (typeof RAKIP_PLATFORM_LISTESI)[number] => Boolean(p));
+				const platformlarStr = aktifPlatformlarNormalize(kanonik);
+				if (!platformlarStr) return null;
+				const goruntu = platformlarStr.split(',').join(', ');
+				try {
+					await setAktifPlatformlarNotu(env, rowNumber, `LLM tespiti, ${new Date().toISOString().slice(0, 10)}: ${goruntu}`);
+				} catch (err) {
+					console.error(`setAktifPlatformlarNotu başarısız oldu (${row.isim})`, err);
+				}
+				return `${row.isim}: ${goruntu}`;
 			} catch (err) {
-				console.error(`setAktifPlatformlarNotu başarısız oldu (${row.isim})`, err);
+				console.error(`platformTespitiYap başarısız oldu (${row.isim})`, err);
+				return null;
 			}
-		} catch (err) {
-			console.error(`platformTespitiYap başarısız oldu (${row.isim})`, err);
-		}
-	}
+		}),
+	);
+	// Promise.all girdi sırasını korur — çıktı bloklarının sırası sıralı sürümle birebir aynı.
+	const bloklar = sonuclar.filter((b): b is string => b !== null);
 	if (!bloklar.length && !atlananSayisi) return '';
 	let sonuc = bloklar.length
 		? `\n\nSeçilen rakip(ler)in canlı platform tespiti (sadece bu analiz için arandı, ana veriye
@@ -741,7 +769,9 @@ denemeye değer): ${JSON.stringify(konuTrendleri.map((k) => ({ konu: k.konu, sko
 
 	const [rakipYorumBaglami, rakipPlatformTespitiBaglami] = await Promise.all([
 		rakipYorumBaglamiGetir(env, rakipler, rakipIds, parametreler),
-		rakipPlatformTespitiBaglamiGetir(env, rakipler, rakipIds),
+		// Yukarıda (kota kontrolü için) BİR KEZ okunan kullanimOzet reuse ediliyor — bkz.
+		// rakipPlatformTespitiBaglamiGetir'in üstündeki BE-77/BE-81 notu.
+		rakipPlatformTespitiBaglamiGetir(env, rakipler, rakipIds, kullanimOzet),
 	]);
 	const platformDagilimOzeti = platformDagilimOzetiGetir(rakipler);
 
@@ -876,8 +906,16 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const grafikPeriyotTuru = gecerliGrafikPeriyotTuru(grafikPeriyotTuruRaw) ? grafikPeriyotTuruRaw : 'aylik';
 	const grafikMod = body.grafikMod === 'ortalama' ? 'ortalama' : '1e1';
 
+	// BE-77/BE-81 (hata günlüğü) — handleIcerikStrateji'deki AYNI desen: kotaDolduMu kendi içinde
+	// zaten tam bir getKullanimOzet çalıştırıyor; rakipPlatformTespitiBaglamiGetir'in de aynı özete
+	// ihtiyacı var. İkisini ayrı ayrı çağırmak tek bir istekte getKullanimOzet'i İKİ KEZ (~31'er
+	// subrequest) çalıştırıp Cloudflare'ın 50 subrequest tavanını zorlardı — TEK çağrı okunup her
+	// ikisi için de reuse ediliyor (kotaDolduMu'nun kontrolüyle birebir aynı: efektifLimit zaten
+	// ozet.aylikLimit olarak dönüyor).
 	await ensureKullanimKaydiTab(env);
-	if (await kotaDolduMu(env, 'aksiyonAnaliz')) {
+	const kullanimOzet = await getKullanimOzet(env);
+	const aksiyonAnalizOzet = kullanimOzet.aksiyonAnaliz;
+	if (aksiyonAnalizOzet.aylikLimit !== null && aksiyonAnalizOzet.kullanilan >= aksiyonAnalizOzet.aylikLimit) {
 		return json({ error: 'Bu ayki Aksiyon/Hedef Analizi kotası doldu. Ay başında sıfırlanır.', limitUrl: ANTHROPIC_BILLING_URL }, request, {
 			status: 402,
 		});
@@ -894,7 +932,7 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const [rakipYorumBaglami, rakipPlatformTespitiBaglami] = rakipIds.length
 		? await Promise.all([
 				rakipYorumBaglamiGetir(env, rakipRows, rakipIds, parametreler),
-				rakipPlatformTespitiBaglamiGetir(env, rakipRows, rakipIds),
+				rakipPlatformTespitiBaglamiGetir(env, rakipRows, rakipIds, kullanimOzet),
 			])
 		: ['', ''];
 	const platformDagilimOzeti = platformDagilimOzetiGetir(rakipRows);
