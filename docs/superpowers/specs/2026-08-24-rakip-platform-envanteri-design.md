@@ -93,6 +93,47 @@ o anki UTC zamanına günceller (aynı davranış `aktifPlatformlar` değiştiğ
 güncellerse o an kaydedilir — otomatik cron/periyodik tazeleme YOK (zaten mümkün değil, API'den
 hiç çekilmiyor).
 
+## DURUM (2026-08-24) — Task 1-5 kodlandı, ek bir katman TASARIM AŞAMASINDA (henüz kodlanmadı)
+
+Yukarıdaki checkbox-bazlı manuel tasarım (Task 1-5) **tamamen kodlandı ve commit edildi**
+(`3aeedea`, `23d4e7d`, `a1f67c5`, `096988f`, ayrıca frontend değişikliği `5f8930e`'ye karışmış
+durumda — içerik doğru, sadece commit mesajı bunu anmıyor). Ama kullanıcı, manuel checkbox'ın
+TEK mekanizma olmasının ürünün otomasyon vaadini boşa çıkardığını haklı olarak belirtti (20
+rakiplik bir aramada kullanıcının her birini elle işaretlemesi gerekiyor). Bu yüzden **ek bir
+otomatik tespit katmanı** tasarlandı ama **henüz koda dökülmedi** — bir sonraki oturumda buradan
+devam edilmeli:
+
+**Kararlaştırılan (ama kodlanmamış) tasarım:**
+1. Rapor üretimi anında (icerikStrateji/aksiyonAnaliz), analiz edilen rakip(ler) için Claude'un
+   web_search aracıyla hangi platformlarda aktif olduğu **canlı tespit edilir** — ephemeral,
+   `rakipYorumBaglamiGetir`'in yorum metni için yaptığı gibi, `aktifPlatformlar` sütununun ANA
+   DEĞERİNE hiç yazılmaz.
+2. Bu tespit, o rakibin `aktifPlatformlar` hücresine **Sheets native hücre notu** (comment,
+   `lib/sheets.ts`'e yeni bir `setCellNote` yardımcısı gerekir) olarak yazılır — "LLM tespiti,
+   [tarih]: Instagram, Facebook" gibi. Hücrenin asıl değeri (checkbox'lardan gelen, kullanıcı
+   onaylı) bu notla asla karışmaz/üzerine yazılmaz.
+3. `platformDagilimOzetiGetir`'in **deterministik** "X/Y rakip Platform'de aktif" sayısı SADECE
+   checkbox'tan gelen (kullanıcı onaylı) `aktifPlatformlar` hücre değerini kullanır — LLM'in
+   ephemeral notundaki tahmini ASLA bu koda-yazılı agregasyona karıştırmaz (bu fonksiyon zaten
+   böyle, DEĞİŞMİYOR).
+4. Ayrı olarak, LLM'in ephemeral platform-tespiti (her analiz edilen rakip için ayrı ayrı, ham
+   veri olarak) userPrompt'a EK bir bölüm olarak girer. Rapor LLM'i bu ham veriyi kullanarak
+   HEM tekil rakip karşılaştırmasında HEM birden fazla rakibi birlikte yorumlayarak ("rakiplerin
+   şu kadarı Instagram'da, biz de ağırlık vermeliyiz" gibi) serbestçe akıl yürütebilir — kısıtlanan
+   sadece kod-tarafı deterministik sayı, LLM'in kendi prose-seviyesi sentezi DEĞİL.
+5. **Maliyet (gerçek ölçüm, 2026-08-24):** rakip başına ~$0.11 (3 web_search çağrısı, Sonnet 5).
+   Kullanıcı sert bir üst sınır istemiyor — sadece mevcut kota + "bu kadar rakip için kalan
+   kotanız yetmez" uyarısı (kullanıcı fazla rakip seçerse kota kadarı işlenir, gerisi atlanır,
+   neden eksik geldiği rapor arayüzünde açıklanır). Ayrı bir kota kategorisi (`KULLANIM_KATEGORILERI`)
+   gerekiyor, tutarı henüz netleşmedi.
+6. **Sparrow'a da (kod değil, doküman notu) işlenmesi gerekiyor** — hem Sparrow'un kendi
+   RakipTakip'i hem müşteri-yüzü modülü için, `SPARROW_RAKIPTAKIP_CFO_VERI_KAYNAGI_ARASTIRMASI.md`'ye.
+
+**Bir sonraki oturumda yapılacak:** Bu maddeler henüz ayrı bir "Rapor Entegrasyonu — Otomatik
+Platform Tespiti" spec bölümü olarak yazılmadı (kod örnekleri, tam fonksiyon imzaları, test planı
+eksik) — brainstorming zaten yapıldı, sıradaki adım bunu resmi bir spec eklentisi haline getirip
+kullanıcı onayı almak, sonra plan/task'lara dökmek.
+
 ## Rapor Entegrasyonu
 
 ### `platformDagilimOzetiGetir` fonksiyonu
