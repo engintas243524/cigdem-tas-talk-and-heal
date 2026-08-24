@@ -392,6 +392,15 @@ export const KULLANIM_KATEGORILERI = {
 	// fazla ~25 rapor, rapor başına en fazla birkaç rakip seçilir → gerçekçi üst sınır ~150/ay,
 	// 300 iki kat güvenlik payı bırakıyor) — normal kullanımda hiçbir zaman $0'ın üstüne çıkmamalı.
 	rakipYorumAnalizi: { etiket: 'Rakip Yorum Metni Analizi (Google Places)', aylikLimit: 300 as number | null },
+	// Rakip Platform Tespiti (2026-08-25, kullanıcı kararı) — Anthropic web_search ile canlı
+	// platform tespiti, rakip başına ~$0.11 (3 web_search çağrısı, Sonnet 5, gerçek ölçüm
+	// 2026-08-24). icerikStrateji/aksiyonAnaliz'in AKSİNE rapor başına DEĞİL, RAKİP başına
+	// maliyetli — çok rakipli bir raporda (ör. 10 rakip) tek başına ~$1.10'a çıkabilir. Kullanıcı
+	// "ayrı bütçe payı" seçeneğini onayladı (2026-08-25): toplam proje Anthropic bütçesi $5/ay'dan
+	// $8/ay'a çıkarıldı, yeni ~$3'lük pay bu kategoriye ayrıldı — icerikStrateji/aksiyonAnaliz
+	// limitleri (12/13) DEĞİŞMEDİ. $3 / $0.11 ≈ 27. Detay: docs/superpowers/specs/
+	// 2026-08-24-rakip-platform-envanteri-design.md, "Maliyet/Kota Kararı" bölümü.
+	rakipPlatformTespiti: { etiket: 'Rakip Platform Tespiti (Canlı Arama)', aylikLimit: 27 as number | null },
 } as const;
 
 export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;
@@ -405,7 +414,7 @@ export type KullanimKategori = keyof typeof KULLANIM_KATEGORILERI;
 // (2026-08-16'da araştırıldı, doğrulandı) bu akış tamamen manuel: Çiğdem sağlayıcıya gidip yükleme
 // yapar, ne kadar yüklediğini kendisi girer, biz USD karşılığını hesaplayıp (bkz. lib/currency.ts)
 // RAPOR_MALIYETI_USD'ye bölüp limite ekleriz.
-export const KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER = ['icerikStrateji', 'aksiyonAnaliz'] as const;
+export const KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER = ['icerikStrateji', 'aksiyonAnaliz', 'rakipPlatformTespiti'] as const;
 
 // config.ts'deki KULLANIM_KATEGORILERI yorumunda hesaplanan "metin-ekli en kötü senaryo" rapor
 // maliyeti — limit yükseltme hesaplamasında da AYNI rakam kullanılıyor, iki yerde ayrı ayrı

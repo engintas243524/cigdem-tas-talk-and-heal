@@ -94,4 +94,14 @@ describe('kullanimKaydi', () => {
 		expect(await kotaDolduMu(env, 'rakipArama')).toBe(true);
 		expect(await kotaDolduMu(env, 'icerikStrateji')).toBe(false);
 	});
+
+	it('exposes the rakipPlatformTespiti category with a 27 monthly limit that can be increased', async () => {
+		stubSheetsApi(['Sayfa1', 'KullanimKaydi', 'KullanimLimitleri']);
+		const ozet = await getKullanimOzet(env);
+		expect(ozet.rakipPlatformTespiti).toMatchObject({
+			etiket: 'Rakip Platform Tespiti (Canlı Arama)',
+			aylikLimit: 27,
+			arttirilabilir: true,
+		});
+	});
 });
