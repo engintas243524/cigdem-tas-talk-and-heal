@@ -508,6 +508,34 @@ async function rakipYorumBaglamiGetir(
 	return `\n\nSeçilen rakip(ler)in güncel Google yorumları (yalnızca bu analiz için canlı çekildi, hiçbir yerde saklanmıyor):\n${bloklar.join('\n\n')}`;
 }
 
+// Rakip Platform Envanteri (2026-08-24) — kayıtlı rakiplerin RAKIP_PLATFORM_LISTESI'ne göre
+// platform dağılımını hesaplar. rakipYorumBaglamiGetir'in aksine bu fonksiyon rakipIds'e HİÇ
+// bakmaz — kullanıcı kararı: bu istatistik her zaman TÜM kayıtlı rakipler üzerinden hesaplanır,
+// tek tek seçilen rakiplerle sınırlanmaz. Payda (toplam), platform bilgisi HİÇ girilmemiş
+// rakipleri dışarıda bırakır — Sparrow'un "hiç doldurulmamış rakipler paydaya dahil edilmez"
+// kuralıyla tutarlı (veri eksikliği "o platformda değil" anlamına gelmemeli).
+function platformDagilimOzetiGetir(rakipler: { row: RakipAnalizRow }[]): string {
+	const kayitliRakipler = rakipler.filter(({ row }) => row.kaynak === 'manuel' || row.kaynak === 'harita');
+	const platformluRakipler = kayitliRakipler.filter(({ row }) => row.aktifPlatformlar.trim());
+	if (!platformluRakipler.length) return '';
+
+	const sayaclar: Record<string, number> = {};
+	for (const platform of RAKIP_PLATFORM_LISTESI) sayaclar[platform] = 0;
+	for (const { row } of platformluRakipler) {
+		for (const p of row.aktifPlatformlar
+			.split(',')
+			.map((x) => x.trim())
+			.filter(Boolean)) {
+			if (p in sayaclar) sayaclar[p]++;
+		}
+	}
+	const toplam = platformluRakipler.length;
+	const satirlar = RAKIP_PLATFORM_LISTESI.filter((p) => sayaclar[p] > 0)
+		.sort((a, b) => sayaclar[b] - sayaclar[a])
+		.map((p) => `${sayaclar[p]}/${toplam} rakip ${p}'de aktif`);
+	return `\n\nRakip platform envanteri (${toplam} rakip için platform bilgisi girildi):\n${satirlar.join('\n')}`;
+}
+
 function parametreReferansSatiri(parametreler: string[]): string {
 	const odaklanilacakParametreler = parametreler.filter((p) => p in ANALIZ_PARAMETRE_ACIKLAMALARI);
 	return odaklanilacakParametreler.length
@@ -624,9 +652,10 @@ denemeye değer): ${JSON.stringify(konuTrendleri.map((k) => ({ konu: k.konu, sko
 	}
 
 	const rakipYorumBaglami = await rakipYorumBaglamiGetir(env, rakipler, rakipIds, parametreler);
+	const platformDagilimOzeti = platformDagilimOzetiGetir(rakipler);
 
 	const userPrompt =
-		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}${konuTrendEki}${rakipYorumBaglami}\n\nÇiğdem'in isteği: ${istek}` +
+		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}${konuTrendEki}${rakipYorumBaglami}${platformDagilimOzeti}\n\nÇiğdem'in isteği: ${istek}` +
 		iceAktarPromptEki(kaynakBelgeler);
 
 	let rapor: string;
@@ -772,10 +801,12 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	const rakipRows = await getAllRakipAnalizRows(env);
 	const rakipOzet = rakipIds.length ? rakipOzetOlustur(rakipRows, rakipIds, parametreler) : null;
 	const rakipYorumBaglami = rakipIds.length ? await rakipYorumBaglamiGetir(env, rakipRows, rakipIds, parametreler) : '';
+	const platformDagilimOzeti = platformDagilimOzetiGetir(rakipRows);
 	const userPrompt =
 		`Sayısal özet: ${sayisalOzet}` +
 		(rakipOzet ? `\n\nSeçilen rakip verisi:\n${rakipOzet}` : '') +
 		rakipYorumBaglami +
+		platformDagilimOzeti +
 		`\n\nÇiğdem'in yorumu: ${yorum}` +
 		iceAktarPromptEki(kaynakBelgeler);
 

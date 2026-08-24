@@ -712,6 +712,47 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(raporData.rapor).not.toContain('Seçilmeyen Rakip');
 	});
 
+	it('includes the platform envanteri statistic in the prompt, computed over ALL competitors regardless of rakipIds', async () => {
+		const { fetchMock } = stubApis();
+		const r1 = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'A Kliniği', kaynak: 'manuel' }),
+		});
+		const r1Id = ((await r1.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id: r1Id, aktifPlatformlar: ['Instagram', 'Facebook'] }),
+		});
+		const r2 = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'B Kliniği', kaynak: 'manuel' }),
+		});
+		const r2Id = ((await r2.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id: r2Id, aktifPlatformlar: ['Instagram'] }),
+		});
+
+		// rakipIds bilerek gönderilmiyor (sadece 1'i seçilmiş gibi davranmıyoruz) — istatistik TÜM
+		// kayıtlı rakipleri kapsamalı.
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', { method: 'POST', body: JSON.stringify({ istek: 'Öneri istiyorum' }) });
+
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).toContain('Rakip platform envanteri');
+		expect(anthropicBody.messages[0].content).toContain("2/2 rakip Instagram'de aktif");
+		expect(anthropicBody.messages[0].content).toContain("1/2 rakip Facebook'de aktif");
+	});
+
+	it('omits the platform envanteri section when no competitor has aktifPlatformlar data', async () => {
+		const { fetchMock } = stubApis();
+		await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: 'A Kliniği', kaynak: 'manuel' }) });
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', { method: 'POST', body: JSON.stringify({ istek: 'Öneri istiyorum' }) });
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).not.toContain('Rakip platform envanteri');
+	});
+
 	it('includes İçe Aktar (kaynakBelgeler) text in the prompt', async () => {
 		const { fetchMock } = stubApis();
 		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
@@ -805,6 +846,28 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).not.toContain('Seçilen rakip verisi');
+	});
+
+	it('includes the platform envanteri statistic even when no rakipIds are selected (always all competitors)', async () => {
+		const { fetchMock } = stubApis();
+		const r1 = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'A Kliniği', kaynak: 'manuel' }),
+		});
+		const r1Id = ((await r1.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id: r1Id, aktifPlatformlar: ['TikTok'] }),
+		});
+
+		await authedRequest('/panel/rakip-analizi/aksiyon-analiz', {
+			method: 'POST',
+			body: JSON.stringify({ yorum: 'Değerlendirme istiyorum' }),
+		});
+
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.messages[0].content).toContain("1/1 rakip TikTok'de aktif");
 	});
 
 	it("rejects with 402 once this month's aksiyonAnaliz quota (13) is full, without calling Claude", async () => {
