@@ -137,6 +137,20 @@ async function authedRequest(path: string, init: RequestInit = {}) {
 	return response;
 }
 
+// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor. system promptu
+// (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de "terapi pratiği" içeriyor)
+// parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT) hiç yok — bu yüzden ek bir
+// ayırt edici olarak kullanılıyor. Tüm rapor-içeriği doğrulayan testler bu tek yardımcıyı paylaşır.
+function findReportCall(fetchMock: ReturnType<typeof vi.fn>) {
+	return fetchMock.mock.calls.find((c) => {
+		if (!String(c[0]).includes('api.anthropic.com')) return false;
+		const body = JSON.parse((c[1] as RequestInit).body as string);
+		return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+	})!;
+}
+
 describe('POST /panel/rakip-analizi/rakip', () => {
 	it('saves a manual competitor entry', async () => {
 		stubApis();
@@ -710,13 +724,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [secilecekId] }),
 		});
 
-		const anthropicCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// bkz. aşağıdaki testlerdeki AYNI not — icerik-strateji'de rakipIds doluyken
-			// anlikParametreSkorlariGetir de max_tokens: 8192 gönderiyor, system promptuyla ayırt ediyoruz.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const anthropicCall = findReportCall(fetchMock);
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).toContain('Seçilen Rakip');
 		expect(anthropicBody.messages[0].content).not.toContain('Seçilmeyen Rakip');
@@ -748,17 +756,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		const tespitBody = JSON.parse((tespitCall[1] as RequestInit).body as string);
 		expect(tespitBody.messages[0].content).toBe('İşletme: Tespit Edilecek Rakip (Kadıköy)');
 
-		const reportCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
-			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
-			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
-			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
-			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
-			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const reportCall = findReportCall(fetchMock);
 		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
 		expect(reportBody.messages[0].content).toContain('canlı platform tespiti');
 		expect(reportBody.messages[0].content).toContain('Tespit Edilecek Rakip: Instagram, TikTok');
@@ -787,17 +785,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			method: 'POST',
 			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
 		});
-		const reportCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
-			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
-			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
-			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
-			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
-			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const reportCall = findReportCall(fetchMock);
 		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
 		expect(reportBody.messages[0].content).toContain('Filtre Testi Rakip: Instagram');
 		expect(reportBody.messages[0].content).not.toContain('Snapchat');
@@ -850,17 +838,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		});
 		expect(tespitCalls).toHaveLength(0);
 
-		const reportCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
-			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
-			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
-			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
-			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
-			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const reportCall = findReportCall(fetchMock);
 		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
 		expect(reportBody.messages[0].content).toContain('1 rakip için platform tespiti YAPILMADI');
 		expect(reportBody.messages[0].content).toContain('27/27');
@@ -882,17 +860,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
 		});
 		expect(raporRes.status).toBe(200);
-		const reportCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
-			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
-			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
-			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
-			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
-			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const reportCall = findReportCall(fetchMock);
 		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
 		expect(reportBody.messages[0].content).not.toContain('canlı platform tespiti');
 		expect(reportBody.messages[0].content).not.toContain('Bulunamayan Rakip:');
@@ -927,17 +895,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		});
 		expect(tespitCalls).toHaveLength(1); // kalan kota: 27 - 26 = 1
 
-		const reportCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
-			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
-			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
-			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
-			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
-			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const reportCall = findReportCall(fetchMock);
 		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
 		expect(reportBody.messages[0].content).toContain('1 rakip için platform tespiti YAPILMADI');
 		expect(reportBody.messages[0].content).toContain('26/27');
@@ -1039,17 +997,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rAId, rBId] }),
 		});
 		expect(raporRes.status).toBe(200);
-		const reportCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
-			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
-			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
-			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
-			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
-			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const reportCall = findReportCall(fetchMock);
 		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
 		expect(reportBody.messages[0].content).toContain('Basarili Rakip: Instagram');
 		expect(reportBody.messages[0].content).not.toContain('Basarisiz Rakip:');
@@ -1080,17 +1028,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
 		});
 		expect(raporRes.status).toBe(200);
-		const reportCall = fetchMock.mock.calls.find((c) => {
-			if (!String(c[0]).includes('api.anthropic.com')) return false;
-			const body = JSON.parse((c[1] as RequestInit).body as string);
-			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
-			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
-			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
-			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
-			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
-			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
-			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
-		})!;
+		const reportCall = findReportCall(fetchMock);
 		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
 		expect(reportBody.messages[0].content).toContain('Not Hatasi Rakip: Instagram');
 	});
