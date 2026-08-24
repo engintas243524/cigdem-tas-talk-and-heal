@@ -57,6 +57,25 @@ describe('rakipSheets', () => {
 		expect(rowNumber).toBe(2);
 	});
 
+	it('round-trips the platform envanteri fields (aktifPlatformlar, google gözlem alanları, gozlemTarihiUtc)', async () => {
+		stubSheetsApi(['Sayfa1', 'RakipAnalizi']);
+		const row = emptyRakipAnalizRow();
+		row.isim = 'Örnek Klinik';
+		row.kaynak = 'manuel';
+		row.aktifPlatformlar = 'Instagram,LinkedIn';
+		row.googlePuaniGozlemi = '4.7';
+		row.googleYorumSayisiGozlemi = '128';
+		row.gozlemTarihiUtc = '2026-08-24T10:00:00.000Z';
+		await appendRakipAnalizRow(env, row);
+		const rows = await getAllRakipAnalizRows(env);
+		expect(rows[0].row).toMatchObject({
+			aktifPlatformlar: 'Instagram,LinkedIn',
+			googlePuaniGozlemi: '4.7',
+			googleYorumSayisiGozlemi: '128',
+			gozlemTarihiUtc: '2026-08-24T10:00:00.000Z',
+		});
+	});
+
 	it('reads back appended rows', async () => {
 		const { appended } = stubSheetsApi(['Sayfa1', 'RakipAnalizi']);
 		const row = emptyRakipAnalizRow();

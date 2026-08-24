@@ -266,6 +266,24 @@ export const STRIPE_METADATA_VALUE_MAX = 500;
 
 export const RAKIP_ANALIZI_TAB_NAME = 'RakipAnalizi';
 
+// Rakip Platform Envanteri (2026-08-24) — sabit sıralı 11 platform. Bu sıra hem
+// aktifPlatformlar sütununun normalize edilmiş yazım sırası hem de platformDagilimOzetiGetir'in
+// sayaç sırası için TEK kaynak (bkz. routes/rakipAnalizi.ts). rakip-analizi.html'deki checkbox
+// listesi bu diziyle AYNI sırada tutulmalı — orada ayrı bir kopyası var, elle senkron edilir.
+export const RAKIP_PLATFORM_LISTESI = [
+	'Facebook',
+	'Instagram',
+	'LinkedIn',
+	'X',
+	'TikTok',
+	'YouTube',
+	'Bluesky',
+	'Threads',
+	'Google Business',
+	'Pinterest',
+	'Mastodon',
+] as const;
+
 export const RAKIP_ANALIZI_COLUMNS = [
 	'id',
 	'createdAtUtc',
@@ -289,6 +307,17 @@ export const RAKIP_ANALIZI_COLUMNS = [
 	// GÜNCEL yorum METNİNİ canlı çekebilmek — yorum metninin kendisi hiçbir zaman bu sekmeye ya da
 	// başka bir sekmeye yazılmaz, sadece o anki Claude çağrısının promptuna girip atılır.
 	'placeId',
+	// Sona eklendi (2026-08-24) — Rakip Platform Envanteri. aktifPlatformlar: virgülle ayrılmış,
+	// RAKIP_PLATFORM_LISTESI sırasına normalize edilmiş tek metin sütunu (11 ayrı sütun DEĞİL —
+	// Sheet okunabilirliği + yeni platform eklemenin şema migrasyonu gerektirmemesi için).
+	// googlePuaniGozlemi/googleYorumSayisiGozlemi: Çiğdem'in Google Maps'te kendi gözüyle gördüğü
+	// değerler — Google Places API'den OTOMATİK ÇEKİLMEZ (Google Maps Platform ToS §3.2.3, tek
+	// istisna Place ID — doğrulama: docs/superpowers/specs/2026-08-24-rakip-platform-envanteri-
+	// design.md). gozlemTarihiUtc: bu üçünden biri en son ne zaman güncellendi.
+	'aktifPlatformlar',
+	'googlePuaniGozlemi',
+	'googleYorumSayisiGozlemi',
+	'gozlemTarihiUtc',
 ] as const;
 
 export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[number], string> = {
@@ -305,6 +334,10 @@ export const RAKIP_ANALIZI_COLUMN_LABELS: Record<(typeof RAKIP_ANALIZI_COLUMNS)[
 	aramaSorgu: 'Arama Terimi',
 	aramaRadiusMeters: 'Arama Yarıçapı (m)',
 	placeId: 'Google Place ID',
+	aktifPlatformlar: 'Aktif Platformlar',
+	googlePuaniGozlemi: 'Google Puanı (Gözlem)',
+	googleYorumSayisiGozlemi: 'Google Yorum Sayısı (Gözlem)',
+	gozlemTarihiUtc: 'Gözlem Tarihi (UTC)',
 };
 
 // Rakip Analizi ekranının kullanım kotası/sayaç sistemi (2026-08-15, icerikStrateji/aksiyonAnaliz
