@@ -155,6 +155,48 @@ describe('POST /panel/rakip-analizi/rakip', () => {
 		expect(response.status).toBe(400);
 	});
 
+	it('normalizes aktifPlatformlar to RAKIP_PLATFORM_LISTESI order and stamps gozlemTarihiUtc', async () => {
+		stubApis();
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-08-24T09:00:00.000Z'));
+		const response = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			// Bilerek YANLIŞ/karışık sırada gönderiliyor — backend normalize etmeli.
+			body: JSON.stringify({ isim: 'Rakip Klinik', kaynak: 'manuel', aktifPlatformlar: ['TikTok', 'Instagram'] }),
+		});
+		const id = ((await response.json()) as { id: string }).id;
+
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as {
+			rakipler: { id: string; aktifPlatformlar: string; gozlemTarihiUtc: string }[];
+		};
+		const rakip = listData.rakipler.find((r) => r.id === id)!;
+		expect(rakip.aktifPlatformlar).toBe('Instagram,TikTok');
+		expect(rakip.gozlemTarihiUtc).toBe('2026-08-24T09:00:00.000Z');
+	});
+
+	it('saves manually-entered googlePuaniGozlemi/googleYorumSayisiGozlemi without calling any Google API', async () => {
+		const { fetchMock } = stubApis();
+		const response = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({
+				isim: 'Rakip Klinik',
+				kaynak: 'harita',
+				placeId: 'ChIJ-fake',
+				googlePuaniGozlemi: '4.7',
+				googleYorumSayisiGozlemi: '128',
+			}),
+		});
+		expect(response.status).toBe(200);
+		expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('places.googleapis.com'))).toBe(false);
+
+		const listResponse = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData = (await listResponse.json()) as {
+			rakipler: { googlePuaniGozlemi: string; googleYorumSayisiGozlemi: string }[];
+		};
+		expect(listData.rakipler[0]).toMatchObject({ googlePuaniGozlemi: '4.7', googleYorumSayisiGozlemi: '128' });
+	});
+
 	it('rejects requests without a valid panel token', async () => {
 		stubApis();
 		const request = new Request('http://localhost/panel/rakip-analizi/rakip', {
@@ -346,6 +388,42 @@ describe('POST /panel/rakip-analizi/rakip-duzelt', () => {
 			kaynak: 'manuel',
 			not: 'Sadece not değişti',
 		});
+	});
+
+	it('updates aktifPlatformlar/google gözlem alanları independently and stamps gozlemTarihiUtc only when one of them changes', async () => {
+		stubApis();
+		const created = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Sabit İsim', kaynak: 'manuel' }),
+		});
+		const id = ((await created.json()) as { id: string }).id;
+
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-08-24T09:00:00.000Z'));
+		await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, googlePuaniGozlemi: '4.5' }),
+		});
+
+		const listResponse1 = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData1 = (await listResponse1.json()) as {
+			rakipler: { id: string; googlePuaniGozlemi: string; aktifPlatformlar: string; gozlemTarihiUtc: string }[];
+		};
+		const rakip1 = listData1.rakipler.find((r) => r.id === id)!;
+		expect(rakip1.googlePuaniGozlemi).toBe('4.5');
+		expect(rakip1.aktifPlatformlar).toBe('');
+		expect(rakip1.gozlemTarihiUtc).toBe('2026-08-24T09:00:00.000Z');
+
+		// İsim değişiyor ama platform/google alanlarından hiçbiri gönderilmiyor — gozlemTarihiUtc
+		// DOKUNULMAMALI.
+		vi.setSystemTime(new Date('2026-08-24T10:00:00.000Z'));
+		await authedRequest('/panel/rakip-analizi/rakip-duzelt', {
+			method: 'POST',
+			body: JSON.stringify({ id, isim: 'Yeni İsim' }),
+		});
+		const listResponse2 = await authedRequest('/panel/rakip-analizi/rakip-liste');
+		const listData2 = (await listResponse2.json()) as { rakipler: { id: string; gozlemTarihiUtc: string }[] };
+		expect(listData2.rakipler.find((r) => r.id === id)!.gozlemTarihiUtc).toBe('2026-08-24T09:00:00.000Z');
 	});
 
 	it('rejects explicitly clearing isim to empty, even in a partial update', async () => {

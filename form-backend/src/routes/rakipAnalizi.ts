@@ -25,7 +25,7 @@ import {
 	gecerliGrafikPeriyotTuru,
 	gecerliGrafikKaynaklari,
 } from '../lib/grafikVerisi';
-import { GRAFIK_PERIYOT_GUN_SAYISI, ANTHROPIC_BILLING_URL, YAYINCI_PROFILLERI, type EtikRejimi } from '../config';
+import { GRAFIK_PERIYOT_GUN_SAYISI, ANTHROPIC_BILLING_URL, YAYINCI_PROFILLERI, RAKIP_PLATFORM_LISTESI, type EtikRejimi } from '../config';
 import { etikDenetimYap, type EtikBayrak } from '../lib/etikGate';
 import { konuHavuzunuSirala, type KonuTrendSonucu } from '../lib/gorselVideoBulmaSiralama';
 import type { Env } from '../types';
@@ -66,6 +66,13 @@ function newId(): string {
 	return crypto.randomUUID();
 }
 
+// Frontend'den gelen (sırasız/tekrarlı olabilir) platform seçimini RAKIP_PLATFORM_LISTESI
+// sırasına normalize eder, listede olmayan değerleri sessizce atar. Aynı platform kümesi her
+// zaman AYNI string'i üretir — platformDagilimOzetiGetir'in sayaç mantığı buna dayanıyor.
+function aktifPlatformlarNormalize(secilenler: string[]): string {
+	return RAKIP_PLATFORM_LISTESI.filter((p) => secilenler.includes(p)).join(',');
+}
+
 // POST /panel/rakip-analizi/rakip { isim, link?, adres?, not, kaynak: 'manuel' | 'harita',
 // aramaAdres?, aramaSorgu?, aramaRadiusMeters? } — Çiğdem'in rastgele karşılaştığı bir rakip
 // (manuel) veya harita aramasından seçtiği bir sonuç (harita), üzerine eklediği yazı/ses
@@ -82,6 +89,9 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 		aramaSorgu?: unknown;
 		aramaRadiusMeters?: unknown;
 		placeId?: unknown;
+		aktifPlatformlar?: unknown;
+		googlePuaniGozlemi?: unknown;
+		googleYorumSayisiGozlemi?: unknown;
 	};
 	try {
 		body = (await request.json()) as typeof body;
@@ -113,6 +123,16 @@ export async function handleRakipEkle(request: Request, env: Env): Promise<Respo
 		// saklıyoruz, rapor üretimi anında canlı yorum çekebilmek için (bkz. lib/places.ts#getPlaceReviews).
 		row.placeId = String(body.placeId ?? '').trim();
 	}
+	const aktifPlatformlarSecim = Array.isArray(body.aktifPlatformlar) ? body.aktifPlatformlar.map((x) => String(x)) : [];
+	if (aktifPlatformlarSecim.length) row.aktifPlatformlar = aktifPlatformlarNormalize(aktifPlatformlarSecim);
+	// Google Puanı/Yorum Sayısı: SADECE Çiğdem'in elle girdiği değer — Google Places API'den
+	// otomatik çekilmez (bkz. yukarıdaki config.ts'deki ToS notu). Bu iki alan ve
+	// aktifPlatformlar'dan biri doluysa gozlemTarihiUtc damgalanır.
+	row.googlePuaniGozlemi = String(body.googlePuaniGozlemi ?? '').trim();
+	row.googleYorumSayisiGozlemi = String(body.googleYorumSayisiGozlemi ?? '').trim();
+	if (row.aktifPlatformlar || row.googlePuaniGozlemi || row.googleYorumSayisiGozlemi) {
+		row.gozlemTarihiUtc = new Date().toISOString();
+	}
 	const rowNumber = await appendRakipAnalizRow(env, row);
 	return json({ id: row.id, rowNumber }, request);
 }
@@ -136,6 +156,10 @@ export async function handleRakipListe(request: Request, env: Env): Promise<Resp
 			aramaAdres: row.aramaAdres,
 			aramaSorgu: row.aramaSorgu,
 			aramaRadiusMeters: row.aramaRadiusMeters,
+			aktifPlatformlar: row.aktifPlatformlar,
+			googlePuaniGozlemi: row.googlePuaniGozlemi,
+			googleYorumSayisiGozlemi: row.googleYorumSayisiGozlemi,
+			gozlemTarihiUtc: row.gozlemTarihiUtc,
 		}))
 		.sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc));
 	return json({ rakipler }, request);
@@ -195,6 +219,9 @@ export async function handleRakipDuzelt(request: Request, env: Env): Promise<Res
 		tarih?: unknown;
 		not?: unknown;
 		link?: unknown;
+		aktifPlatformlar?: unknown;
+		googlePuaniGozlemi?: unknown;
+		googleYorumSayisiGozlemi?: unknown;
 	};
 	try {
 		body = (await request.json()) as typeof body;
@@ -235,6 +262,21 @@ export async function handleRakipDuzelt(request: Request, env: Env): Promise<Res
 		patch.aramaAdres = '';
 		patch.aramaRadiusMeters = '';
 	}
+	let gozlemGuncellendi = false;
+	if (body.aktifPlatformlar !== undefined) {
+		const secilenler = Array.isArray(body.aktifPlatformlar) ? body.aktifPlatformlar.map((x) => String(x)) : [];
+		patch.aktifPlatformlar = aktifPlatformlarNormalize(secilenler);
+		gozlemGuncellendi = true;
+	}
+	if (body.googlePuaniGozlemi !== undefined) {
+		patch.googlePuaniGozlemi = String(body.googlePuaniGozlemi).trim();
+		gozlemGuncellendi = true;
+	}
+	if (body.googleYorumSayisiGozlemi !== undefined) {
+		patch.googleYorumSayisiGozlemi = String(body.googleYorumSayisiGozlemi).trim();
+		gozlemGuncellendi = true;
+	}
+	if (gozlemGuncellendi) patch.gozlemTarihiUtc = new Date().toISOString();
 	await updateRakipAnalizRow(env, bulunan.rowNumber, bulunan.row, patch);
 	return json({ id }, request);
 }
