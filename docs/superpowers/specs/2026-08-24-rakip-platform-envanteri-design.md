@@ -71,7 +71,7 @@ güncellendi.
 
 ## Panel UI + Backend Mantığı
 
-**Form:** `panel.html`'deki Rakip Ekle/Düzenle formuna (`rakipEkleField`, satır ~79) 11
+**Form:** `rakip-analizi.html`'deki Rakip Ekle/Düzenle formuna (`rakipEkleField`, satır ~79) 11
 checkbox eklenir — `RAKIP_PLATFORM_LISTESI`'nden dinamik üretilir (JS içinde diziden DOM
 oluşturulur, 11 checkbox'ı elle HTML'e yazmak yerine). Düzenleme akışı, mevcut
 `rakipEkleDuzenleAlanlarPaneliOlustur`'daki "sadece işaretlenen/değiştirilen alan gönderilir"
