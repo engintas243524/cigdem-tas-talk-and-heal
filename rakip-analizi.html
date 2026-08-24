@@ -1809,6 +1809,11 @@
     rakipEkleDuzenleAlanKontrolleri = {};
   }
 
+  // Backend'deki RAKIP_PLATFORM_LISTESI (form-backend/src/config.ts) ile AYNI sırada tutulmalı —
+  // sıra sadece checkbox'ların GÖRÜNÜM sırası için, normalize sıralama backend'de
+  // (aktifPlatformlarNormalize) garanti ediliyor.
+  var RAKIP_PLATFORM_LISTESI = ['Facebook', 'Instagram', 'LinkedIn', 'X', 'TikTok', 'YouTube', 'Bluesky', 'Threads', 'Google Business', 'Pinterest', 'Mastodon'];
+
   function rakipEkleDuzenleAlanlarPaneliOlustur(r) {
     var eski = el('rakipDuzenleAlanlarPaneli');
     if (eski) eski.remove();
@@ -1829,6 +1834,9 @@
       { key: 'kaynak', label: 'Kaynak', tip: 'select', deger: r.kaynak },
       { key: 'nasilBulundu', label: 'Nasıl Bulundu', tip: 'text', deger: g.nasilBulundu === '—' ? '' : g.nasilBulundu },
       { key: 'tarih', label: 'Tarih', tip: 'datetime-local', deger: isoToDatetimeLocalDeger(r.createdAtUtc) },
+      { key: 'aktifPlatformlar', label: 'Aktif Platformlar', tip: 'platformCheckboxes', deger: r.aktifPlatformlar || '' },
+      { key: 'googlePuaniGozlemi', label: 'Google Puanı (kendi gözlemin)', tip: 'text', deger: r.googlePuaniGozlemi || '' },
+      { key: 'googleYorumSayisiGozlemi', label: 'Google Yorum Sayısı (kendi gözlemin)', tip: 'text', deger: r.googleYorumSayisiGozlemi || '' },
     ];
     alanlar.forEach(function (alan) {
       var satir = document.createElement('div');
@@ -1839,6 +1847,36 @@
       label.appendChild(checkbox);
       label.appendChild(document.createTextNode(' ' + alan.label));
       satir.appendChild(label);
+
+      if (alan.tip === 'platformCheckboxes') {
+        var mevcutPlatformlar = alan.deger ? alan.deger.split(',').map(function (p) { return p.trim(); }) : [];
+        var grup = document.createElement('div');
+        grup.className = 'rakip-platform-checkbox-grup';
+        var platformKutulari = RAKIP_PLATFORM_LISTESI.map(function (platform) {
+          var pLabel = document.createElement('label');
+          var pCheckbox = document.createElement('input');
+          pCheckbox.type = 'checkbox';
+          pCheckbox.value = platform;
+          pCheckbox.checked = mevcutPlatformlar.indexOf(platform) !== -1;
+          pCheckbox.disabled = true;
+          pLabel.appendChild(pCheckbox);
+          pLabel.appendChild(document.createTextNode(' ' + platform));
+          grup.appendChild(pLabel);
+          return pCheckbox;
+        });
+        checkbox.addEventListener('change', function () {
+          platformKutulari.forEach(function (pCheckbox) { pCheckbox.disabled = !checkbox.checked; });
+        });
+        satir.appendChild(grup);
+        list.appendChild(satir);
+        rakipEkleDuzenleAlanKontrolleri[alan.key] = {
+          checkbox: checkbox,
+          getValue: function () {
+            return platformKutulari.filter(function (p) { return p.checked; }).map(function (p) { return p.value; });
+          },
+        };
+        return;
+      }
 
       var input;
       if (alan.tip === 'select') {
@@ -1933,6 +1971,7 @@
         var ctrl = rakipEkleDuzenleAlanKontrolleri[key];
         if (!ctrl.checkbox.checked) return;
         if (key === 'tarih') { if (ctrl.input.value) payload.tarih = new Date(ctrl.input.value).toISOString(); }
+        else if (ctrl.getValue) { payload[key] = ctrl.getValue(); }
         else { payload[key] = ctrl.input.value.trim(); }
       });
       setStatus(el('rakipEkleStatus'), 'Güncelleniyor...', '');

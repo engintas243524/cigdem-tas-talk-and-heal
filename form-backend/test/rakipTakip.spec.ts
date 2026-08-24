@@ -311,11 +311,22 @@ describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
 		fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
 			if (url.includes('api.anthropic.com')) {
-				const body = init?.body ? (JSON.parse(init.body as string) as { system?: string }) : {};
+				const body = init?.body ? (JSON.parse(init.body as string) as { system?: string; messages?: { content?: unknown }[] }) : {};
 				if (typeof body.system === 'string' && body.system.includes('veri analistisin')) {
 					const skorlar = skorListesi[skorCagriSayaci] ?? skorListesi[skorListesi.length - 1] ?? {};
 					skorCagriSayaci++;
-					return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(skorlar) }] }), { status: 200 });
+					// Kanıt Zorunluluğu (2026-08-24, bkz. lib/rakipParametreSkor.ts) — parametreSkorlariUret
+					// artık her puan için, gerçek çağrının KENDİ baglamMetni'nde birebir geçen bir "kanit"
+					// alıntısı zorunlu kılıyor. Stub'ın hangi rakip/Talk-and-Heal için çalıştığını bilmesine
+					// gerek kalmadan, gerçek isteğin userPrompt'undaki "Bilgi:\n...\n\nSADECE" bölümünü
+					// kendisi çıkarıp AYNEN kanit olarak geri döndürüyor — bu, doğrulama gate'ini her zaman
+					// geçer çünkü çıkarılan metin, üretim kodunun karşılaştıracağı baglamMetni ile birebir
+					// aynı kaynaktan geliyor.
+					const userPrompt = typeof body.messages?.[0]?.content === 'string' ? (body.messages[0].content as string) : '';
+					const baglamEslesme = userPrompt.match(/Bilgi:\n([\s\S]*?)\n\nSADECE/);
+					const kanit = baglamEslesme ? baglamEslesme[1] : 'test-baglam';
+					const kanitliSkorlar = Object.fromEntries(Object.entries(skorlar).map(([key, puan]) => [key, { puan, kanit }]));
+					return new Response(JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(kanitliSkorlar) }] }), { status: 200 });
 				}
 				return new Response(JSON.stringify({ content: [{ type: 'text', text: 'Üretilen rapor metni.' }] }), { status: 200 });
 			}
