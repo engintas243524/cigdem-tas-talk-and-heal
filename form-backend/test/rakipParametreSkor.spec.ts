@@ -41,6 +41,43 @@ describe('parametreSkorlariUret', () => {
 		expect(sonuc).toEqual({ webSitesi: null, markaGuveni: null });
 	});
 
+	// KANIT ZORUNLULUĞU — KATMAN 2 (2026-08-24) — canlı bir testte, "kaynak metinde birebir geçme"
+	// kontrolünü geçen ama puanlanan parametreyle ALAKASIZ bir alıntının ("2019 kuruluş" → markaGuveni
+	// için "kanıt" sayılması) sahte bir doğrulama izlenimi verdiği görüldü. Kanıt artık hem kaynak
+	// metinde birebir geçmeli HEM DE o parametrenin kendi anahtar kelime listesinden en az birini
+	// içermeli — ikisi birden sağlanmazsa puan yine null'a zorlanır.
+	it('SECURITY: forces the score to null when the kanit is real (verbatim) but IRRELEVANT to the scored parameter', async () => {
+		stubClaude(
+			'{"markaGuveni": {"puan": 5, "kanit": "2019 kuruluş"}, "webSitesi": {"puan": 5, "kanit": "fiyatları web sitesinde açık değil"}}',
+		);
+		// "2019 kuruluş" gerçekten metinde var ama markaGuveni'nin tanımıyla (sertifika/dernek/medya)
+		// alakasız — deneyimSuresi'nin alanı. "fiyatları web sitesinde açık değil" de gerçek ama web
+		// sitesinin KALİTESİ hakkında hiçbir şey söylemiyor, sadece fiyat şeffaflığıyla ilgili.
+		const sonuc = await parametreSkorlariUret(env, 'Vera Terapi Merkezi, Kadıköy. Fiyatları web sitesinde açık değil, 2019 kuruluş.', [
+			'markaGuveni',
+			'webSitesi',
+		]);
+		expect(sonuc).toEqual({ markaGuveni: null, webSitesi: null });
+	});
+
+	it('accepts a kanit that is both verbatim AND topically relevant to the scored parameter', async () => {
+		stubClaude(
+			'{"markaGuveni": {"puan": 7, "kanit": "TPD üyesi, basında röportajları yayınlandı"}, "deneyimSuresi": {"puan": 6, "kanit": "2019 kuruluş"}}',
+		);
+		const sonuc = await parametreSkorlariUret(
+			env,
+			'Vera Terapi Merkezi, Kadıköy. TPD üyesi, basında röportajları yayınlandı. 2019 kuruluş.',
+			['markaGuveni', 'deneyimSuresi'],
+		);
+		expect(sonuc).toEqual({ markaGuveni: 7, deneyimSuresi: 6 });
+	});
+
+	it('does not require topical-keyword relevance for konum/hedefKitle (özel isim ağırlıklı, sabit anahtar kelimeyle güvenilir eşleşmez)', async () => {
+		stubClaude('{"konum": {"puan": 8, "kanit": "Kadıköy"}, "hedefKitle": {"puan": 6, "kanit": "çiftlere özel terapi"}}');
+		const sonuc = await parametreSkorlariUret(env, 'Vera Terapi Merkezi, Kadıköy. Çiftlere özel terapi sunuyor.', ['konum', 'hedefKitle']);
+		expect(sonuc).toEqual({ konum: 8, hedefKitle: 6 });
+	});
+
 	it('SECURITY: forces the score to null when puan is given but kanit is missing entirely', async () => {
 		stubClaude('{"fiyat": {"puan": 8}}');
 		const sonuc = await parametreSkorlariUret(env, 'Fiyatlar rakiplerden düşük.', ['fiyat']);

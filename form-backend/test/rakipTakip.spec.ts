@@ -378,7 +378,10 @@ describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
 	});
 
 	it('1e1 mode returns matching talkAndHeal/rakip series with real scores', async () => {
-		const { fetchMock } = stubApisWithScores([{ fiyat: 9 }, { fiyat: 3 }]); // 1. çağrı=Talk and Heal, 2.=rakip
+		// 'konum' kullanılıyor (keyword-relevance kontrolüne tabi olmayan tek parametre, bkz.
+		// lib/rakipParametreSkor.ts) — bu test skorlama/kanıt mantığını değil, karşılaştırma
+		// plumbing'ini doğruluyor, hangi parametre olduğu önemsiz.
+		const { fetchMock } = stubApisWithScores([{ konum: 9 }, { konum: 3 }]); // 1. çağrı=Talk and Heal, 2.=rakip
 		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
 			method: 'POST',
 			body: JSON.stringify({ isim: 'Rakip A', kaynak: 'manuel', not: 'Ucuz fiyatlar.' }),
@@ -395,7 +398,7 @@ describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
 
 		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
 			method: 'POST',
-			body: JSON.stringify({ periyotTuru: 'haftalik', mod: '1e1', rakipIds: [rakipId], parametreler: ['fiyat'] }),
+			body: JSON.stringify({ periyotTuru: 'haftalik', mod: '1e1', rakipIds: [rakipId], parametreler: ['konum'] }),
 		});
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as {
@@ -415,7 +418,7 @@ describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
 
 	it('ortalama mode averages two competitors scored on the same closed period', async () => {
 		// Sıra: 1) Talk and Heal, 2) Rakip B, 3) Rakip C (gecmisSnapshotlariniKaydet'in rakipRows sırası)
-		stubApisWithScores([{ fiyat: 5 }, { fiyat: 4 }, { fiyat: 8 }]);
+		stubApisWithScores([{ konum: 5 }, { konum: 4 }, { konum: 8 }]);
 		const rakipB = (
 			(await (
 				await authedRequest('/panel/rakip-analizi/rakip', { method: 'POST', body: JSON.stringify({ isim: 'Rakip B', kaynak: 'manuel' }) })
@@ -438,7 +441,7 @@ describe('POST /panel/rakip-analizi/rakip-takip/karsilastirma', () => {
 
 		const response = await authedRequest('/panel/rakip-analizi/rakip-takip/karsilastirma', {
 			method: 'POST',
-			body: JSON.stringify({ periyotTuru: 'aylik', mod: 'ortalama', rakipIds: [rakipB, rakipC], parametreler: ['fiyat'] }),
+			body: JSON.stringify({ periyotTuru: 'aylik', mod: 'ortalama', rakipIds: [rakipB, rakipC], parametreler: ['konum'] }),
 		});
 		expect(response.status).toBe(200);
 		const data = (await response.json()) as {
