@@ -141,3 +141,37 @@ export async function deleteRakipAnalizRows(env: Env, rowNumbers: number[]): Pro
 		}),
 	});
 }
+
+// Rakip Platform Tespiti (2026-08-25) — LLM'in web_search ile tespit ettiği platform listesini
+// aktifPlatformlar hücresine NATIVE bir Sheets notu (CellData.note) olarak yazar. Sheets'in ayrı/
+// karmaşık "comments" (Drive tabanlı, threadli) API'sinden FARKLI — basit bir metin notu, hücreye
+// sağ-üstte küçük bir üçgen olarak görünür. `fields: 'note'` mask'ı SADECE bu alanı hedefler —
+// checkbox'lardan gelen ASIL değer (userEnteredValue) bu API semantiği gereği HİÇ etkilenmez, ayrı
+// bir koruma kodu yazmaya gerek yok (deleteRakipAnalizRows'daki sheetId-bulma deseniyle aynı).
+export async function setAktifPlatformlarNotu(env: Env, rowNumber: number, notMetni: string): Promise<void> {
+	const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title)');
+	const data = (await response.json()) as { sheets?: { properties?: { sheetId?: number; title?: string } }[] };
+	const sheetId = data.sheets?.find((s) => s.properties?.title === RAKIP_ANALIZI_TAB_NAME)?.properties?.sheetId;
+	if (sheetId === undefined) throw new Error('RakipAnalizi tab bulunamadı, not yazılamadı.');
+	const colIndex = RAKIP_ANALIZI_COLUMNS.indexOf('aktifPlatformlar');
+	await sheetsFetch(env, ':batchUpdate', {
+		method: 'POST',
+		body: JSON.stringify({
+			requests: [
+				{
+					updateCells: {
+						range: {
+							sheetId,
+							startRowIndex: rowNumber - 1,
+							endRowIndex: rowNumber,
+							startColumnIndex: colIndex,
+							endColumnIndex: colIndex + 1,
+						},
+						rows: [{ values: [{ note: notMetni }] }],
+						fields: 'note',
+					},
+				},
+			],
+		}),
+	});
+}
