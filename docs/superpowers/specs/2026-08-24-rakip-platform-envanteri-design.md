@@ -1,4 +1,8 @@
-# Rakip Platform Envanteri + Kaynak Notu — Tasarım
+# Rakip Platform Envanteri — Tasarım
+
+_(İlk taslakta "+ Kaynak Notu" başlığı, Sheets hücre-notu mekanizmasına atıfla vardı — bu
+mekanizma 2026-08-24 düzeltmesiyle kaldırıldığı için başlıktan çıkarıldı, bkz. Veri Modeli
+bölümündeki DÜZELTME notu.)_
 
 ## Bağlam
 
@@ -37,12 +41,30 @@ export const RAKIP_PLATFORM_LISTESI = [
   Sheet okunabilirliği + gelecekte yeni platform eklemenin şema migrasyonu gerektirmemesi.
   Sıra her zaman `RAKIP_PLATFORM_LISTESI` sırasına göre normalize edilir (backend'de
   birleştirilirken), böylece aynı platform kümesi her zaman aynı string'i üretir.
-- **`googlePuaniGozlemi`** — o anki Google puanı (ör. `"4.7"`).
-- **`googleYorumSayisiGozlemi`** — o anki toplam yorum sayısı (ör. `"128"`).
-- **`gozlemTarihiUtc`** — bu üç alanın en son ne zaman güncellendiği (ISO tarih). Sparrow'un
-  ToS-uyumlu "gözlem kaydı" deseniyle aynı: bu Google'ın verisi değil, bizim o tarihteki
-  gözlemimiz — Google Maps Platform ToS'un yasakladığı "canlı veriyi saklama" değil, kendi
-  gözlemimizi kaydetme.
+- **`googlePuaniGozlemi`** — Çiğdem'in Google Maps'te kendi gözüyle gördüğü puan (ör. `"4.7"`),
+  **elle girilir**.
+- **`googleYorumSayisiGozlemi`** — Çiğdem'in gördüğü toplam yorum sayısı (ör. `"128"`), **elle
+  girilir**.
+- **`gozlemTarihiUtc`** — bu iki alanın (+ `aktifPlatformlar`'ın) en son ne zaman güncellendiği
+  (ISO tarih), otomatik damgalanır.
+
+**DÜZELTME (2026-08-24, bu oturumda bulundu — Bölüm 2026-08-14'teki ilk tasarımın aksine):**
+İlk tasarımda bu iki alanın `kaynak==='harita'` + `placeId` varsa mevcut Text Search
+çağrısından **otomatik** doldurulması planlanmıştı ("Sparrow'un ToS-uyumlu 'gözlem kaydı'
+deseni" gerekçesiyle). Bu oturumda birincil kaynaklardan (Google'ın resmi Places API caching
+policy sayfası + Sparrow'un kendi `sparrow-hata-gunlugu/13-.../13-raktiptakip-cfo-veri-kaynagi-
+hukuki-arastirma.md` dosyası, satır 178-183: "kritik bulgu" diye işaretli, hiç geri
+alınmamış) doğrulandı ki bu gerekçe geçersiz — Google Maps Platform ToS'un "must not pre-fetch,
+cache, or store Places API content beyond the allowed exceptions" kısıtı **tier'dan bağımsız**
+(ücretli planda da istisna yok, ayrıca doğrulandı) ve **tek istisna Place ID**. "Gözlem kaydı"
+diye adlandırmak veya ekran görüntüsü alıp sonra elle tabloya işlemek bu kısıtı dolanmıyor —
+API'den (veya otomatik ekran görüntüsüyle Google Maps sayfasından) gelen içerik hangi ara
+adımdan geçerse geçsin kalıcı saklanamıyor. Tek hukuka uygun yol: bu iki alanın **API'den hiç
+çekilmeden**, Çiğdem'in (ya da ileride Sparrow müşterisinin) kendi gözlemine dayalı **manuel
+giriş** olması — tıpkı rakip-analizi araçlarının (Rival IQ, Sprout Social — Sparrow'un kendi
+araştırmasında zaten belgelenmiş) Google puanı için "manuel inceleme gerekiyor" dediği gibi.
+Otomatik doldurma tamamen kaldırıldı, aşağıdaki "Panel UI + Backend Mantığı" bölümü buna göre
+güncellendi.
 
 `RAKIP_ANALIZI_COLUMN_LABELS`'a karşılık gelen 4 Türkçe başlık eklenir: `'Aktif Platformlar'`,
 `'Google Puanı (Gözlem)'`, `'Google Yorum Sayısı (Gözlem)'`, `'Gözlem Tarihi (UTC)'`.
@@ -59,23 +81,17 @@ deseniyle tutarlı olacak şekilde entegre edilir.
 `RAKIP_PLATFORM_LISTESI` sırasına göre normalize edip virgülle birleştirir, `aktifPlatformlar`
 sütununa yazar.
 
-**Google Places otomatik doldurma:** `kaynak === 'harita'` ve `placeId` doluysa, rakip
-eklenirken/düzenlenirken **mevcut Text Search çağrısından** (ek API çağrısı YOK — Text Search
-zaten rating/userRatingCount döndürüyor, bkz. `lib/places.ts`) gelen rating ve yorum sayısı
-otomatik olarak `googlePuaniGozlemi`/`googleYorumSayisiGozlemi`'ye, o anki UTC zamanı
-`gozlemTarihiUtc`'ye yazılır. `kaynak === 'manuel'` rakiplerde bu 3 alan Çiğdem elle
-girmedikçe boş kalır.
+**Google puanı/yorum sayısı — tamamen manuel giriş:** `googlePuaniGozlemi`/
+`googleYorumSayisiGozlemi`, forma eklenen iki serbest sayı alanı — Çiğdem Google Maps'te kendi
+gözüyle gördüğü değerleri buraya yazar. Backend bu iki alanı **hiçbir Google API çağrısından
+otomatik doldurmaz** (`kaynak==='harita'`/`'manuel'` farketmez, ikisinde de aynı davranış).
+`handleRakipEkle`/`handleRakipDuzelt`, bu iki alandan en az biri değiştiyse `gozlemTarihiUtc`'yi
+o anki UTC zamanına günceller (aynı davranış `aktifPlatformlar` değiştiğinde de geçerli —
+`gozlemTarihiUtc` üçünün ortak "son güncelleme" damgası).
 
-**Kaynak şeffaflığı (Sheets native "not"):** Kayıt sonrası ilgili hücrelere Google Sheets'in
-native hücre notu (comment, Sheets API `batchUpdate` → `repeatCell`/`updateCells` ile `note`
-alanı — mevcut `lib/sheets.ts`'e küçük bir yardımcı eklenir, örn. `setCellNote`) eklenir:
-- Otomatik dolan hücreler (`kaynak==='harita'` + `placeId` varsa): `"Kaynak: Google Places
-  API, [gozlemTarihiUtc]"`.
-- Elle girilen hücreler: `"Kaynak: Çiğdem'in manuel gözlemi, [gozlemTarihiUtc]"`.
-
-**Rating gözlem zamanlaması:** Sadece rakip eklenirken/düzenlenirken snapshot alınır — otomatik
-cron/periyodik tazeleme YOK (MVP basitliği, kullanıcı kararı). Rating zamanla değişebilir ama
-bu, "o an ne gördük" kaydı — canlı bir gösterge değil.
+**Rating gözlem zamanlaması:** Çiğdem ne zaman Google Maps'e bakıp bu alanları
+güncellerse o an kaydedilir — otomatik cron/periyodik tazeleme YOK (zaten mümkün değil, API'den
+hiç çekilmiyor).
 
 ## Rapor Entegrasyonu
 
@@ -158,7 +174,8 @@ döner) prompt seviyesinde tekrar belirtiliyor — LLM'in kendi genel bilgisinde
 - `handleRakipEkle`/`handleRakipDuzelt`: checkbox listesi → normalize edilmiş
   `aktifPlatformlar` string'i (sırasız gönderilen input bile `RAKIP_PLATFORM_LISTESI` sırasına
   normalize olmalı).
-- Places otomatik doldurma: `kaynak==='harita'` + `placeId` varken rating/userRatingCount
-  Text Search yanıtından doğru şekilde `googlePuaniGozlemi`/`googleYorumSayisiGozlemi`'ye
-  yazılıyor mu (mock Text Search yanıtıyla).
-- `setCellNote`: doğru hücreye doğru kaynak metnini yazıyor mu (mock Sheets API çağrısıyla).
+- `handleRakipEkle`/`handleRakipDuzelt`: `googlePuaniGozlemi`/`googleYorumSayisiGozlemi`/
+  `aktifPlatformlar`'dan biri değiştiğinde `gozlemTarihiUtc`'nin güncellendiğini, hiçbiri
+  değişmediğinde dokunulmadığını doğrula. Bu iki alanın hiçbir Google API çağrısı
+  YAPILMADAN (mock/spy ile `searchCompetitorsInArea`/`getPlaceReviews` hiç çağrılmadığını
+  doğrulayarak) sadece body'den gelen değeri yazdığını doğrula.
