@@ -6,9 +6,10 @@ import {
 	ensureRakipAnaliziTab,
 	deleteRakipAnalizRows,
 	updateRakipAnalizRow,
+	setAktifPlatformlarNotu,
 	type RakipAnalizRow,
 } from '../lib/rakipSheets';
-import { generateReport, InsufficientCreditError } from '../lib/claude';
+import { generateReport, InsufficientCreditError, platformTespitiYap } from '../lib/claude';
 import { searchCompetitorsInArea, getPlaceReviews, OPTIMAL_RADIUS_METERS } from '../lib/places';
 import { rakipHavuzunuSiralaVeKirp } from '../lib/rakipBulmaSiralama';
 import { geocodeAddress } from '../lib/geocoding';
@@ -417,6 +418,16 @@ const PLATFORM_DAGILIM_TALIMATI_AKSIYON = `${PLATFORM_DAGILIM_TALIMATI_CEKIRDEK}
 "## Rakip Karşısında Konumlanma" (veya benzeri) bölümünde bu envanteri somut bir gözlem/aksiyon
 maddesi olarak kullan.`;
 
+// Platform Tespiti talimatı (2026-08-25) — PLATFORM_DAGILIM_TALIMATI_* (istatistiksel, TÜM
+// rakipler) ile KARIŞTIRILMAMALI. Bu ayrı, sadece seçili/tekil rakip(ler) için ham/tekil gözlem.
+const PLATFORM_TESPITI_TALIMATI = `
+Sana seçili rakip(ler) için "canlı platform tespiti" başlığıyla verilen veri, o rakibin hangi
+platformlarda aktif olduğuna dair GÜNCEL bir web aramasının ham sonucudur (checkbox'tan gelen
+kullanıcı-onaylı veriden AYRI, doğrulanmamış bir gözlem). Bunu hem tekil rakip değerlendirmende hem
+(birden fazla rakip seçiliyse) rakipler arası karşılaştırmada serbestçe kullanabilirsin (ör. "rakibin
+X platformunda da aktif, sen henüz değilsin" gibi somut bir gözlem/öneriye çevir). Bu veri hiç
+verilmemişse (veri yoksa ya da kota nedeniyle atlandıysa), bu konudan hiç bahsetme.`;
+
 // Görsel/video stratejisi için sistem talimatı — rakip içeriği KOPYALANMAZ, sadece stratejiden
 // (format/sıklık/platform) ilham alınır; küratif yaklaşımın kod-seviyesindeki karşılığı bu.
 // Kullanıcı kararı (2026-08-15): rakip seçimi bu dalda da mümkün ama seçilen rakiplerin
@@ -443,7 +454,7 @@ geri bildirimi: ikisi birbirine çok benzer/aynı çıkmıştı). Bu yüzden SEN
 sayısal randevu/gelir hedefi, haftalık/aylık/3-6-9-12 aylık zaman ufku, "hedef" veya "yol haritası"
 başlıklı bir bölüm ÜRETME — bunlar tamamen diğer rapora ait. Bölüm başlıkların içerik/format bazlı
 olsun (ör. "## Instagram Reels Fikri", "## Blog Yazısı Fikri" gibi somut platform/format adları),
-asla zaman ufku veya iş hedefi bazlı olmasın.${ICERIK_GORSEL_VIDEO_DETAY_TALIMATI}${ICERIK_ETIK_UYARI_METNI}${PLATFORM_DAGILIM_TALIMATI_ICERIK}${RAPOR_YAPISI_TALIMATI}`;
+asla zaman ufku veya iş hedefi bazlı olmasın.${ICERIK_GORSEL_VIDEO_DETAY_TALIMATI}${ICERIK_ETIK_UYARI_METNI}${PLATFORM_DAGILIM_TALIMATI_ICERIK}${PLATFORM_TESPITI_TALIMATI}${RAPOR_YAPISI_TALIMATI}`;
 
 export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
@@ -527,6 +538,62 @@ async function rakipYorumBaglamiGetir(
 	}
 	if (!bloklar.length) return '';
 	return `\n\nSeçilen rakip(ler)in güncel Google yorumları (yalnızca bu analiz için canlı çekildi, hiçbir yerde saklanmıyor):\n${bloklar.join('\n\n')}`;
+}
+
+// Rakip Platform Tespiti (2026-08-25) — rakipYorumBaglamiGetir'in AYNI ephemeral deseni, ama veri
+// kaynağı Google Places DEĞİL, Claude'un web_search aracı. rakipYorumBaglamiGetir'in aksine kota
+// dolunca TAMAMEN atlamak yerine KISMİ İŞLEME yapar — kalan kota kadar rakip işlenir, gerisi rapora
+// açıkça not düşülerek atlanır (kullanıcı kararı: 20 rakiplik bir seçimde kota bir kısmını
+// engellese bile geri kalanı işlensin).
+async function rakipPlatformTespitiBaglamiGetir(
+	env: Env,
+	rakipler: { rowNumber: number; row: RakipAnalizRow }[],
+	rakipIds: string[],
+): Promise<string> {
+	if (!rakipIds.length) return '';
+	const secililer = rakipler.filter(({ row }) => rakipIds.includes(row.id));
+	if (!secililer.length) return '';
+
+	const ozet = await getKullanimOzet(env);
+	const { kullanilan, aylikLimit } = ozet.rakipPlatformTespiti;
+	const kalanKota = aylikLimit === null ? Infinity : Math.max(0, aylikLimit - kullanilan);
+	const islenecekler = secililer.slice(0, kalanKota);
+	const atlananSayisi = secililer.length - islenecekler.length;
+
+	const bloklar: string[] = [];
+	for (const { rowNumber, row } of islenecekler) {
+		try {
+			const ham = await platformTespitiYap(env, row.isim, row.adres);
+			await logKullanim(env, 'rakipPlatformTespiti', row.isim);
+			if (!ham) continue;
+			const platformlarStr = aktifPlatformlarNormalize(
+				ham
+					.split(',')
+					.map((p) => p.trim())
+					.filter(Boolean),
+			);
+			if (!platformlarStr) continue;
+			const goruntu = platformlarStr.split(',').join(', ');
+			bloklar.push(`${row.isim}: ${goruntu}`);
+			try {
+				await setAktifPlatformlarNotu(env, rowNumber, `LLM tespiti, ${new Date().toISOString().slice(0, 10)}: ${goruntu}`);
+			} catch (err) {
+				console.error(`setAktifPlatformlarNotu başarısız oldu (${row.isim})`, err);
+			}
+		} catch (err) {
+			console.error(`platformTespitiYap başarısız oldu (${row.isim})`, err);
+		}
+	}
+	if (!bloklar.length && !atlananSayisi) return '';
+	let sonuc = bloklar.length
+		? `\n\nSeçilen rakip(ler)in canlı platform tespiti (sadece bu analiz için arandı, ana veriye
+YAZILMADI — kullanıcı onaylı checkbox verisinden AYRI, ham/tekil gözlem):\n${bloklar.join('\n')}`
+		: '';
+	if (atlananSayisi > 0) {
+		sonuc += `\n\n(${atlananSayisi} rakip için platform tespiti YAPILMADI — aylık kota doldu:
+${kullanilan}/${aylikLimit}. Sıradaki ay otomatik sıfırlanır.)`;
+	}
+	return sonuc;
 }
 
 // Rakip Platform Envanteri (2026-08-24) — kayıtlı rakiplerin RAKIP_PLATFORM_LISTESI'ne göre
@@ -672,11 +739,14 @@ denemeye değer): ${JSON.stringify(konuTrendleri.map((k) => ({ konu: k.konu, sko
 		}
 	}
 
-	const rakipYorumBaglami = await rakipYorumBaglamiGetir(env, rakipler, rakipIds, parametreler);
+	const [rakipYorumBaglami, rakipPlatformTespitiBaglami] = await Promise.all([
+		rakipYorumBaglamiGetir(env, rakipler, rakipIds, parametreler),
+		rakipPlatformTespitiBaglamiGetir(env, rakipler, rakipIds),
+	]);
 	const platformDagilimOzeti = platformDagilimOzetiGetir(rakipler);
 
 	const userPrompt =
-		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}${konuTrendEki}${rakipYorumBaglami}${platformDagilimOzeti}\n\nÇiğdem'in isteği: ${istek}` +
+		`Toplanan rakip verisi:\n${rakipOzet}${parametreSkorlariEki}${konuTrendEki}${rakipYorumBaglami}${rakipPlatformTespitiBaglami}${platformDagilimOzeti}\n\nÇiğdem'in isteği: ${istek}` +
 		iceAktarPromptEki(kaynakBelgeler);
 
 	let rapor: string;
@@ -771,7 +841,7 @@ geri bildirimi: ikisi birbirine çok benzer/aynı çıkmıştı). Bu yüzden SEN
 sosyal medya gönderi metni, video senaryosu/replik, kompozisyon/font/renk önerisi ÜRETME — bunlar
 tamamen diğer rapora ait. Bölüm başlıkların zaman ufku ve iş hedefi bazlı olsun (ör. "## Bu Ay",
 "## Önümüzdeki 3 Ay", "## Rakip Karşısında Konumlanma" gibi somut zaman/hedef başlıkları), asla
-içerik fikri/format bazlı olmasın.${PLATFORM_DAGILIM_TALIMATI_AKSIYON}${RAPOR_YAPISI_TALIMATI}`;
+içerik fikri/format bazlı olmasın.${PLATFORM_DAGILIM_TALIMATI_AKSIYON}${PLATFORM_TESPITI_TALIMATI}${RAPOR_YAPISI_TALIMATI}`;
 
 // POST /panel/rakip-analizi/aksiyon-analiz { yorum, rakipIds?, parametreler? } — booking
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses
@@ -821,12 +891,18 @@ export async function handleAksiyonAnaliz(request: Request, env: Env): Promise<R
 	await ensureRakipAnaliziTab(env);
 	const rakipRows = await getAllRakipAnalizRows(env);
 	const rakipOzet = rakipIds.length ? rakipOzetOlustur(rakipRows, rakipIds, parametreler) : null;
-	const rakipYorumBaglami = rakipIds.length ? await rakipYorumBaglamiGetir(env, rakipRows, rakipIds, parametreler) : '';
+	const [rakipYorumBaglami, rakipPlatformTespitiBaglami] = rakipIds.length
+		? await Promise.all([
+				rakipYorumBaglamiGetir(env, rakipRows, rakipIds, parametreler),
+				rakipPlatformTespitiBaglamiGetir(env, rakipRows, rakipIds),
+			])
+		: ['', ''];
 	const platformDagilimOzeti = platformDagilimOzetiGetir(rakipRows);
 	const userPrompt =
 		`Sayısal özet: ${sayisalOzet}` +
 		(rakipOzet ? `\n\nSeçilen rakip verisi:\n${rakipOzet}` : '') +
 		rakipYorumBaglami +
+		rakipPlatformTespitiBaglami +
 		platformDagilimOzeti +
 		`\n\nÇiğdem'in yorumu: ${yorum}` +
 		iceAktarPromptEki(kaynakBelgeler);

@@ -710,7 +710,13 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [secilecekId] }),
 		});
 
-		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// bkz. aşağıdaki testlerdeki AYNI not — icerik-strateji'de rakipIds doluyken
+			// anlikParametreSkorlariGetir de max_tokens: 8192 gönderiyor, system promptuyla ayırt ediyoruz.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).toContain('Seçilen Rakip');
 		expect(anthropicBody.messages[0].content).not.toContain('Seçilmeyen Rakip');
@@ -719,6 +725,374 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		const raporData = (await raporResponse.json()) as { rapor: string };
 		expect(raporData.rapor).toContain('Kullanılan rakip(ler): Seçilen Rakip');
 		expect(raporData.rapor).not.toContain('Seçilmeyen Rakip');
+	});
+
+	it('runs live platform tespiti for selected competitors and adds it to the report prompt', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram, TikTok' });
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Tespit Edilecek Rakip', kaynak: 'manuel', adres: 'Kadıköy' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+
+		const tespitCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			return JSON.parse((c[1] as RequestInit).body as string).max_tokens === 512;
+		})!;
+		expect(tespitCall).toBeTruthy();
+		const tespitBody = JSON.parse((tespitCall[1] as RequestInit).body as string);
+		expect(tespitBody.messages[0].content).toBe('İşletme: Tespit Edilecek Rakip (Kadıköy)');
+
+		const reportCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
+			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
+			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
+			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		expect(reportBody.messages[0].content).toContain('canlı platform tespiti');
+		expect(reportBody.messages[0].content).toContain('Tespit Edilecek Rakip: Instagram, TikTok');
+	});
+
+	it('does not run platform tespiti when no rakipIds are given', async () => {
+		const { fetchMock } = stubApis();
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', { method: 'POST', body: JSON.stringify({ istek: 'Öneri istiyorum' }) });
+		const tespitCalls = fetchMock.mock.calls.filter((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			return JSON.parse((c[1] as RequestInit).body as string).max_tokens === 512;
+		});
+		expect(tespitCalls).toHaveLength(0);
+	});
+
+	it('filters out any platform tespiti response text outside RAKIP_PLATFORM_LISTESI', async () => {
+		// Anthropic'in HEM rapor HEM tespit çağrısı için AYNI stub metni döner — listede olmayan bir
+		// kelime uydurmuş gibi simüle etmek için özel bir metin kullanılıyor.
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram, Snapchat, UydurmaPlatform' });
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Filtre Testi Rakip', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		const reportCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
+			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
+			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
+			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		expect(reportBody.messages[0].content).toContain('Filtre Testi Rakip: Instagram');
+		expect(reportBody.messages[0].content).not.toContain('Snapchat');
+		expect(reportBody.messages[0].content).not.toContain('UydurmaPlatform');
+	});
+
+	it('writes a Sheets cell note for each detected competitor', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Facebook' });
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Not Testi Rakip', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		const noteCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			return body.requests?.[0]?.updateCells?.fields === 'note';
+		})!;
+		expect(noteCall).toBeTruthy();
+		const noteBody = JSON.parse((noteCall[1] as RequestInit).body as string);
+		expect(noteBody.requests[0].updateCells.rows[0].values[0].note).toContain('LLM tespiti');
+		expect(noteBody.requests[0].updateCells.rows[0].values[0].note).toContain('Facebook');
+	});
+
+	it('processes zero competitors and adds only the skip note when the monthly quota is already full', async () => {
+		const { fetchMock, tabRows } = stubApis({ anthropicText: 'Instagram' });
+		const now = new Date().toISOString();
+		const kullanimKaydi = (tabRows.KullanimKaydi ??= []);
+		for (let i = 0; i < 27; i++) kullanimKaydi.push([`k${i}`, now, 'rakipPlatformTespiti', 'önceki tespit']);
+
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Rakip A', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		expect(raporRes.status).toBe(200);
+
+		const tespitCalls = fetchMock.mock.calls.filter((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			return JSON.parse((c[1] as RequestInit).body as string).max_tokens === 512;
+		});
+		expect(tespitCalls).toHaveLength(0);
+
+		const reportCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
+			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
+			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
+			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		expect(reportBody.messages[0].content).toContain('1 rakip için platform tespiti YAPILMADI');
+		expect(reportBody.messages[0].content).toContain('27/27');
+		expect(reportBody.messages[0].content).not.toContain('canlı platform tespiti (sadece bu analiz');
+	});
+
+	it('silently skips a competitor when web_search finds nothing, without an empty note in the prompt', async () => {
+		const { fetchMock } = stubApis();
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Bulunamayan Rakip', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+		// stubApis'in jenerik anthropicText'i platform-tespiti çağrısında ('Üretilen rapor metni.')
+		// zaten RAKIP_PLATFORM_LISTESI'nde olmadığı için normalize sonrası boş dönüyor — "hiç platform
+		// bulunamadı" senaryosunu doğal olarak simüle ediyor, ekstra bir sarmalayıcı gerekmiyor.
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		expect(raporRes.status).toBe(200);
+		const reportCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
+			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
+			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
+			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		expect(reportBody.messages[0].content).not.toContain('canlı platform tespiti');
+		expect(reportBody.messages[0].content).not.toContain('Bulunamayan Rakip:');
+	});
+
+	it('processes only as many competitors as the remaining quota allows, and notes the skip count', async () => {
+		const { fetchMock, tabRows } = stubApis({ anthropicText: 'Instagram' });
+		const now = new Date().toISOString();
+		const kullanimKaydi = (tabRows.KullanimKaydi ??= []);
+		for (let i = 0; i < 26; i++) kullanimKaydi.push([`k${i}`, now, 'rakipPlatformTespiti', 'önceki tespit']);
+
+		const r1 = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Rakip A', kaynak: 'manuel' }),
+		});
+		const r1Id = ((await r1.json()) as { id: string }).id;
+		const r2 = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Rakip B', kaynak: 'manuel' }),
+		});
+		const r2Id = ((await r2.json()) as { id: string }).id;
+
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [r1Id, r2Id] }),
+		});
+		expect(raporRes.status).toBe(200);
+
+		const tespitCalls = fetchMock.mock.calls.filter((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			return JSON.parse((c[1] as RequestInit).body as string).max_tokens === 512;
+		});
+		expect(tespitCalls).toHaveLength(1); // kalan kota: 27 - 26 = 1
+
+		const reportCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
+			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
+			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
+			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		expect(reportBody.messages[0].content).toContain('1 rakip için platform tespiti YAPILMADI');
+		expect(reportBody.messages[0].content).toContain('26/27');
+	});
+
+	it('isolates a per-competitor platformTespitiYap failure without blocking the report', async () => {
+		// stubApis() burada YOK — özel bir fetchMock ile Anthropic çağrılarını ayırt ediyoruz. Brief'in
+		// verdiği orijinal sürümde bu mock, rakibi oluşturan İLK authedRequest çağrısından SONRA
+		// stub'lanıyordu — bu da o ilk çağrının gerçek ağa (Google OAuth/Sheets) çıkmasına sebep oluyordu
+		// (tam suite içinde bazen gerçek 401 dönüyordu). Düzeltme: mock'u en başa taşı, rakip oluşturma
+		// çağrısını da kapsasın; rakipId sunucu tarafında (crypto.randomUUID()) üretildiği için mock'un
+		// GET /values/ dalının recreationId'yi bilmesine gerek yok — 'let' ile sonradan dolduruluyor.
+		let rakipId = '';
+		let call = 0;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes('oauth2.googleapis.com'))
+				return new Response(JSON.stringify({ access_token: 'fake', expires_in: 3600 }), { status: 200 });
+			if (url.includes('?fields=sheets.properties'))
+				return new Response(
+					JSON.stringify({ sheets: [{ properties: { sheetId: 1, title: 'RakipAnalizi', gridProperties: { columnCount: 20 } } }] }),
+					{ status: 200 },
+				);
+			if (url.includes(':batchUpdate')) return new Response('{}', { status: 200 });
+			if (url.includes(':append') && (init?.method ?? 'GET') === 'POST') {
+				return new Response(JSON.stringify({ updates: { updatedRange: 'RakipAnalizi!A2:P2' } }), { status: 200 });
+			}
+			if (url.includes('/values/') && (init?.method ?? 'GET') === 'GET') {
+				return new Response(
+					JSON.stringify({
+						values: [
+							[rakipId, new Date().toISOString(), 'manuel', 'Hatalı Rakip', '', '', '', 'icerikStrateji', '', '', '', '', '', '', '', ''],
+						],
+					}),
+					{ status: 200 },
+				);
+			}
+			if (url.includes('api.anthropic.com')) {
+				const body = JSON.parse(init!.body as string);
+				if (body.max_tokens === 512) {
+					call++;
+					throw new Error('simulated network failure');
+				}
+				return new Response(JSON.stringify({ content: [{ type: 'text', text: 'Üretilen rapor metni.' }] }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ values: [] }), { status: 200 });
+		});
+		vi.stubGlobal('fetch', fetchMock);
+
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Hatalı Rakip', kaynak: 'manuel' }),
+		});
+		rakipId = ((await rakipRes.json()) as { id: string }).id;
+
+		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		expect(response.status).toBe(200);
+		expect(call).toBe(1);
+		const data = (await response.json()) as { rapor: string };
+		expect(data.rapor).toContain('Üretilen rapor metni.');
+	});
+
+	it('when one of two competitors fails platformTespitiYap, the other still gets processed', async () => {
+		const { fetchMock } = stubApis();
+		const rA = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Basarisiz Rakip', kaynak: 'manuel' }),
+		});
+		const rAId = ((await rA.json()) as { id: string }).id;
+		const rB = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Basarili Rakip', kaynak: 'manuel' }),
+		});
+		const rBId = ((await rB.json()) as { id: string }).id;
+
+		// stubApis'in genel Anthropic dalını, İŞLETME ADINA göre ayıran özel bir sarmalayıcıyla
+		// değiştiriyoruz — Basarisiz Rakip'in tespit çağrısı hata fırlatır, Basarili Rakip'inki geçerli
+		// bir platform adı döner (jenerik stub metni RAKIP_PLATFORM_LISTESI'nde olmadığı için o kolu
+		// kullanmak yanlış-negatif üretirdi). Diğer her şey (Sheets, oauth, rapor çağrısı) stubApis'in
+		// kendi mantığında kalır.
+		const original = fetchMock.getMockImplementation()!;
+		fetchMock.mockImplementation(async (input, init) => {
+			const url = String(input);
+			if (url.includes('api.anthropic.com') && init?.body) {
+				const body = JSON.parse(init.body as string);
+				if (body.max_tokens === 512) {
+					if (String(body.messages[0].content).includes('Basarisiz Rakip')) throw new Error('simulated failure for Basarisiz Rakip');
+					return new Response(JSON.stringify({ content: [{ type: 'text', text: 'Instagram' }] }), { status: 200 });
+				}
+			}
+			return original(input, init);
+		});
+
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rAId, rBId] }),
+		});
+		expect(raporRes.status).toBe(200);
+		const reportCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
+			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
+			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
+			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		expect(reportBody.messages[0].content).toContain('Basarili Rakip: Instagram');
+		expect(reportBody.messages[0].content).not.toContain('Basarisiz Rakip:');
+	});
+
+	it('when setAktifPlatformlarNotu fails, the report still generates and still includes the detected platforms', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
+			method: 'POST',
+			body: JSON.stringify({ isim: 'Not Hatasi Rakip', kaynak: 'manuel' }),
+		});
+		const rakipId = ((await rakipRes.json()) as { id: string }).id;
+
+		const original = fetchMock.getMockImplementation()!;
+		fetchMock.mockImplementation(async (input, init) => {
+			const url = String(input);
+			if (url.includes(':batchUpdate') && init?.body) {
+				const body = JSON.parse(init.body as string);
+				if (body.requests?.[0]?.updateCells?.fields === 'note') {
+					return new Response('sheets error', { status: 500 });
+				}
+			}
+			return original(input, init);
+		});
+
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds: [rakipId] }),
+		});
+		expect(raporRes.status).toBe(200);
+		const reportCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			// icerik-strateji rakipIds gönderdiğinde, generateReport'u kullanan ayrı bir ön-adım daha var
+			// (anlikParametreSkorlariGetir → parametreSkorlariUret) — O DA max_tokens: 8192 gönderiyor, bu
+			// yüzden sadece max_tokens'a bakmak rapor çağrısını GÜVENİLİR ayırt etmiyor (brief'in varsaydığının
+			// aksine). system promptu (ICERIK_STRATEJI_SYSTEM_PROMPT/AKSIYON_ANALIZ_SYSTEM_PROMPT, ikisi de
+			// "terapi pratiği" içeriyor) parametre-skor çağrısının kısa system promptunda (SKOR_SYSTEM_PROMPT)
+			// hiç yok — bu yüzden ek bir ayırt edici olarak kullanılıyor.
+			return body.max_tokens === 8192 && String(body.system).includes('terapi pratiği');
+		})!;
+		const reportBody = JSON.parse((reportCall[1] as RequestInit).body as string);
+		expect(reportBody.messages[0].content).toContain('Not Hatasi Rakip: Instagram');
 	});
 
 	it('includes the platform envanteri statistic in the prompt, computed over ALL competitors regardless of rakipIds', async () => {
@@ -855,7 +1229,11 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 			body: JSON.stringify({ yorum: 'Bu ay randevular azaldı', rakipIds: [rakipId] }),
 		});
 
-		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicCall = fetchMock.mock.calls.find((c) => {
+			if (!String(c[0]).includes('api.anthropic.com')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			return body.max_tokens === 8192;
+		})!;
 		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
 		expect(anthropicBody.messages[0].content).toContain('Kıyaslanacak Rakip');
 		expect(anthropicBody.messages[0].content).toContain('Seçilen rakip verisi');
