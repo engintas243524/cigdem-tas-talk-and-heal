@@ -396,6 +396,27 @@ etkili olduğunu gösteriyor — dakikada ~130-150 kelime konuşma hızı varsay
 kısa tut; uzun-form video için konunun derinliğine uygun, gereksiz uzatmadan makul bir süre öngör.
 Metnin hemen altında tahmini süreyi parantez içinde belirt (ör. "(~75 saniye)").`;
 
+// Rakip platform envanteri talimatı (2026-08-24) — platformDagilimOzetiGetir'in ürettiği
+// istatistiği (userPrompt'a otomatik eklenir, parametre seçimine bakılmaksızın) YORUMLAYIP somut
+// öneriye çevirmesi için ortak çekirdek. Her iki sistem promptu da kendi odağına özgü tek
+// cümlelik ekle bunu kullanır.
+const PLATFORM_DAGILIM_TALIMATI_CEKIRDEK = `
+Sana "Rakip platform envanteri" başlığıyla verilen istatistik, hangi platformda kaç rakibin aktif
+olduğunu gösterir (payda sadece platform bilgisi girilmiş rakipleri kapsar, hiç işaretlenmemiş
+rakipler sayılmaz). Bu ham sayıyı asla olduğu gibi tekrarlama ("5 rakipten 3'ü Instagram'da"
+şeklinde okuyucuya aynen aktarma) — SEN bunu yorumlayıp somut bir öneriye çevir (ör. rakiplerin
+çoğunun bulunmadığı bir platform bir fırsat mı, yoksa çoğunun bulunduğu bir platform zaten
+kanıtlanmış bir kanal mı). Bu istatistik hiç verilmemişse (veri yoksa), bu konudan hiç bahsetme.`;
+
+const PLATFORM_DAGILIM_TALIMATI_ICERIK = `${PLATFORM_DAGILIM_TALIMATI_CEKIRDEK}
+Hangi platformda içerik önereceğine karar verirken bu envanteri gerekçelerinden biri olarak kullan
+(ör. "rakiplerin çoğu bu platformda değil, boşluk var" ya da "rakipler burada yoğun, senin de
+burada görünür olman gerekiyor").`;
+
+const PLATFORM_DAGILIM_TALIMATI_AKSIYON = `${PLATFORM_DAGILIM_TALIMATI_CEKIRDEK}
+"## Rakip Karşısında Konumlanma" (veya benzeri) bölümünde bu envanteri somut bir gözlem/aksiyon
+maddesi olarak kullan.`;
+
 // Görsel/video stratejisi için sistem talimatı — rakip içeriği KOPYALANMAZ, sadece stratejiden
 // (format/sıklık/platform) ilham alınır; küratif yaklaşımın kod-seviyesindeki karşılığı bu.
 // Kullanıcı kararı (2026-08-15): rakip seçimi bu dalda da mümkün ama seçilen rakiplerin
@@ -422,7 +443,7 @@ geri bildirimi: ikisi birbirine çok benzer/aynı çıkmıştı). Bu yüzden SEN
 sayısal randevu/gelir hedefi, haftalık/aylık/3-6-9-12 aylık zaman ufku, "hedef" veya "yol haritası"
 başlıklı bir bölüm ÜRETME — bunlar tamamen diğer rapora ait. Bölüm başlıkların içerik/format bazlı
 olsun (ör. "## Instagram Reels Fikri", "## Blog Yazısı Fikri" gibi somut platform/format adları),
-asla zaman ufku veya iş hedefi bazlı olmasın.${ICERIK_GORSEL_VIDEO_DETAY_TALIMATI}${ICERIK_ETIK_UYARI_METNI}${RAPOR_YAPISI_TALIMATI}`;
+asla zaman ufku veya iş hedefi bazlı olmasın.${ICERIK_GORSEL_VIDEO_DETAY_TALIMATI}${ICERIK_ETIK_UYARI_METNI}${PLATFORM_DAGILIM_TALIMATI_ICERIK}${RAPOR_YAPISI_TALIMATI}`;
 
 export const ANALIZ_PARAMETRE_ACIKLAMALARI: Record<string, string> = {
 	sosyalMedya: 'Sosyal medya aktiflik/format sıklığı (hangi platformda ne sıklıkla paylaşım yapıyor)',
@@ -750,7 +771,7 @@ geri bildirimi: ikisi birbirine çok benzer/aynı çıkmıştı). Bu yüzden SEN
 sosyal medya gönderi metni, video senaryosu/replik, kompozisyon/font/renk önerisi ÜRETME — bunlar
 tamamen diğer rapora ait. Bölüm başlıkların zaman ufku ve iş hedefi bazlı olsun (ör. "## Bu Ay",
 "## Önümüzdeki 3 Ay", "## Rakip Karşısında Konumlanma" gibi somut zaman/hedef başlıkları), asla
-içerik fikri/format bazlı olmasın.${RAPOR_YAPISI_TALIMATI}`;
+içerik fikri/format bazlı olmasın.${PLATFORM_DAGILIM_TALIMATI_AKSIYON}${RAPOR_YAPISI_TALIMATI}`;
 
 // POST /panel/rakip-analizi/aksiyon-analiz { yorum, rakipIds?, parametreler? } — booking
 // Sheet'inden (Sayfa1) otomatik sayısal özet + seçilen (varsa) rakip verisi + Çiğdem'in yazı/ses

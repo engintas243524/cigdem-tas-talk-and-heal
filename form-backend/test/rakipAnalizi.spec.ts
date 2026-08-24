@@ -639,6 +639,15 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(data.rapor).toContain('Odaklanılan analiz parametreleri: Tüm parametreler (belirli bir odak seçilmedi)');
 	});
 
+	it('includes the platform envanteri talimatı in the system prompt', async () => {
+		const { fetchMock } = stubApis();
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', { method: 'POST', body: JSON.stringify({ istek: 'Öneri istiyorum' }) });
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.system).toContain('Rakip platform envanteri');
+		expect(anthropicBody.system).toContain('Hangi platformda içerik önereceğine karar verirken');
+	});
+
 	it('returns an empty etikBayraklari for a clean report', async () => {
 		stubApis();
 		const response = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
@@ -809,6 +818,18 @@ describe('POST /panel/rakip-analizi/aksiyon-analiz', () => {
 		expect(data.rapor).toContain('Üretilen rapor metni.');
 		expect(data.rapor).toContain('Dip not — bu raporun dayandığı veri');
 		expect(data.rapor).toContain('Kullanılan rakip(ler): Rakip seçilmedi (rakip karşılaştırması yapılmadı)');
+	});
+
+	it('includes the platform envanteri talimatı in the system prompt', async () => {
+		const { fetchMock } = stubApis();
+		await authedRequest('/panel/rakip-analizi/aksiyon-analiz', {
+			method: 'POST',
+			body: JSON.stringify({ yorum: 'Değerlendirme istiyorum' }),
+		});
+		const anthropicCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('api.anthropic.com'))!;
+		const anthropicBody = JSON.parse((anthropicCall[1] as RequestInit).body as string);
+		expect(anthropicBody.system).toContain('Rakip platform envanteri');
+		expect(anthropicBody.system).toContain('somut bir gözlem/aksiyon');
 	});
 
 	it('flags a report containing a BACP-regime banned pattern via the deterministic ethics gate', async () => {
