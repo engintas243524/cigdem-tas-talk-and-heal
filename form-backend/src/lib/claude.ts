@@ -110,10 +110,20 @@ veya özür cümlesi yazma.`,
 		body: JSON.stringify(body),
 	});
 	if (!response.ok) throw new Error(`platformTespitiYap API çağrısı başarısız: ${response.status}`);
-	const data = (await response.json()) as { content?: { type: string; text?: string }[] };
-	return (data.content ?? [])
-		.filter((b) => b.type === 'text' && b.text)
-		.map((b) => b.text)
-		.join(' ')
-		.trim();
+	const data = (await response.json()) as { content?: { type: string; text?: string }[]; stop_reason?: string };
+	// SADECE SON text bloğu (generateReport'un TÜM blokları birleştiren davranışının AKSİNE) —
+	// web_search açıkken gerçek yanıt bloklara bölünüyor: text (giriş cümlesi) → server_tool_use →
+	// web_search_tool_result → text (asıl cevap). Birleştirmek "Bu işletmeyi araştırıyorum.
+	// Instagram, Facebook" gibi bir metin üretir; çağıran taraf bunu virgülle böldüğü için İLK
+	// platform adı ("Bu işletmeyi araştırıyorum. Instagram") hiçbir kanonik adla eşleşmez ve
+	// SESSİZCE düşerdi. generateReport'ta birleştirme doğru (orada tüm metin rapordur), burada
+	// istenen tek satırlık nihai liste her zaman SON text bloğudur.
+	const bloklar = (data.content ?? []).filter((b) => b.type === 'text' && b.text);
+	const metin = (bloklar[bloklar.length - 1]?.text ?? '').trim();
+	// Boş sonuç iki AYRI durumdan gelebilir: (a) model gerçekten hiçbir platform bulamadı (sözleşme
+	// gereği boş string), (b) yanıt yarıda kesildi/reddedildi (pause_turn, refusal, max_tokens).
+	// İkisi de çağıran taraf için aynı görünüyor — hata fırlatmak yerine (bu bir zenginleştirme
+	// katmanı, raporu engellememeli) stop_reason'ı loglayıp ayırt edilebilir kılıyoruz.
+	if (!metin) console.error(`platformTespitiYap boş yanıt döndü (stop_reason: ${data.stop_reason ?? 'yok'})`);
+	return metin;
 }

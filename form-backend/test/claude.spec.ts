@@ -77,6 +77,43 @@ describe('platformTespitiYap', () => {
 		expect(body.messages[0].content).toBe('İşletme: Test Klinik (Test Adres)');
 	});
 
+	// Gerçek bir web_search yanıtı bloklara bölünür: text (giriş) → server_tool_use →
+	// web_search_tool_result → text (asıl cevap). TÜM text bloklarını birleştirmek, çağıran tarafın
+	// virgülle böldüğü metnin BAŞINA giriş cümlesini yapıştırıp İLK platformu sessizce düşürüyordu.
+	it('returns ONLY the last text block of a realistic multi-block web_search response', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				async () =>
+					new Response(
+						JSON.stringify({
+							content: [
+								{ type: 'text', text: 'Bu işletmeyi araştırıyorum.' },
+								{ type: 'server_tool_use', id: 'srvtoolu_1', name: 'web_search', input: { query: 'Test Klinik' } },
+								{ type: 'web_search_tool_result', tool_use_id: 'srvtoolu_1', content: [{ type: 'web_search_result', url: 'https://x' }] },
+								{ type: 'text', text: 'Instagram, Facebook' },
+							],
+						}),
+						{ status: 200 },
+					),
+			),
+		);
+		const result = await platformTespitiYap(env, 'Test Klinik', 'Test Adres');
+		expect(result).toBe('Instagram, Facebook');
+	});
+
+	it('logs the stop_reason when the extracted text ends up empty', async () => {
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(JSON.stringify({ content: [], stop_reason: 'pause_turn' }), { status: 200 })),
+		);
+		const result = await platformTespitiYap(env, 'Test Klinik', '');
+		expect(result).toBe('');
+		expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('pause_turn'));
+		errorSpy.mockRestore();
+	});
+
 	it('omits the parenthesized address when none is given', async () => {
 		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ content: [{ type: 'text', text: '' }] }), { status: 200 }));
 		vi.stubGlobal('fetch', fetchMock);
