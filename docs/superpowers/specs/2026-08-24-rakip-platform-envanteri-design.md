@@ -129,10 +129,12 @@ devam edilmeli:
 6. **Sparrow'a da (kod değil, doküman notu) işlenmesi gerekiyor** — hem Sparrow'un kendi
    RakipTakip'i hem müşteri-yüzü modülü için, `SPARROW_RAKIPTAKIP_CFO_VERI_KAYNAGI_ARASTIRMASI.md`'ye.
 
-**Bir sonraki oturumda yapılacak:** Bu maddeler henüz ayrı bir "Rapor Entegrasyonu — Otomatik
-Platform Tespiti" spec bölümü olarak yazılmadı (kod örnekleri, tam fonksiyon imzaları, test planı
-eksik) — brainstorming zaten yapıldı, sıradaki adım bunu resmi bir spec eklentisi haline getirip
-kullanıcı onayı almak, sonra plan/task'lara dökmek.
+**Bir sonraki oturumda yapılacak:** ~~Bu maddeler henüz ayrı bir "Rapor Entegrasyonu — Otomatik
+Platform Tespiti" spec bölümü olarak yazılmadı~~ → **TAMAMLANDI (2026-08-25)**, bkz. aşağıdaki
+"Rapor Entegrasyonu — Otomatik Platform Tespiti" bölümü (kod örnekleri, tam fonksiyon imzaları,
+test planı dahil). Bütçe kararı da kullanıcı tarafından onaylandı (2026-08-25: $5/ay → $8/ay, yeni
+kategoriye $3/ay = aylikLimit 27) — bkz. o bölümün "Maliyet/Kota Kararı" alt başlığı. Sıradaki adım:
+`writing-plans` → `executing-plans` akışına sokmak.
 
 ## Rapor Entegrasyonu
 
@@ -207,6 +209,202 @@ döner) prompt seviyesinde tekrar belirtiliyor — LLM'in kendi genel bilgisinde
 çoğu rakip Instagram'dadır" gibi halüsinasyon üretmesini önlemek için, `rakipOzetOlustur`'un
 "(henüz rakip verisi yok)" dönüşüne benzer bir güvenlik katmanı.
 
+## Rapor Entegrasyonu — Otomatik Platform Tespiti (TASARIM, henüz kodlanmadı)
+
+Yukarıdaki "DURUM (2026-08-24)" bölümünün kararlaştırdığı tasarımın resmi hâli. `rakipYorumBaglamiGetir`
+(satır 502) ile AYNI ephemeral desen: canlı iste, kullan, hiçbir Sheet ana değerine yazma — tek fark,
+veri kaynağı Google Places API değil, Claude'un kendi `web_search` aracı.
+
+### Yeni mini-çağrı fonksiyonu: `platformTespitiYap` (`lib/claude.ts`)
+
+`generateReport` bu iş için uygun değil — o, rapor-seviyesi genel bir sistem promptu + 8192 token'lık
+tam metin rapor bekliyor; burada tek satırlık yapılandırılmış bir liste isteniyor. Ayrı, küçük bir
+fonksiyon:
+
+```ts
+// Rakip Platform Tespiti (TASARIM, 2026-08-25) — rakipYorumBaglamiGetir'in Google Places yerine
+// Claude'un web_search aracını kullanan eşdeğeri. generateReport'un aksine dar bir soru sorup
+// TEK SATIRLIK yapılandırılmış yanıt bekler — büyük max_tokens/genel sistem promptu gereksiz.
+export async function platformTespitiYap(env: Env, rakipIsim: string, rakipAdres: string): Promise<string> {
+  const body = {
+    model: MODEL,
+    max_tokens: 512,
+    system: `Sana verilen işletmenin hangi sosyal medya/iş platformlarında aktif olduğunu web
+aramasıyla tespit et. SADECE şu listeden seç, başka platform adı uydurma:
+${RAKIP_PLATFORM_LISTESI.join(', ')}.
+Yanıtını TEK SATIRDA, virgülle ayrılmış platform adları olarak ver (ör. "Instagram, Facebook").
+Emin olmadığın bir platformu ASLA ekleme. Hiçbir platform bulamazsan tamamen boş yanıt ver — açıklama
+veya özür cümlesi yazma.`,
+    messages: [{ role: 'user', content: `İşletme: ${rakipIsim}${rakipAdres ? ` (${rakipAdres})` : ''}` }],
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+  };
+  const response = await fetch(ANTHROPIC_API, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(`platformTespitiYap API çağrısı başarısız: ${response.status}`);
+  const data = (await response.json()) as { content?: { type: string; text?: string }[] };
+  return (data.content ?? []).filter((b) => b.type === 'text' && b.text).map((b) => b.text).join(' ').trim();
+}
+```
+
+**Parse/normalize:** ham yanıt, checkbox akışının zaten kullandığı `aktifPlatformlarNormalize`
+(satır 72, `RAKIP_PLATFORM_LISTESI.filter((p) => secilenler.includes(p)).join(',')`) fonksiyonuna
+verilir — filtre/sıralama mantığı İKİ YERDE ayrı ayrı yazılmaz, tek kaynak. Listede olmayan bir
+kelime (LLM'in "SADECE listeden seç" talimatını çiğneyip uydurması ihtimaline karşı deterministik
+bir filtre — [[feedback_llm_skorlama_kanit_zorunlulugu]]'ndaki "asla tahmin etme talimatı tek
+başına garanti değil" dersiyle aynı gerekçe) `aktifPlatformlarNormalize`'in `filter`'ı tarafından
+sessizce elenir, loglanmaz (rakipYorumBaglamiGetir'in per-item try/catch'inin sessiz atlama
+deseniyle tutarlı).
+
+### Kota kontrolü ve kısmi işleme
+
+`rakipYorumBaglamiGetir`'in aksine (tek `kotaDolduMu` çağrısıyla ya hep ya hiç), burada **kısmi işleme**
+gerekiyor — kullanıcı "kalan kotanız yetmezse kalan kadarı işlensin, gerisi atlansın" dedi. Bunun için
+`kotaDolduMu` yerine `getKullanimOzet`'in zaten döndürdüğü `kullanilan`/`aylikLimit` çifti kullanılır:
+
+```ts
+// routes/rakipAnalizi.ts, rakipYorumBaglamiGetir'in hemen altına
+async function rakipPlatformTespitiBaglamiGetir(
+  env: Env,
+  rakipler: { rowNumber: number; row: RakipAnalizRow }[],
+  rakipIds: string[],
+): Promise<string> {
+  if (!rakipIds.length) return '';
+  const secililer = rakipler.filter(({ row }) => rakipIds.includes(row.id));
+  if (!secililer.length) return '';
+
+  const ozet = await getKullanimOzet(env);
+  const { kullanilan, aylikLimit } = ozet.rakipPlatformTespiti;
+  const kalanKota = aylikLimit === null ? Infinity : Math.max(0, aylikLimit - kullanilan);
+  const islenecekler = secililer.slice(0, kalanKota);
+  const atlananSayisi = secililer.length - islenecekler.length;
+
+  const bloklar: string[] = [];
+  for (const { rowNumber, row } of islenecekler) {
+    try {
+      const ham = await platformTespitiYap(env, row.isim, row.adres);
+      await logKullanim(env, 'rakipPlatformTespiti', row.isim);
+      if (!ham) continue;
+      const platformlarStr = aktifPlatformlarNormalize(ham.split(',').map((p) => p.trim()).filter(Boolean));
+      if (!platformlarStr) continue;
+      const goruntu = platformlarStr.split(',').join(', ');
+      bloklar.push(`${row.isim}: ${goruntu}`);
+      // Hücre notu yazımı hata verirse rapor üretimini ENGELLEMEMELİ — ayrı try/catch (guard-timestamp
+      // deseniyle aynı gerekçe: bir yan etkinin başarısızlığı diğerini bloklamamalı).
+      try {
+        await setAktifPlatformlarNotu(env, rowNumber, `LLM tespiti, ${new Date().toISOString().slice(0, 10)}: ${goruntu}`);
+      } catch (err) {
+        console.error(`setAktifPlatformlarNotu başarısız oldu (${row.isim})`, err);
+      }
+    } catch (err) {
+      console.error(`platformTespitiYap başarısız oldu (${row.isim})`, err);
+    }
+  }
+  if (!bloklar.length && !atlananSayisi) return '';
+  let sonuc = bloklar.length
+    ? `\n\nSeçilen rakip(ler)in canlı platform tespiti (sadece bu analiz için arandı, ana veriye
+YAZILMADI — kullanıcı onaylı checkbox verisinden AYRI, ham/tekil gözlem):\n${bloklar.join('\n')}`
+    : '';
+  if (atlananSayisi > 0) {
+    sonuc += `\n\n(${atlananSayisi} rakip için platform tespiti YAPILMADI — aylık kota doldu:
+${kullanilan}/${aylikLimit}. Sıradaki ay otomatik sıfırlanır.)`;
+  }
+  return sonuc;
+}
+```
+
+**Çağrı noktaları:** `rakipYorumBaglami` ile AYNI yerde (satır 675 `handleIcerikStrateji`, satır 824
+`handleAksiyonAnaliz`), paralel bir ek satır — `rakipPlatformTespitiBaglami` adıyla userPrompt'a eklenir.
+`Promise.all` ile `rakipYorumBaglamiGetir` çağrısıyla PARALEL çalıştırılabilir (ikisi birbirinden
+bağımsız, sıralı beklemek gereksiz gecikme eklerdi).
+
+### Hücre notu yazımı: `setAktifPlatformlarNotu` (`lib/rakipSheets.ts`)
+
+Sheets API'nin native `note` alanı (CellData üzerinde) — Sheets'in ayrı/karmaşık "comments" (Drive
+tabanlı, threadli) API'sinden FARKLI, basit bir metin notu; hücreye sağ-üstte küçük bir üçgen olarak
+görünür, üzerine gelince metni gösterir. `deleteRakipAnalizRows`'daki (satır 125) sheetId-bulma
+deseniyle aynı:
+
+```ts
+export async function setAktifPlatformlarNotu(env: Env, rowNumber: number, notMetni: string): Promise<void> {
+  const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title)');
+  const data = (await response.json()) as { sheets?: { properties?: { sheetId?: number; title?: string } }[] };
+  const sheetId = data.sheets?.find((s) => s.properties?.title === RAKIP_ANALIZI_TAB_NAME)?.properties?.sheetId;
+  if (sheetId === undefined) throw new Error('RakipAnalizi tab bulunamadı, not yazılamadı.');
+  const colIndex = RAKIP_ANALIZI_COLUMNS.indexOf('aktifPlatformlar');
+  await sheetsFetch(env, ':batchUpdate', {
+    method: 'POST',
+    body: JSON.stringify({
+      requests: [
+        {
+          updateCells: {
+            range: { sheetId, startRowIndex: rowNumber - 1, endRowIndex: rowNumber, startColumnIndex: colIndex, endColumnIndex: colIndex + 1 },
+            rows: [{ values: [{ note: notMetni }] }],
+            fields: 'note',
+          },
+        },
+      ],
+    }),
+  });
+}
+```
+
+**Kritik güvenlik özelliği:** `fields: 'note'` mask'ı SADECE `note` alanını hedefler — Sheets API bu
+maskın dışındaki alanlara (`userEnteredValue`, yani checkbox'lardan gelen asıl `aktifPlatformlar`
+değeri) DOKUNMAZ. Bu, "ana değerle asla karışmaz/üzerine yazılmaz" gereksinimini kod-seviyesinde
+garanti eden native API semantiği — ayrı bir koruma kodu yazmaya gerek yok, ama test planında
+AÇIKÇA doğrulanmalı (aşağıya bkz.).
+
+### Sistem prompt eki
+
+Mevcut `PLATFORM_DAGILIM_TALIMATI_*` (istatistiksel, TÜM rakipler) ile KARIŞTIRILMAMALI — bu ayrı, sadece
+seçili/tekil rakip(ler) için ham gözlem verisi:
+
+```ts
+const PLATFORM_TESPITI_TALIMATI = `
+Sana seçili rakip(ler) için "canlı platform tespiti" başlığıyla verilen veri, o rakibin hangi
+platformlarda aktif olduğuna dair GÜNCEL bir web aramasının ham sonucudur (checkbox'tan gelen
+kullanıcı-onaylı veriden AYRI, doğrulanmamış bir gözlem). Bunu hem tekil rakip değerlendirmende hem
+(birden fazla rakip seçiliyse) rakipler arası karşılaştırmada serbestçe kullanabilirsin (ör. "rakibin
+X platformunda da aktif, sen henüz değilsin" gibi somut bir gözlem/öneriye çevir). Bu veri hiç
+verilmemişse (veri yoksa ya da kota nedeniyle atlandıysa), bu konudan hiç bahsetme.`;
+```
+
+`ICERIK_STRATEJI_SYSTEM_PROMPT` ve `AKSIYON_ANALIZ_SYSTEM_PROMPT`'a, `${PLATFORM_DAGILIM_TALIMATI_*}`
+ile aynı yere (RAPOR_YAPISI_TALIMATI'ndan hemen önce) `${PLATFORM_TESPITI_TALIMATI}` eklenir.
+
+### Yeni kota kategorisi: `rakipPlatformTespiti` (`config.ts`)
+
+```ts
+// Rakip Platform Tespiti (2026-08-25, kullanıcı kararı) — Anthropic web_search ile canlı platform
+// tespiti, rakip başına ~$0.11 (3 web_search çağrısı, Sonnet 5, gerçek ölçüm 2026-08-24).
+// icerikStrateji/aksiyonAnaliz'in AKSİNE rapor başına DEĞİL, RAKİP başına maliyetli — çok rakipli
+// bir raporda (ör. 10 rakip) tek başına ~$1.10'a çıkabilir. Kullanıcı "ayrı bütçe payı" seçeneğini
+// onayladı: toplam Anthropic bütçesi $5/ay'dan $8/ay'a çıkarılıyor (bkz. config.ts başındaki genel
+// KULLANIM_KATEGORILERI notu, o da güncellenmeli), yeni ~$3'lük pay bu kategoriye ayrıldı —
+// icerikStrateji/aksiyonAnaliz limitleri DEĞİŞMEDİ. $3 / $0.11 ≈ 27.
+rakipPlatformTespiti: { etiket: 'Rakip Platform Tespiti (Canlı Arama)', aylikLimit: 27 as number | null },
+```
+
+`KullanimKategori` union'a otomatik eklenir (`keyof typeof KULLANIM_KATEGORILERI`). Gerçek bir $
+Anthropic kredisi tükettiği için `icerikStrateji`/`aksiyonAnaliz` ile AYNI gerekçeyle
+`KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER`'e de eklenir (Çiğdem "Limiti Yükselt" ile bunu da
+açabilmeli):
+
+```ts
+export const KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER = ['icerikStrateji', 'aksiyonAnaliz', 'rakipPlatformTespiti'] as const;
+```
+
+### Maliyet/Kota Kararı — KARARLAŞTIRILDI (2026-08-25)
+
+Kullanıcı **"ayrı bütçe payı"**nı onayladı: toplam Anthropic bütçesi $5/ay → **$8/ay**'a çıkıyor, yeni
+**$3/ay**'lık pay `rakipPlatformTespiti`'ye ayrıldı (**aylikLimit: 27**, $0.11/rakip ölçümüne göre).
+`icerikStrateji`/`aksiyonAnaliz` limitleri (12/13) DEĞİŞMEDİ. Implementasyon sırasında
+`config.ts`'in `KULLANIM_KATEGORILERI` başındaki genel bütçe yorumu ($5/ay diyor) da $8/ay'a
+güncellenmeli — tek kaynak orası, iki yerde çelişen sayı kalmamalı.
+
 ## Test Planı
 
 - `platformDagilimOzetiGetir`: boş rakip listesi → `''`; hiçbir rakipte `aktifPlatformlar`
@@ -220,3 +418,25 @@ döner) prompt seviyesinde tekrar belirtiliyor — LLM'in kendi genel bilgisinde
   değişmediğinde dokunulmadığını doğrula. Bu iki alanın hiçbir Google API çağrısı
   YAPILMADAN (mock/spy ile `searchCompetitorsInArea`/`getPlaceReviews` hiç çağrılmadığını
   doğrulayarak) sadece body'den gelen değeri yazdığını doğrula.
+
+### Otomatik Platform Tespiti (TASARIM aşaması, implementasyonla birlikte yazılacak)
+
+- `rakipPlatformTespitiBaglamiGetir`: `rakipIds` boşsa → `''`, hiç `platformTespitiYap` çağrılmadığını
+  doğrula (fetch mock hiç tetiklenmemeli).
+- Kota tam doluyken (`kullanilan >= aylikLimit`) → hiçbir rakip işlenmez, dönen metin sadece "X rakip
+  için platform tespiti YAPILMADI" notu içerir, `platformTespitiYap` hiç çağrılmaz.
+- Kota kısmen doluyken (ör. 3 rakip seçili, kalan kota 1) → sadece ilk 1 işlenir, `atlananSayisi: 2`
+  notu doğru sayıyla rapora eklenir.
+- `platformTespitiYap`'ın döndürdüğü ham metinde `RAKIP_PLATFORM_LISTESI` DIŞI bir kelime (ör. LLM
+  "Snapchat" derse) varsa bu deterministik olarak filtrelenip atıldığını doğrula — [[feedback_llm_skorlama_kanit_zorunlulugu]]
+  dersiyle aynı gerekçe: LLM'in "sadece listeden seç" talimatına güvenmek tek başına yetmez.
+  `web_search` boş/hiç sonuç dönmezse (ham metin boş) o rakip sessizce atlanır, hata fırlatmaz.
+  Bir rakip için `platformTespitiYap` hata fırlatırsa (API hatası) diğer rakiplerin işlenmesi
+  ENGELLENMEZ (per-item try/catch izolasyonu, `rakipYorumBaglamiGetir` ile aynı desen).
+- `setAktifPlatformlarNotu`: gönderilen `batchUpdate` body'sinde `fields: 'note'` dışında hiçbir alan
+  hedeflenmediğini doğrula (mock `sheetsFetch` çağrı argümanı assert) — bu, ana `aktifPlatformlar`
+  değerinin (checkbox onaylı) LLM notuyla ASLA karışmadığının kod-seviyesi kanıtı. `setAktifPlatformlarNotu`
+  hata fırlatırsa (ör. sheetId bulunamadı) `rakipPlatformTespitiBaglamiGetir`'in genel akışının
+  ENGELLENMEDİĞİNİ (diğer rakiplerin/raporun üretilmeye devam ettiğini) doğrula.
+- `platformDagilimOzetiGetir` (mevcut, deterministik istatistik) bu yeni ephemeral veriden hiç
+  etkilenmediğini doğrula — iki fonksiyon birbirinden tamamen bağımsız veri kaynağı kullanmalı.

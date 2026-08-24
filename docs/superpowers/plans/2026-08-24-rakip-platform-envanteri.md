@@ -755,7 +755,15 @@ to:
       });
 ```
 
-- [ ] **Step 4: Manual verification (no automated frontend test in this repo)**
+- [x] **Step 4: Manual verification (no automated frontend test in this repo)** — sub-steps 1-5
+  doğrulandı (kullanıcı manuel test, 2026-08-24). Sub-step 6 (DevTools Network sekmesi canlı
+  teyidi) Chrome uzantı hesap eşleştirme sorunu nedeniyle yapılamadı (2026-08-25) — bunun yerine
+  daha güçlü statik+otomatik kanıtla kapatıldı: (a) `rakip-analizi.html` içinde
+  `places.googleapis.com`'a hiçbir referans yok; (b) backend'de bu checkbox'ların POST ettiği tek
+  endpoint olan `handleRakipDuzelt` (`routes/rakipAnalizi.ts:212`) `lib/places.ts`'ten hiçbir
+  fonksiyon import/çağırmıyor — Places API çağrıları sadece ayrı `handleRakipAra`/rapor üretimi
+  yollarında var; (c) `test/rakipAnalizi.spec.ts:191` bunu tam olarak assert ediyor
+  (`fetchMock`'ta `places.googleapis.com` çağrısı olmadığını doğruluyor), 54/54 test yeşil.
 
 Run: `cd /Users/selencelik/Desktop/PROJELER/cigdem-tas-talk-and-heal && python3 -m http.server 5173`, then in a browser:
 
@@ -766,9 +774,4 @@ Run: `cd /Users/selencelik/Desktop/PROJELER/cigdem-tas-talk-and-heal && python3 
 5. Re-open the same competitor's edit panel — confirm Instagram and TikTok show as checked, others unchecked, and the Google Puanı field shows `4.6`.
 6. Confirm no request to `places.googleapis.com` fires during this whole flow (DevTools Network tab) — the two Google fields must never trigger an API call.
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add rakip-analizi.html
-git commit -m "feat: add platform checkboxes and manual google gözlem fields to the rakip edit panel"
-```
+- [x] **Step 5: Commit** — `5f8930e` (mesajı bunu anmıyor ama içerik doğru dahil, bkz. handoff.md).

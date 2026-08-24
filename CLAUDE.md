@@ -128,6 +128,14 @@ even though the developer/user are in Turkey.
 
 ## Documentation map (read before assuming something isn't decided yet)
 
+- `handoff.md` — **read this FIRST, before anything else, at the start of any session in this
+  project.** It records exactly where the previous session left off — what was just finished, and
+  the precise next step (often a specific pending decision or an unfinished plan/task). Without
+  reading it, a new session risks re-deriving context that already exists, or missing a decision
+  that's waiting on the user. Whenever a session ends (the user signals wrapping up, or asks for
+  `/compact`), update this file BEFORE finishing — overwrite it with the current state, don't
+  append to old entries (this file is a snapshot of "now," not a running log — `INTEGRASYON_TODO.md`
+  below is the running log).
 - `INTEGRASYON_TODO.md` — the authoritative, continuously-updated build log/spec for the backend
   integration: full build order, what's done vs. pending, and verbatim records of every
   multi-part user request (kept verbatim on purpose — summaries lose exact numbered lists across
