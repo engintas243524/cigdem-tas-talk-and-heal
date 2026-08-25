@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ensureKullanimKaydiTab, logKullanim, logKullanimToplu, getKullanimOzet, kotaDolduMu } from '../src/lib/kullanimKaydi';
+import { updateKullanimLimit } from '../src/lib/kullanimLimitSheets';
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -117,15 +118,13 @@ describe('kullanimKaydi', () => {
 	});
 
 	it('preserves getKullanimOzet output exactly: limit override and currency still read from KullanimLimitleri rows', async () => {
-		const { fetchMock } = stubSheetsApi(['Sayfa1', 'KullanimKaydi', 'KullanimLimitleri']);
-		// stubSheetsApi'nin GET /values/ handler'ı tüm append edilen satırları TEK bir listede
-		// döndürüyor (bkz. dosyanın başındaki stub tanımı) — KullanimLimitleri'ne bir satır
-		// "append" edip limitin GERÇEKTEN o satırdan okunduğunu doğruluyoruz.
-		fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ access_token: 'fake', expires_in: 3600 }), { status: 200 }));
-		await getKullanimOzet(env); // ensureKullanimLimitTab'ı tetikleyip KullanimLimitleri'ni seed'ler
+		stubSheetsApi(['Sayfa1', 'KullanimKaydi', 'KullanimLimitleri']);
+		// updateKullanimLimit ile statik varsayılandan (27/null) GERÇEKTEN farklı bir limit+para
+		// birimi yazıp getKullanimOzet'in bunu (fallback'e düşmeden) o satırdan okuduğunu doğruluyoruz.
+		await updateKullanimLimit(env, 'rakipPlatformTespiti', 99, 10, 'USD');
 		const ozet = await getKullanimOzet(env);
-		expect(ozet.rakipPlatformTespiti.aylikLimit).toBe(27);
-		expect(ozet.rakipPlatformTespiti.sonKullanilanParaBirimi).toBeNull();
+		expect(ozet.rakipPlatformTespiti.aylikLimit).toBe(99);
+		expect(ozet.rakipPlatformTespiti.sonKullanilanParaBirimi).toBe('USD');
 	});
 
 	it('kotaDolduMu still reports quota as full once the monthly limit is reached, but never for null-limit categories', async () => {
