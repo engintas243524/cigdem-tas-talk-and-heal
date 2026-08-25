@@ -856,18 +856,18 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(metin.indexOf('Paralel Rakip A: Instagram')).toBeLessThan(metin.indexOf('Paralel Rakip B: Instagram'));
 	});
 
-	// Subrequest regresyon koruması (BE-77/BE-81) — Cloudflare ücretsiz planında bir istek en fazla
-	// 50 subrequest yapabilir (bkz. lib/places.ts#MAX_GRID_DIMENSION'ın üstündeki aynı hesap).
-	// getKullanimOzet TEK ÇAĞRIDA 31 subrequest'e mal oluyor (bu testle ölçüldü: 2026-08-25'te
-	// rakipPlatformTespitiBaglamiGetir kendi özetini çekerken sayı 83'tü, özet parametreye
-	// çevrilince 52'ye düştü — aradaki 31 tam olarak bir getKullanimOzet çağrısı).
+	// Subrequest regresyon koruması (BE-77/BE-81/BE-82, kapatıldı: BE-115, 2026-08-25) — Cloudflare
+	// ücretsiz planında bir istek en fazla 50 subrequest yapabilir (bkz. lib/places.ts#MAX_GRID_DIMENSION'ın
+	// üstündeki aynı hesap). getKullanimOzet eskiden TEK ÇAĞRIDA 31 subrequest'e mal oluyordu (kategori
+	// başına ensureKullanimLimitTab + getAllKullanimLimitRows, efektifLimit ve sonKullanilanParaBirimi
+	// için AYRI AYRI) — sayı 2026-08-25'te rakipPlatformTespitiBaglamiGetir kendi özetini çekerken 83'tü,
+	// özet parametreye çevrilince 52'ye düştü. BE-115'te getKullanimOzet tek-okumaya indirgendi
+	// (bkz. src/lib/kullanimKaydi.ts) — bu senaryo artık ÖLÇÜLEN 25 subrequest'te (52'den ~2 katı düşüş).
 	//
-	// Tavan 60: BİR getKullanimOzet çağrısının geri sızmasını (52 → 83) kesin yakalar, ±birkaç
-	// çağrılık gürültüde ötmez. 50'nin ALTINA çekilemiyor çünkü tek rakipli bu senaryo bugün 52'de —
-	// kalan aşım getKullanimOzet'in KENDİ iç maliyetinden geliyor (kategori başına
-	// ensureKullanimLimitTab + getAllKullanimLimitRows, efektifLimit ve sonKullanilanParaBirimi için
-	// AYRI AYRI). O refactor bu düzeltmenin kapsamı dışında bırakıldı (review'ın "önerilen takip"
-	// maddesi) — bu yorum, sayının neden hâlâ 50'nin üstünde olduğunun kaydıdır.
+	// Tavan 35: gözlenen 25'in rahatça üstünde (gürültüye ötmez) ama eski 60'tan (ve 52/83'ten) belirgin
+	// şekilde düşük — getKullanimOzet'in tek-okuma davranışının geri sızmasını kesin yakalar. Task 2'nin
+	// çok-rakipli senaryosu ayrı bir regresyon testiyle logKullanimToplu'nun (rakip başına ayrı log
+	// yerine toplu yazım) etkisini koruyacak.
 	it('stays well under the Cloudflare subrequest ceiling for a one-competitor report', async () => {
 		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
 		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
@@ -884,7 +884,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		});
 		expect(raporRes.status).toBe(200);
 		const raporIstegiCagriSayisi = fetchMock.mock.calls.length - oncesi;
-		expect(raporIstegiCagriSayisi).toBeLessThan(60);
+		expect(raporIstegiCagriSayisi).toBeLessThan(35);
 	});
 
 	it('writes a Sheets cell note for each detected competitor', async () => {

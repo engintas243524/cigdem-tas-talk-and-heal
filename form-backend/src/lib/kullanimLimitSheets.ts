@@ -110,16 +110,34 @@ export async function getAllKullanimLimitRows(env: Env): Promise<{ rowNumber: nu
 		.filter(({ row }) => row.kategori);
 }
 
-// Her arttırılabilir kategori için o anki (güncel) limiti döner — satır hiç yoksa (ensure henüz
-// çalışmadıysa) config.ts'deki statik varsayılana düşer.
-export async function getGuncelLimit(env: Env, kategori: KullanimKategori): Promise<number | null> {
-	const rows = await getAllKullanimLimitRows(env);
+// Saf (fetch yapmayan) yardımcı — zaten elde bir getAllKullanimLimitRows sonucu varsa (ör.
+// getKullanimOzet'in tek okumasından) tekrar fetch yapmadan aynı mantığı çalıştırır. BE-115:
+// eskiden getGuncelLimit'in kendisi HER çağrıda ayrı bir getAllKullanimLimitRows fetch'i
+// yapıyordu — getKullanimOzet kategori başına bunu çağırınca subrequest zinciri katlanıyordu.
+export function guncelLimitFromRows(rows: { rowNumber: number; row: KullanimLimitRow }[], kategori: KullanimKategori): number | null {
 	const satir = rows.find(({ row }) => row.kategori === kategori);
 	if (satir) {
 		const n = Number(satir.row.limit);
 		if (Number.isFinite(n)) return n;
 	}
 	return KULLANIM_KATEGORILERI[kategori].aylikLimit;
+}
+
+// Her arttırılabilir kategori için o anki (güncel) limiti döner — satır hiç yoksa (ensure henüz
+// çalışmadıysa) config.ts'deki statik varsayılana düşer. routes/kullanimLimit.ts'nin doğrudan
+// çağırdığı DIŞA AÇIK API — imza/davranış AYNI, içeride sadece pure helper'a devrediyor.
+export async function getGuncelLimit(env: Env, kategori: KullanimKategori): Promise<number | null> {
+	const rows = await getAllKullanimLimitRows(env);
+	return guncelLimitFromRows(rows, kategori);
+}
+
+// Saf yardımcı — bkz. guncelLimitFromRows'un aynı gerekçesi.
+export function sonKullanilanParaBirimiFromRows(
+	rows: { rowNumber: number; row: KullanimLimitRow }[],
+	kategori: KullanimKategori,
+): string | null {
+	const satir = rows.find(({ row }) => row.kategori === kategori);
+	return satir?.row.sonEklenenParaBirimi || null;
 }
 
 export async function updateKullanimLimit(

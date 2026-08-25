@@ -7,7 +7,13 @@ import {
 	type KullanimKategori,
 } from '../config';
 import { columnLetter, sheetsFetch, sabitSatirYuksekligiUygula } from './sheets';
-import { ensureKullanimLimitTab, getGuncelLimit, getAllKullanimLimitRows } from './kullanimLimitSheets';
+import {
+	ensureKullanimLimitTab,
+	getAllKullanimLimitRows,
+	guncelLimitFromRows,
+	sonKullanilanParaBirimiFromRows,
+	type KullanimLimitRow,
+} from './kullanimLimitSheets';
 import type { Env } from '../types';
 
 type KullanimKaydiRow = Record<(typeof KULLANIM_KAYDI_COLUMNS)[number], string>;
@@ -91,6 +97,23 @@ export async function logKullanim(env: Env, kategori: KullanimKategori, detay: s
 	});
 }
 
+// N rakip/olay için TEK bir Sheets append isteğinde toplu kayıt — BE-115: rakip başına ayrı
+// logKullanim çağrısı, rakip sayısıyla doğrusal büyüyen subrequest maliyeti yaratıyordu. logKullanim
+// (tekil) DEĞİŞMEDİ, mevcut 8 çağıranı etkilenmiyor — bu SADECE çok-öğeli senaryolar için ek bir
+// fonksiyon (bkz. routes/rakipAnalizi.ts#rakipPlatformTespitiBaglamiGetir).
+export async function logKullanimToplu(env: Env, kategori: KullanimKategori, detaylar: string[]): Promise<void> {
+	if (!detaylar.length) return;
+	const values = detaylar.map((detay) => {
+		const row: KullanimKaydiRow = { id: crypto.randomUUID(), tarihUtc: new Date().toISOString(), kategori, detay };
+		return KULLANIM_KAYDI_COLUMNS.map((key) => row[key]);
+	});
+	const range = `${KULLANIM_KAYDI_TAB_NAME}!A:${columnLetter(KULLANIM_KAYDI_COLUMNS.length - 1)}`;
+	await sheetsFetch(env, `/values/${encodeURIComponent(range)}:append?valueInputOption=RAW`, {
+		method: 'POST',
+		body: JSON.stringify({ values }),
+	});
+}
+
 export interface KullanimOzetKategori {
 	etiket: string;
 	kullanilan: number;
@@ -106,28 +129,6 @@ export interface KullanimOzetKategori {
 	sonKullanilanParaBirimi: string | null;
 }
 
-// Bir kategorinin O ANKİ (güncel) aylık limitini döner — arttırılabilir kategoriler için
-// KullanimLimitleri sekmesindeki (Limit Yükseltme ile güncellenebilen) değer, diğerleri için
-// config.ts'deki statik değer.
-async function efektifLimit(env: Env, kategori: KullanimKategori): Promise<number | null> {
-	if (!(KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori)) {
-		return KULLANIM_KATEGORILERI[kategori].aylikLimit;
-	}
-	await ensureKullanimLimitTab(env);
-	return getGuncelLimit(env, kategori);
-}
-
-async function sonKullanilanParaBirimiGetir(env: Env, kategori: KullanimKategori): Promise<string | null> {
-	if (!(KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori)) return null;
-	await ensureKullanimLimitTab(env);
-	const rows = await getAllKullanimLimitRows(env);
-	const satir = rows.find(({ row }) => row.kategori === kategori);
-	return satir?.row.sonEklenenParaBirimi || null;
-}
-
-// Bu ayki (UTC takvim ayı) kullanımı kategori başına sayar. Tüm satırları okuyup bellekte
-// filtreliyor — hacim (aylık birkaç yüz/bin satır) bunun için hâlâ ucuz, ayrı bir sayaç
-// tutmanın (ve onu senkron tutmanın) karmaşıklığından kaçınmaya değer.
 export async function getKullanimOzet(env: Env): Promise<Record<KullanimKategori, KullanimOzetKategori>> {
 	const range = `${KULLANIM_KAYDI_TAB_NAME}!A2:${columnLetter(KULLANIM_KAYDI_COLUMNS.length - 1)}`;
 	const response = await sheetsFetch(env, `/values/${encodeURIComponent(range)}`);
@@ -147,24 +148,36 @@ export async function getKullanimOzet(env: Env): Promise<Record<KullanimKategori
 		sayimlar[kategori] = (sayimlar[kategori] ?? 0) + 1;
 	}
 
+	// BE-115 düzeltmesi (2026-08-25): eskiden HER artırılabilir kategori için efektifLimit VE
+	// sonKullanilanParaBirimiGetir AYRI AYRI ensureKullanimLimitTab+getAllKullanimLimitRows
+	// çalıştırıyordu (~10 subrequest/kategori × 3 kategori ≈ 31 subrequest/okuma). Şimdi ikisi de
+	// BURADA bir kez çalışıyor, sonuç bellekte (limitRows) her kategori için pure helper'larla
+	// okunuyor — toplam ~6 subrequest/okuma, kategori sayısından bağımsız.
+	let limitRows: { rowNumber: number; row: KullanimLimitRow }[] = [];
+	if (KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER.length > 0) {
+		await ensureKullanimLimitTab(env);
+		limitRows = await getAllKullanimLimitRows(env);
+	}
+
 	const ozet = {} as Record<KullanimKategori, KullanimOzetKategori>;
 	for (const kategori of Object.keys(KULLANIM_KATEGORILERI) as KullanimKategori[]) {
+		const arttirilabilir = (KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori);
 		ozet[kategori] = {
 			etiket: KULLANIM_KATEGORILERI[kategori].etiket,
 			kullanilan: sayimlar[kategori] ?? 0,
-			aylikLimit: await efektifLimit(env, kategori),
-			arttirilabilir: (KULLANIM_LIMIT_ARTTIRILABILIR_KATEGORILER as readonly string[]).includes(kategori),
-			sonKullanilanParaBirimi: await sonKullanilanParaBirimiGetir(env, kategori),
+			aylikLimit: arttirilabilir ? guncelLimitFromRows(limitRows, kategori) : KULLANIM_KATEGORILERI[kategori].aylikLimit,
+			arttirilabilir,
+			sonKullanilanParaBirimi: arttirilabilir ? sonKullanilanParaBirimiFromRows(limitRows, kategori) : null,
 		};
 	}
 	return ozet;
 }
 
-// Bir kategori bu ay için kotasını doldurmuş mu? aylikLimit=null olan bir kategori (şu an yok,
-// ama gelecekte eklenebilir) burada hiç sınırlanmaz.
+// Bir kategori bu ay için kotasını doldurmuş mu? aylikLimit=null olan bir kategori burada hiç
+// sınırlanmaz. BE-115: eskiden efektifLimit + getKullanimOzet AYRI AYRI çağrılıyordu (limit
+// zaten getKullanimOzet'in kendi sonucunda var) — tek çağrıya indirildi.
 export async function kotaDolduMu(env: Env, kategori: KullanimKategori): Promise<boolean> {
-	const limit = await efektifLimit(env, kategori);
-	if (limit === null) return false;
 	const ozet = await getKullanimOzet(env);
-	return ozet[kategori].kullanilan >= limit;
+	const { kullanilan, aylikLimit } = ozet[kategori];
+	return aylikLimit !== null && kullanilan >= aylikLimit;
 }
