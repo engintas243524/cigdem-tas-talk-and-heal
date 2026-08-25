@@ -6,6 +6,7 @@ import {
 	getAllRakipAnalizRows,
 	emptyRakipAnalizRow,
 	setAktifPlatformlarNotu,
+	setAktifPlatformlarNotlariToplu,
 } from '../src/lib/rakipSheets';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -138,5 +139,37 @@ describe('rakipSheets', () => {
 	it('throws a clear error when the RakipAnalizi tab cannot be found', async () => {
 		stubSheetsApi(['Sayfa1']); // RakipAnalizi tab'ı YOK
 		await expect(setAktifPlatformlarNotu(env, 3, 'not')).rejects.toThrow(/bulunamadı/);
+	});
+
+	describe('setAktifPlatformlarNotlariToplu', () => {
+		it('writes N notes in ONE batchUpdate call with ONE sheetId lookup, not N of each', async () => {
+			const { fetchMock } = stubSheetsApi(['Sayfa1', 'RakipAnalizi']);
+			await setAktifPlatformlarNotlariToplu(env, [
+				{ rowNumber: 3, notMetni: 'LLM tespiti, 2026-08-25: Instagram' },
+				{ rowNumber: 5, notMetni: 'LLM tespiti, 2026-08-25: Facebook, TikTok' },
+				{ rowNumber: 7, notMetni: 'LLM tespiti, 2026-08-25: X' },
+			]);
+			const fieldsCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes('?fields=sheets.properties'));
+			const batchCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes(':batchUpdate'));
+			expect(fieldsCalls).toHaveLength(1);
+			expect(batchCalls).toHaveLength(1);
+			const body = JSON.parse((batchCalls[0][1] as RequestInit).body as string);
+			expect(body.requests).toHaveLength(3);
+			expect(body.requests[0].updateCells.fields).toBe('note');
+			expect(body.requests[0].updateCells.rows[0].values[0].note).toBe('LLM tespiti, 2026-08-25: Instagram');
+			expect(body.requests[1].updateCells.range.startRowIndex).toBe(4); // rowNumber 5 -> 0-indexli 4
+			expect(body.requests[2].updateCells.rows[0].values[0].note).toBe('LLM tespiti, 2026-08-25: X');
+		});
+
+		it('does nothing (no fetch at all) when given an empty list', async () => {
+			const { fetchMock } = stubSheetsApi(['Sayfa1', 'RakipAnalizi']);
+			await setAktifPlatformlarNotlariToplu(env, []);
+			expect(fetchMock).not.toHaveBeenCalled();
+		});
+
+		it('throws a clear error when the RakipAnalizi tab cannot be found', async () => {
+			stubSheetsApi(['Sayfa1']); // RakipAnalizi tab'ı YOK
+			await expect(setAktifPlatformlarNotlariToplu(env, [{ rowNumber: 3, notMetni: 'not' }])).rejects.toThrow(/bulunamadı/);
+		});
 	});
 });

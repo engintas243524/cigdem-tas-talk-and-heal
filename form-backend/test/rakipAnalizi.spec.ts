@@ -909,6 +909,55 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(noteBody.requests[0].updateCells.rows[0].values[0].note).toContain('Facebook');
 	});
 
+	it('runs platform tespiti for many competitors while staying well under the Cloudflare subrequest ceiling', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipIds: string[] = [];
+		for (let i = 0; i < 10; i++) {
+			const res = await authedRequest('/panel/rakip-analizi/rakip', {
+				method: 'POST',
+				body: JSON.stringify({ isim: `Coklu Rakip ${i}`, kaynak: 'manuel' }),
+			});
+			rakipIds.push(((await res.json()) as { id: string }).id);
+		}
+
+		const oncesi = fetchMock.mock.calls.length;
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds }),
+		});
+		expect(raporRes.status).toBe(200);
+		const raporIstegiCagriSayisi = fetchMock.mock.calls.length - oncesi;
+		// BE-115: bu test, TEK BAŞINA getKullanimOzet düzeltmesinin (Task 1) YETERSİZ kaldığı asıl
+		// senaryoyu doğruluyor — 10 rakip, eski rakip-başına-yazım deseniyle taban(~27) + 10×4 = ~67
+		// olurdu, hâlâ tavanın üstünde. Toplu yazım (bu task) sayesinde rakip sayısından NEREDEYSE
+		// bağımsız kalmalı.
+		expect(raporIstegiCagriSayisi).toBeLessThan(45);
+	});
+
+	it('batches all detected-competitor Sheets notes into ONE batchUpdate call, not one per competitor', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipIds: string[] = [];
+		for (let i = 0; i < 3; i++) {
+			const res = await authedRequest('/panel/rakip-analizi/rakip', {
+				method: 'POST',
+				body: JSON.stringify({ isim: `Toplu Not Rakip ${i}`, kaynak: 'manuel' }),
+			});
+			rakipIds.push(((await res.json()) as { id: string }).id);
+		}
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds }),
+		});
+		const noteCalls = fetchMock.mock.calls.filter((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			return body.requests?.[0]?.updateCells?.fields === 'note';
+		});
+		expect(noteCalls).toHaveLength(1);
+		const body = JSON.parse((noteCalls[0][1] as RequestInit).body as string);
+		expect(body.requests).toHaveLength(3);
+	});
+
 	it('processes zero competitors and adds only the skip note when the monthly quota is already full', async () => {
 		const { fetchMock, tabRows } = stubApis({ anthropicText: 'Instagram' });
 		const now = new Date().toISOString();
@@ -1098,7 +1147,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(reportBody.messages[0].content).not.toContain('Basarisiz Rakip:');
 	});
 
-	it('when setAktifPlatformlarNotu fails, the report still generates and still includes the detected platforms', async () => {
+	it('when the batched Sheets note write fails, the report still generates and still includes the detected platforms', async () => {
 		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
 		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
 			method: 'POST',

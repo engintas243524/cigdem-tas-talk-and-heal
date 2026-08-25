@@ -6,7 +6,7 @@ import {
 	ensureRakipAnaliziTab,
 	deleteRakipAnalizRows,
 	updateRakipAnalizRow,
-	setAktifPlatformlarNotu,
+	setAktifPlatformlarNotlariToplu,
 	type RakipAnalizRow,
 } from '../lib/rakipSheets';
 import { generateReport, InsufficientCreditError, platformTespitiYap } from '../lib/claude';
@@ -15,7 +15,7 @@ import { rakipHavuzunuSiralaVeKirp } from '../lib/rakipBulmaSiralama';
 import { geocodeAddress } from '../lib/geocoding';
 import { cleanDictation } from '../lib/textCleanup';
 import { errorResponse, json } from '../lib/http';
-import { ensureKullanimKaydiTab, logKullanim, getKullanimOzet, kotaDolduMu } from '../lib/kullanimKaydi';
+import { ensureKullanimKaydiTab, logKullanim, logKullanimToplu, getKullanimOzet, kotaDolduMu } from '../lib/kullanimKaydi';
 import { belgedenMetinCikar, metinCikarWebLink } from '../lib/belgeCikar';
 import { appendRaporKaydi } from '../lib/raporlarSheets';
 import {
@@ -566,28 +566,23 @@ async function rakipPlatformTespitiBaglamiGetir(
 	const islenecekler = secililer.slice(0, kalanKota);
 	const atlananSayisi = secililer.length - islenecekler.length;
 
-	// Rakip başına iş PARALEL (2026-08-25) — her tespit çağrısı 3 web aramasına kadar sürebiliyor
-	// (~10-30sn), sıralı döngüde N rakip rapor gecikmesine doğrusal olarak ekleniyordu. İşler
-	// birbirinden bağımsız: kota YUKARIDA bir kez hesaplandı (iterasyon başına yeniden bakılmıyor)
-	// ve her not yazımı AYRI bir hücreyi hedefliyor. Her rakip kendi hatasını KENDİ İÇİNDE yakalayıp
-	// null ile resolve oluyor — Promise.all'un bir reject'in diğerlerini iptal etmesi davranışına
-	// hiç girilmiyor, sıralı sürümün "yut ve devam et" semantiği aynen korunuyor.
+	interface TespitSonucu {
+		isim: string;
+		rowNumber: number;
+		basarili: boolean;
+		blok: string | null;
+		notMetni: string | null;
+	}
+
+	// Rakip başına iş PARALEL — sadece platformTespitiYap + kanonikleştirme, YAN ETKİ YOK (BE-115:
+	// eskiden her rakip kendi logKullanim+setAktifPlatformlarNotu çağrısını yapıyordu, rakip
+	// sayısıyla doğrusal büyüyen subrequest maliyeti yaratıyordu). Yan etkiler AŞAĞIDA, Promise.all
+	// bittikten SONRA, tek bir toplu çağrıda yapılıyor.
 	const sonuclar = await Promise.all(
-		islenecekler.map(async ({ rowNumber, row }): Promise<string | null> => {
+		islenecekler.map(async ({ rowNumber, row }): Promise<TespitSonucu> => {
 			try {
 				const ham = await platformTespitiYap(env, row.isim, row.adres);
-				// Kendi try/catch'inde (Global Constraint: her yan etki izole) — kota kaydının
-				// başarısız olması, ZATEN YAPILMIŞ (ve faturalanmış) bir tespiti çöpe atmamalı.
-				try {
-					await logKullanim(env, 'rakipPlatformTespiti', row.isim);
-				} catch (err) {
-					console.error(`logKullanim başarısız oldu (rakipPlatformTespiti, ${row.isim})`, err);
-				}
-				if (!ham) return null;
-				// LLM'in ham metni kanonik olmayabilir ("instagram", "INSTAGRAM") ve "TEK SATIRDA"
-				// talimatına rağmen satır sonuyla ayırabilir (prompt talimatı garanti değil) —
-				// aktifPlatformlarNormalize'a vermeden ÖNCE burada kanonikleştiriliyor. İzinli liste
-				// ve çıktı sırası hâlâ TEK kaynak olarak aktifPlatformlarNormalize'da kalıyor.
+				if (!ham) return { isim: row.isim, rowNumber, basarili: true, blok: null, notMetni: null };
 				const tokenlar = ham
 					.split(/[,\n]/)
 					.map((p) => p.trim())
@@ -596,22 +591,48 @@ async function rakipPlatformTespitiBaglamiGetir(
 					.map((t) => RAKIP_PLATFORM_LISTESI.find((p) => p.toLowerCase() === t.toLowerCase()))
 					.filter((p): p is (typeof RAKIP_PLATFORM_LISTESI)[number] => Boolean(p));
 				const platformlarStr = aktifPlatformlarNormalize(kanonik);
-				if (!platformlarStr) return null;
+				if (!platformlarStr) return { isim: row.isim, rowNumber, basarili: true, blok: null, notMetni: null };
 				const goruntu = platformlarStr.split(',').join(', ');
-				try {
-					await setAktifPlatformlarNotu(env, rowNumber, `LLM tespiti, ${new Date().toISOString().slice(0, 10)}: ${goruntu}`);
-				} catch (err) {
-					console.error(`setAktifPlatformlarNotu başarısız oldu (${row.isim})`, err);
-				}
-				return `${row.isim}: ${goruntu}`;
+				return {
+					isim: row.isim,
+					rowNumber,
+					basarili: true,
+					blok: `${row.isim}: ${goruntu}`,
+					notMetni: `LLM tespiti, ${new Date().toISOString().slice(0, 10)}: ${goruntu}`,
+				};
 			} catch (err) {
 				console.error(`platformTespitiYap başarısız oldu (${row.isim})`, err);
-				return null;
+				return { isim: row.isim, rowNumber, basarili: false, blok: null, notMetni: null };
 			}
 		}),
 	);
-	// Promise.all girdi sırasını korur — çıktı bloklarının sırası sıralı sürümle birebir aynı.
-	const bloklar = sonuclar.filter((b): b is string => b !== null);
+
+	// Kota kaydı: BAŞARILI her tespit denemesi için (platform bulunsa da bulunmasa da — API çağrısı
+	// zaten yapıldı/faturalandı), TEK bir toplu Sheets append. Kendi try/catch'inde izole: bu
+	// başarısız olsa bile aşağıdaki blok/not verisi ZATEN bellekte, hiçbir şey kaybolmaz.
+	const basariliIsimler = sonuclar.filter((s) => s.basarili).map((s) => s.isim);
+	if (basariliIsimler.length) {
+		try {
+			await logKullanimToplu(env, 'rakipPlatformTespiti', basariliIsimler);
+		} catch (err) {
+			console.error('logKullanimToplu başarısız oldu (rakipPlatformTespiti)', err);
+		}
+	}
+
+	// Sheets hücre notları: TEK bir toplu batchUpdate. Kendi try/catch'inde izole: bu başarısız
+	// olsa bile aşağıdaki bloklar (rapor promptuna giden metin) ETKİLENMEZ.
+	const notlar = sonuclar
+		.filter((s): s is TespitSonucu & { notMetni: string } => s.notMetni !== null)
+		.map((s) => ({ rowNumber: s.rowNumber, notMetni: s.notMetni }));
+	if (notlar.length) {
+		try {
+			await setAktifPlatformlarNotlariToplu(env, notlar);
+		} catch (err) {
+			console.error('setAktifPlatformlarNotlariToplu başarısız oldu', err);
+		}
+	}
+
+	const bloklar = sonuclar.filter((s): s is TespitSonucu & { blok: string } => s.blok !== null).map((s) => s.blok);
 	if (!bloklar.length && !atlananSayisi) return '';
 	let sonuc = bloklar.length
 		? `\n\nSeçilen rakip(ler)in canlı platform tespiti (sadece bu analiz için arandı, ana veriye
