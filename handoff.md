@@ -1,58 +1,82 @@
-# Handoff — 2026-08-25
+# Handoff — 2026-08-25 (devam kaydı)
 
 ## Şu an tam olarak nerede kaldık (YENİ OTURUM BURADAN BAŞLASIN)
 
-**"Otomatik Platform Tespiti" özelliği TAMAMLANDI ve main'e merge edildi.** Rapor üretimi
-(İçerik Stratejisi / Aksiyon Analizi) sırasında, seçili rakip(ler) için Claude'un `web_search`
-aracıyla hangi platformlarda aktif olduğu canlı tespit ediliyor — checkbox'tan gelen kullanıcı-
-onaylı `aktifPlatformlar` ana değerine hiç dokunmadan, ephemeral bir rapor girdisi + Sheets hücre
-notu olarak.
+**Kesilen nokta: kullanıcının Cloudflare dashboard'ına bakıp Workers planını (Free vs Paid)
+söylemesi bekleniyor.** Bu tek cevap, bir sonraki adımı tamamen belirliyor — aşağıya bak.
 
-Subagent-driven development ile uygulandı: 4 task (`platformTespitiYap`, kota kategorisi,
-`setAktifPlatformlarNotu`, orkestrasyon+wiring), her biri ayrı review'dan geçti, sonra whole-branch
-final review yapıldı. Final review 1 Kritik + 5 Önemli bulgu buldu (detay: commit geçmişi + ledger,
-`.superpowers/sdd/` workspace silindi, artık git log tek kayıt), tek bir fix dalgasıyla hepsi
-düzeltildi ve re-review ile doğrulandı. 401/401 test yeşil, main'e fast-forward merge edildi,
-worktree+dal temizlendi.
+### Arka plan (neden bu soru sorulda kaldı)
 
-**AÇIK KALAN TEK MADDE (takip bileti, hata günlüğüne BE-115 olarak kaydedildi):**
-`getKullanimOzet`'in kendi iç maliyeti (kategori başına 2 ayrı Sheets round-trip) tek başına
-~31 subrequest — bu fix dalgası çifte-okuma sorununu giderdi (83→52 subrequest/istek) ama **52
-hâlâ Cloudflare'in ~50-subrequest tavanının üzerinde**. Kullanıcı bunu bilerek ayrı bir takip
-bileti olarak bıraktı (2026-08-25 kararı), bu oturumda düzeltilmedi. Önerilen düzeltme:
-`src/lib/kullanimKaydi.ts`'te her artırılabilir kategori için `efektifLimit` +
-`sonKullanilanParaBirimiGetir`'in AYRI AYRI çalışan `ensureKullanimLimitTab`+`getAllKullanimLimitRows`
-zincirini tek okumaya indirmek (tahmini ~31→~6, toplam istek ~52→~27). Detaylı gerekçe/geçmiş:
-`talk-and-heal-hata-gunlugu/05-Backend-Entegrasyon/05-backend-entegrasyon.md`, **BE-115**.
+"Otomatik Platform Tespiti" özelliği (bir önceki oturum) main'e merge edildi ve TAMAMLANDI. O
+oturumun final review'ı, özelliğin çoklu-rakip raporlarında Cloudflare'in subrequest tavanını
+aştığını buldu (BE-115). Bu oturumda BE-115'i düzeltmek için 2 task'lık bir plan yazıldı
+(`docs/superpowers/plans/2026-08-25-subrequest-limit-duzeltmesi.md`), subagent-driven development
+ile uygulandı, her iki task da review'dan geçti, **whole-branch final review "Ready to merge: Yes"
+dedi** (0 Kritik, 0 Önemli kod hatası) — ama final review'ın kendisi YENİ bir kalıntı risk buldu:
+planın hiç modellemediği ikinci bir rakip-başına maliyet kalemi (`anlikParametreSkorlariGetir` →
+`parametreSkorlariUret`, rakip başına ayrı bir Anthropic çağrısı). Gerçek formül **25 + 2×N**
+(N=rakip sayısı) — 14+ rakipte, ve özellikle `googlePuani` parametresi seçiliyse daha da erken,
+tavan (varsayılan 50) yine aşılıyor.
 
-**Yeni oturumda ilk yapılacak:** Kullanıcıya BE-115'in (subrequest bütçesi) ayrı bir iş kalemi
-olarak ne zaman ele alınacağını sor, ya da başka bir öncelik varsa onu takip et.
+Kullanıcıya bunu nasıl düzelteceğimiz soruldu (düşük riskli kota-tavanı deseni vs yüksek riskli
+LLM-prompt-birleştirme). Kullanıcının cevabı sohbeti üst-seviye bir soruya taşıdı: "Anthropic
+kotasını yükseltirsek bu da çözülmüş olmuyor mu?" — Bu, Anthropic bütçe kotası ile Cloudflare'in
+TAMAMEN AYRI bir sistemi olan subrequest tavanını karıştırıyordu, ama gerçek ve daha ucuz bir
+alternatifi ortaya çıkardı: **Cloudflare Workers'ın PLAN SEVİYESİ** (Free vs Paid, $5/ay) bu
+tavanı doğrudan belirliyor.
 
-## Bu oturumda (2026-08-25) tamamlanan işler
+**Doğrulandı (developers.cloudflare.com/workers/platform/limits/, 2026-08-25):**
+- Workers Free: **50 subrequest/istek** (bu dosyadaki BE-77/81/82/115'in TÜM varsayımının kaynağı)
+- Workers Paid ($5/ay): **1.000 subrequest/istek** (varsayılan), 10 milyona kadar yapılandırılabilir
 
-1. Önceki oturumdan kalan commit edilmemiş dokümantasyon (spec/plan/handoff güncellemeleri)
-   main'e commit edildi.
-2. İzole git worktree kuruldu (`.worktrees/rakip-platform-otomatik-tespit/`), `.dev.vars`
-   kopyalandı, baseline 375/375 test doğrulandı.
-3. 4 task subagent-driven development ile uygulandı (her biri implementer + task review):
-   - Task 1: `platformTespitiYap` (`lib/claude.ts`) — commit `4577be9`
-   - Task 2: `rakipPlatformTespiti` kota kategorisi (`config.ts`, 27/ay) — commit `93de885`
-   - Task 3: `setAktifPlatformlarNotu` (`lib/rakipSheets.ts`, native Sheets hücre notu) — commit `e07f455`
-   - Task 4: orkestrasyon+wiring (`routes/rakipAnalizi.ts`) — commit `4823a95`, 1 fix round
-     (test-dosyası DRY temizliği) — commit `f9412d3`
-4. Task 4'ün full-suite koşusu ayrı bir regresyonu ortaya çıkardı: `test/giderTakipSweep.spec.ts`
-   Task 2'nin yeni kota kategorisiyle kırılan hardcoded kategori sayısı (6→7) — ayrı, küçük bir
-   fix ile giderildi, commit `0a4c9b3`.
-5. Whole-branch final review (Opus): 1 Kritik (`getKullanimOzet` çifte-okuma, BE-77'nin tekrarı)
-   + 5 Önemli bulgu (multi-block web_search text kaybı, `stop_reason` kontrolsüzlüğü, izole
-   olmayan `logKullanim`, case-sensitive platform eşleşmesi, sıralı/yavaş tespit). Kullanıcı onayı
-   ile tek fix dalgası dispatch edildi (commit `43a668f`, `889f165`), scoped re-review ile
-   doğrulandı — 6/6 bulgu ADDRESSED, yeni kırılma yok.
-6. Fix dalgası bir kalıntı risk ortaya çıkardı (52 subrequest, hâlâ ~50 tavanının üzerinde) —
-   kullanıcıya soruldu, "dalı tamamla, ayrı takip bileti aç" kararı verildi. BE-115 olarak hata
-   günlüğüne kaydedildi.
-7. `finishing-a-development-branch`: 401/401 test yeşil, main'e fast-forward merge edildi
-   (`889f165`), worktree ve dal temizlendi.
+Eğer proje zaten Workers Paid'deyse, 25+2×20=65 bile 1.000'in çok altında kalır — BE-115'in TÜM
+senaryosu (muhtemelen BE-77/81/82'nin de) zaten kapanmış demektir, ek kod çalışmasına HİÇ gerek
+kalmaz.
+
+**Hangi planda olduğu API üzerinden doğrulanamadı** — `npx wrangler whoami` hesabı doğruladı
+(`engintass19@gmail.com`, account ID `3588dd8cc3089f0f3f06ebed2ca4cc84`), ama wrangler'ın OAuth
+token'ının billing/subscription okuma yetkisi yok (403). Kullanıcıdan dashboard.cloudflare.com →
+Workers & Pages → plan rozetine bakması istendi.
+
+### Yeni oturumda İLK yapılacak
+
+1. **Kullanıcıya sor: "Cloudflare planına baktın mı, Free mi Paid mi?"** (soru zaten
+   `AskUserQuestion` ile bir kere soruldu ama cevap gelmeden oturum bitti — muhtemelen kullanıcı
+   check ettiyse cevabı hazır olacak).
+2. **Cevaba göre dallan:**
+   - **Free ise:** kullanıcının daha önce onayladığı düşük-riskli yaklaşımla devam —
+     `anlikParametreSkorlariGetir`'e (`form-backend/src/lib/grafikVerisi.ts:58`)
+     `rakipPlatformTespitiBaglamiGetir`'deki (`routes/rakipAnalizi.ts`) gibi bir "kalan kota
+     kadar işle, gerisini açıkça atla" tavanı ekleyen küçük bir 3. task/plan yaz (subagent-driven
+     development ile, aynı disiplin). Bu, `parametreSkorlariUret`'in LLM prompt'una hiç
+     dokunmuyor, BE-114'ün kanıt-doğrulama katmanını etkilemiyor. Sonra mevcut
+     `subrequest-limit-duzeltmesi` dalını main'e merge et, BE-115'i TAM ÇÖZÜLDÜ olarak kapat.
+   - **Paid ise:** ek kod işi GEREKMİYOR — mevcut `subrequest-limit-duzeltmesi` dalı (zaten
+     "Ready to merge: Yes") doğrudan main'e merge edilebilir
+     (`superpowers:finishing-a-development-branch`). BE-115'i "gerçek tavan 1000, mevcut kod her
+     durumda güvenli" notuyla ÇÖZÜLDÜ olarak kapat.
+3. **Her iki durumda da düşün:** final review'ın bulduğu ucuz bir Minor temizliği —
+   `test/kullanimKaydi.spec.ts` satır ~130 civarı, satır ~89'daki testin BİREBİR KOPYASI (sıfır ek
+   kapsam, gereksiz yavaşlık) — silip yerine gerçek bir null-limit senaryosu yazılabilir.
+
+### Şu anki kod/branch durumu (kayıp iş YOK, hepsi commit edilmiş)
+
+- **Worktree:** `.worktrees/subrequest-limit-duzeltmesi/`
+- **Branch:** `subrequest-limit-duzeltmesi` (main'den `d8d0d79`'da ayrıldı, main'e henüz MERGE
+  EDİLMEDİ)
+- **HEAD:** `8016973` — 3 commit (`ed50e46`, `1bed657`, `8016973`), hepsi review'dan geçti
+- **Test durumu:** 411/411 yeşil, `npx tsc --noEmit` ve `npx prettier --check` temiz
+- **SDD workspace** (`~/.worktrees/subrequest-limit-duzeltmesi/.superpowers/sdd/2026-08-25-subrequest-limit-duzeltmesi/`)
+  hâlâ duruyor — final review temiz gelince/dal merge edilince silinmesi gerekiyor (normalde bu
+  adımda silinirdi, ama merge kararı kullanıcının Cloudflare cevabına bağlı olduğu için erken
+  bitirildi).
+
+## Detaylı gerekçe
+
+Tüm ölçümler, formüller, final review'ın tam metni ve gerekçe zinciri
+`talk-and-heal-hata-gunlugu/05-Backend-Entegrasyon/05-backend-entegrasyon.md`'nin BE-115 kaydında
+(özellikle "2026-08-25 devam kaydı" bölümü, dosyanın sonu) — yeni oturum kod yazmaya başlamadan
+önce oradan tam bağlamı oku.
 
 ## Eski açık maddeler (değişmedi, bu oturumda dokunulmadı)
 
