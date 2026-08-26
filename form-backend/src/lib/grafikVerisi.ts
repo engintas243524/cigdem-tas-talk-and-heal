@@ -47,6 +47,21 @@ export interface AnlikParametreSkoru {
 	skorlar: Record<string, number | null>;
 }
 
+// BE-115 TAKİP (2026-08-25) — bu fonksiyon rakip başına 1 AYRI Claude çağrısı (dolayısıyla 1 AYRI
+// Cloudflare subrequest) yapar, `rakipPlatformTespitiBaglamiGetir`'in kendi rakip-başına maliyetinden
+// TAMAMEN BAĞIMSIZ bir ikinci kalem. Final whole-branch review ölçtü: aynı istekte diğer sabit
+// maliyetlerle (Task 1/2 sonrası ~25 subrequest tabanı) birleşince toplam formül ~25+2×N — Workers
+// Free planın 50-subrequest tavanında N=14'te (rakip sayısı) aşım başlıyor (bkz. hata günlüğü BE-115,
+// "2026-08-25 devam kaydı" bölümündeki tablo). platformTespiti'nin "kalan kota kadar işle, gerisini
+// açıkça atla" desenini burada da uyguluyoruz — ama burada Anthropic $ bütçesine karşılık gelen bir
+// aylık KULLANIM_KATEGORILERI kotası YOK (bu skorlama hiç loglanmıyor/faturalandırılmıyor), o yüzden
+// "kota" burada saf bir Cloudflare subrequest güvenlik tavanı: en fazla bu kadar rakip TEK istekte
+// işlenir, N=10 formülü 25+20=45 sonucunu verir (tablodaki "tavanın altında" satırıyla aynı, rahat
+// pay bırakır). Çağıran taraf `rakipRows.length` ile dönen dizinin rakip kısmının uzunluğunu
+// karşılaştırarak kaç tanesinin atlandığını tespit edip kullanıcıya not düşebilir (bkz.
+// routes/rakipAnalizi.ts#handleIcerikStrateji).
+export const MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP = 10;
+
 // Talk and Heal + seçili rakip(ler) için AN'INDAKİ (geçmiş değil) 1-10 parametre skorunu üretir —
 // RakipTakip'te dönem kapanışında kullanılan AYNI mekanizma (parametreSkorlariUret), ama burada
 // hiçbir yere kaydedilmiyor, sadece bu tek rapor/grafik isteği için hesaplanıp dönülüyor. Her rakip
@@ -61,8 +76,10 @@ export async function anlikParametreSkorlariGetir(
 	rakipRows: { row: RakipAnalizRow }[],
 	parametreAnahtarlari: string[],
 ): Promise<AnlikParametreSkoru[]> {
+	// BE-115: kalan-kota-kadar-işle tavanı — bkz. MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP üstündeki not.
+	const islenecekler = rakipRows.slice(0, MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP);
 	const rakipSkorlari = await Promise.all(
-		rakipRows.map(async ({ row }) => {
+		islenecekler.map(async ({ row }) => {
 			const baglam = [row.isim, row.adres, row.not].filter(Boolean).join('\n');
 			return { varlikAdi: row.isim, skorlar: await parametreSkorlariUret(env, baglam, parametreAnahtarlari) };
 		}),

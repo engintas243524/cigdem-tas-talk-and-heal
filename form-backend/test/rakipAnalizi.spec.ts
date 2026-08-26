@@ -856,18 +856,18 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(metin.indexOf('Paralel Rakip A: Instagram')).toBeLessThan(metin.indexOf('Paralel Rakip B: Instagram'));
 	});
 
-	// Subrequest regresyon koruması (BE-77/BE-81) — Cloudflare ücretsiz planında bir istek en fazla
-	// 50 subrequest yapabilir (bkz. lib/places.ts#MAX_GRID_DIMENSION'ın üstündeki aynı hesap).
-	// getKullanimOzet TEK ÇAĞRIDA 31 subrequest'e mal oluyor (bu testle ölçüldü: 2026-08-25'te
-	// rakipPlatformTespitiBaglamiGetir kendi özetini çekerken sayı 83'tü, özet parametreye
-	// çevrilince 52'ye düştü — aradaki 31 tam olarak bir getKullanimOzet çağrısı).
+	// Subrequest regresyon koruması (BE-77/BE-81/BE-82, kapatıldı: BE-115, 2026-08-25) — Cloudflare
+	// ücretsiz planında bir istek en fazla 50 subrequest yapabilir (bkz. lib/places.ts#MAX_GRID_DIMENSION'ın
+	// üstündeki aynı hesap). getKullanimOzet eskiden TEK ÇAĞRIDA 31 subrequest'e mal oluyordu (kategori
+	// başına ensureKullanimLimitTab + getAllKullanimLimitRows, efektifLimit ve sonKullanilanParaBirimi
+	// için AYRI AYRI) — sayı 2026-08-25'te rakipPlatformTespitiBaglamiGetir kendi özetini çekerken 83'tü,
+	// özet parametreye çevrilince 52'ye düştü. BE-115'te getKullanimOzet tek-okumaya indirgendi
+	// (bkz. src/lib/kullanimKaydi.ts) — bu senaryo artık ÖLÇÜLEN 25 subrequest'te (52'den ~2 katı düşüş).
 	//
-	// Tavan 60: BİR getKullanimOzet çağrısının geri sızmasını (52 → 83) kesin yakalar, ±birkaç
-	// çağrılık gürültüde ötmez. 50'nin ALTINA çekilemiyor çünkü tek rakipli bu senaryo bugün 52'de —
-	// kalan aşım getKullanimOzet'in KENDİ iç maliyetinden geliyor (kategori başına
-	// ensureKullanimLimitTab + getAllKullanimLimitRows, efektifLimit ve sonKullanilanParaBirimi için
-	// AYRI AYRI). O refactor bu düzeltmenin kapsamı dışında bırakıldı (review'ın "önerilen takip"
-	// maddesi) — bu yorum, sayının neden hâlâ 50'nin üstünde olduğunun kaydıdır.
+	// Tavan 35: gözlenen 25'in rahatça üstünde (gürültüye ötmez) ama eski 60'tan (ve 52/83'ten) belirgin
+	// şekilde düşük — getKullanimOzet'in tek-okuma davranışının geri sızmasını kesin yakalar. Task 2'nin
+	// çok-rakipli senaryosu ayrı bir regresyon testiyle logKullanimToplu'nun (rakip başına ayrı log
+	// yerine toplu yazım) etkisini koruyacak.
 	it('stays well under the Cloudflare subrequest ceiling for a one-competitor report', async () => {
 		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
 		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
@@ -884,7 +884,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		});
 		expect(raporRes.status).toBe(200);
 		const raporIstegiCagriSayisi = fetchMock.mock.calls.length - oncesi;
-		expect(raporIstegiCagriSayisi).toBeLessThan(60);
+		expect(raporIstegiCagriSayisi).toBeLessThan(35);
 	});
 
 	it('writes a Sheets cell note for each detected competitor', async () => {
@@ -907,6 +907,83 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		const noteBody = JSON.parse((noteCall[1] as RequestInit).body as string);
 		expect(noteBody.requests[0].updateCells.rows[0].values[0].note).toContain('LLM tespiti');
 		expect(noteBody.requests[0].updateCells.rows[0].values[0].note).toContain('Facebook');
+	});
+
+	it('runs platform tespiti for many competitors while staying well under the Cloudflare subrequest ceiling', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipIds: string[] = [];
+		for (let i = 0; i < 10; i++) {
+			const res = await authedRequest('/panel/rakip-analizi/rakip', {
+				method: 'POST',
+				body: JSON.stringify({ isim: `Coklu Rakip ${i}`, kaynak: 'manuel' }),
+			});
+			rakipIds.push(((await res.json()) as { id: string }).id);
+		}
+
+		const oncesi = fetchMock.mock.calls.length;
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds }),
+		});
+		expect(raporRes.status).toBe(200);
+		const raporIstegiCagriSayisi = fetchMock.mock.calls.length - oncesi;
+		// BE-115: bu test, TEK BAŞINA getKullanimOzet düzeltmesinin (Task 1) YETERSİZ kaldığı asıl
+		// senaryoyu doğruluyor — 10 rakip, eski rakip-başına-yazım deseniyle taban(~27) + 10×4 = ~67
+		// olurdu, hâlâ tavanın üstünde. Toplu yazım (bu task) sayesinde rakip sayısından NEREDEYSE
+		// bağımsız kalmalı.
+		expect(raporIstegiCagriSayisi).toBeLessThan(45);
+	});
+
+	// BE-115 TAKİP (2026-08-25) — final review'ın bulduğu, Task 1/2'nin KAPSAMADIĞI ikinci rakip-başına
+	// maliyet kalemi: anlikParametreSkorlariGetir'in kendi Claude çağrısı. 14+ rakip seçildiğinde
+	// (25+2×N formülü) tavanı aşıyordu — bkz. lib/grafikVerisi.ts#MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP.
+	it('caps anlikParametreSkorlariGetir at MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP and notes the skip in the report prompt', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipIds: string[] = [];
+		for (let i = 0; i < 14; i++) {
+			const res = await authedRequest('/panel/rakip-analizi/rakip', {
+				method: 'POST',
+				body: JSON.stringify({ isim: `Tavan Testi Rakip ${i}`, kaynak: 'manuel' }),
+			});
+			rakipIds.push(((await res.json()) as { id: string }).id);
+		}
+
+		const oncesi = fetchMock.mock.calls.length;
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds }),
+		});
+		expect(raporRes.status).toBe(200);
+		const raporIstegiCagriSayisi = fetchMock.mock.calls.length - oncesi;
+		expect(raporIstegiCagriSayisi).toBeLessThan(50);
+
+		const reportBody = JSON.parse((findReportCall(fetchMock)[1] as RequestInit).body as string);
+		const metin = String(reportBody.messages[0].content);
+		expect(metin).toContain('4 rakip için parametre skorlaması YAPILMADI');
+	});
+
+	it('batches all detected-competitor Sheets notes into ONE batchUpdate call, not one per competitor', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipIds: string[] = [];
+		for (let i = 0; i < 3; i++) {
+			const res = await authedRequest('/panel/rakip-analizi/rakip', {
+				method: 'POST',
+				body: JSON.stringify({ isim: `Toplu Not Rakip ${i}`, kaynak: 'manuel' }),
+			});
+			rakipIds.push(((await res.json()) as { id: string }).id);
+		}
+		await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds }),
+		});
+		const noteCalls = fetchMock.mock.calls.filter((c) => {
+			if (!String(c[0]).includes(':batchUpdate')) return false;
+			const body = JSON.parse((c[1] as RequestInit).body as string);
+			return body.requests?.[0]?.updateCells?.fields === 'note';
+		});
+		expect(noteCalls).toHaveLength(1);
+		const body = JSON.parse((noteCalls[0][1] as RequestInit).body as string);
+		expect(body.requests).toHaveLength(3);
 	});
 
 	it('processes zero competitors and adds only the skip note when the monthly quota is already full', async () => {
@@ -1098,7 +1175,7 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(reportBody.messages[0].content).not.toContain('Basarisiz Rakip:');
 	});
 
-	it('when setAktifPlatformlarNotu fails, the report still generates and still includes the detected platforms', async () => {
+	it('when the batched Sheets note write fails, the report still generates and still includes the detected platforms', async () => {
 		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
 		const rakipRes = await authedRequest('/panel/rakip-analizi/rakip', {
 			method: 'POST',

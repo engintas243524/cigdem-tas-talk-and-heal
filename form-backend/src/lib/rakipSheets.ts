@@ -175,3 +175,35 @@ export async function setAktifPlatformlarNotu(env: Env, rowNumber: number, notMe
 		}),
 	});
 }
+
+// N rakip için TEK bir sheetId sorgusu + TEK bir batchUpdate isteğinde toplu not yazımı — BE-115:
+// setAktifPlatformlarNotu (tekil) her çağrıda kendi sheetId sorgusunu TEKRARLIYORDU, rakip
+// sayısıyla doğrusal büyüyen subrequest maliyeti yaratıyordu (rakip başına 2). setAktifPlatformlarNotu
+// (tekil) DEĞİŞMEDİ, mevcut testleri etkilenmiyor — bu SADECE çok-öğeli senaryolar için ek bir
+// fonksiyon (bkz. routes/rakipAnalizi.ts#rakipPlatformTespitiBaglamiGetir).
+export async function setAktifPlatformlarNotlariToplu(env: Env, notlar: { rowNumber: number; notMetni: string }[]): Promise<void> {
+	if (!notlar.length) return;
+	const response = await sheetsFetch(env, '?fields=sheets.properties(sheetId,title)');
+	const data = (await response.json()) as { sheets?: { properties?: { sheetId?: number; title?: string } }[] };
+	const sheetId = data.sheets?.find((s) => s.properties?.title === RAKIP_ANALIZI_TAB_NAME)?.properties?.sheetId;
+	if (sheetId === undefined) throw new Error('RakipAnalizi tab bulunamadı, not yazılamadı.');
+	const colIndex = RAKIP_ANALIZI_COLUMNS.indexOf('aktifPlatformlar');
+	await sheetsFetch(env, ':batchUpdate', {
+		method: 'POST',
+		body: JSON.stringify({
+			requests: notlar.map(({ rowNumber, notMetni }) => ({
+				updateCells: {
+					range: {
+						sheetId,
+						startRowIndex: rowNumber - 1,
+						endRowIndex: rowNumber,
+						startColumnIndex: colIndex,
+						endColumnIndex: colIndex + 1,
+					},
+					rows: [{ values: [{ note: notMetni }] }],
+					fields: 'note',
+				},
+			})),
+		}),
+	});
+}
