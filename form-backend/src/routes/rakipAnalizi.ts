@@ -25,6 +25,7 @@ import {
 	gecerliPeriyotTuru,
 	gecerliGrafikPeriyotTuru,
 	gecerliGrafikKaynaklari,
+	MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP,
 } from '../lib/grafikVerisi';
 import { GRAFIK_PERIYOT_GUN_SAYISI, ANTHROPIC_BILLING_URL, YAYINCI_PROFILLERI, RAKIP_PLATFORM_LISTESI, type EtikRejimi } from '../config';
 import { etikDenetimYap, type EtikBayrak } from '../lib/etikGate';
@@ -785,6 +786,14 @@ denemeye değer): ${JSON.stringify(konuTrendleri.map((k) => ({ konu: k.konu, sko
 		if (seciliRakipler.length && odaklanilacakParametreler.length) {
 			const skorlar = await anlikParametreSkorlariGetir(env, null, seciliRakipler, odaklanilacakParametreler);
 			parametreSkorlariEki = `\n\nYapılandırılmış parametre skorları (1-10, veri yoksa null):\n${JSON.stringify(skorlar)}`;
+			// BE-115: talkAndHealBaglam=null olduğu için skorlar.length rakip sayısıyla birebir —
+			// MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP tavanı devreye girdiyse fark, atlanan rakip sayısıdır.
+			const atlananSayisi = seciliRakipler.length - skorlar.length;
+			if (atlananSayisi > 0) {
+				parametreSkorlariEki += `\n\n(${atlananSayisi} rakip için parametre skorlaması YAPILMADI — tek istekte işlenebilecek
+rakip sayısı sınırına (${MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP}) ulaşıldı. Rapor metni yine de tüm seçili rakiplerin ham verisini kullanır,
+sadece bu yapılandırılmış 1-10 skorlama kısmi kaldı.)`;
+			}
 		}
 	}
 

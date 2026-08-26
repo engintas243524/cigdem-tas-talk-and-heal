@@ -934,6 +934,34 @@ describe('POST /panel/rakip-analizi/icerik-strateji', () => {
 		expect(raporIstegiCagriSayisi).toBeLessThan(45);
 	});
 
+	// BE-115 TAKİP (2026-08-25) — final review'ın bulduğu, Task 1/2'nin KAPSAMADIĞI ikinci rakip-başına
+	// maliyet kalemi: anlikParametreSkorlariGetir'in kendi Claude çağrısı. 14+ rakip seçildiğinde
+	// (25+2×N formülü) tavanı aşıyordu — bkz. lib/grafikVerisi.ts#MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP.
+	it('caps anlikParametreSkorlariGetir at MAX_ANLIK_PARAMETRE_SKORLAMA_RAKIP and notes the skip in the report prompt', async () => {
+		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
+		const rakipIds: string[] = [];
+		for (let i = 0; i < 14; i++) {
+			const res = await authedRequest('/panel/rakip-analizi/rakip', {
+				method: 'POST',
+				body: JSON.stringify({ isim: `Tavan Testi Rakip ${i}`, kaynak: 'manuel' }),
+			});
+			rakipIds.push(((await res.json()) as { id: string }).id);
+		}
+
+		const oncesi = fetchMock.mock.calls.length;
+		const raporRes = await authedRequest('/panel/rakip-analizi/icerik-strateji', {
+			method: 'POST',
+			body: JSON.stringify({ istek: 'Öneri istiyorum', rakipIds }),
+		});
+		expect(raporRes.status).toBe(200);
+		const raporIstegiCagriSayisi = fetchMock.mock.calls.length - oncesi;
+		expect(raporIstegiCagriSayisi).toBeLessThan(50);
+
+		const reportBody = JSON.parse((findReportCall(fetchMock)[1] as RequestInit).body as string);
+		const metin = String(reportBody.messages[0].content);
+		expect(metin).toContain('4 rakip için parametre skorlaması YAPILMADI');
+	});
+
 	it('batches all detected-competitor Sheets notes into ONE batchUpdate call, not one per competitor', async () => {
 		const { fetchMock } = stubApis({ anthropicText: 'Instagram' });
 		const rakipIds: string[] = [];
