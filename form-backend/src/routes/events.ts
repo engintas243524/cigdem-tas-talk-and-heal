@@ -16,12 +16,17 @@ function newId(): string {
 	return crypto.randomUUID();
 }
 
-// GET /events — PUBLIC (auth yok, index.html/services.html'in ziyaretçi tarafından çağırılıyor).
-// events-box.js'in beklediği alanlarla birebir eşleşir; id/createdAtUtc döndürmüyoruz (sitede
-// gösterilecek hiçbir alanda kullanılmıyor, gereksiz iç veri sızdırmamak için).
+// GET /events — PUBLIC (auth yok, index.html/services.html'in ziyaretçi tarafından çağırılıyor,
+// her sayfa yüklemesinde). ensureEventsTab BİLEREK çağrılmıyor: o üç sıralı Sheets API isteği
+// yapıyor (tab kontrolü + başlık satırını koşulsuz yeniden yazma + satır yüksekliği formatlama),
+// hepsi her okumada gereksiz tekrar — panel yazma uçları zaten tabı garanti ediyor. Bu uç public/
+// yüksek trafikli olduğu için tek bir sıralı Sheets çağrısına indirildi (2026-09-01, Uptime Kuma'nın
+// tekrarlayan "timeout of 48000ms exceeded" uyarılarının kök nedeniydi — 4 sıralı dış çağrı, aynı
+// paylaşılan Google servis hesabı kotasında ufak bir gecikmede üst üste binip 48s'i aşıyordu).
+// Tab henüz hiç oluşmadıysa (ör. ilk deploy, panelden hiç etkinlik eklenmemiş) Sheets 400 döner —
+// ziyaretçiye hata/timeout göstermek yerine boş listeye düş.
 export async function handleEventsListe(request: Request, env: Env): Promise<Response> {
-	await ensureEventsTab(env);
-	const rows = await getAllEventRows(env);
+	const rows = await getAllEventRows(env).catch(() => []);
 	const events = rows
 		.map(({ row }) => ({
 			category: row.category,
