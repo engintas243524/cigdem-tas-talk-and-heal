@@ -1,89 +1,78 @@
-# Handoff — 2026-08-27
+# Handoff — Talk & Heal (2026-09-02)
 
-## Şu an tam olarak nerede kaldık
+## Bu oturumda TAMAMLANAN işler
 
-Bu oturumda Talk & Heal'in **11 sosyal medya platformunu Postiz'e (Sparrow'un paylaşılan Netcup
-kurulumu, `app.sparro.io`) bağlama** işine başlandı. Tam hesap/durum tablosu artık
-`TALK_AND_HEAL_HESAPLAR.md`'de tutuluyor (Sparrow'daki `SPARROW_HESAPLAR.md` deseninde) —
-yeni bir platform eklendiğinde oraya satır eklenmeli, şifreler orada asla düz metin durmaz.
+- **LinkedIn kişisel profil entegrasyonu TAMAMLANDI:** Postiz'e `tascigdem@hotmail.com` hesabı
+  "Cigdem Tas" kanalı olarak bağlandı, "Talk & Heal" grubuna taşındı. Yol boyunca Postiz'in kendi
+  LinkedIn OAuth kodunda iki bug bulunup düzeltildi (`prompt=none` sessiz yetkilendirme + yanlış
+  scope listesi — detay: `talk-and-heal-hata-gunlugu/05-Backend-Entegrasyon/05-backend-entegrasyon.md`
+  BE-120), düzeltme `github.com/engintas243524/postiz-app` main'e push edildi (commit `7b395525`)
+  ve Netcup'ta yeni image (`sparro-v4`) olarak canlıya alındı.
+- **Telegram entegrasyonu TAMAMLANDI:** Önceki oturumdan kalan "Postiz bağlantısı tıkandı" sorunu
+  çözüldü — kök neden bot'un Telegram sunucusunda "left" durumunda takılı kalmasıydı (telefon
+  arayüzü yanıltıcı şekilde admin gösteriyordu). Botu kaldırıp yeniden admin eklemek sorunu
+  çözdü, "Talk & Heal" kanalı Postiz'e bağlandı. Tüm doğrulama Telegram Bot API'sinden
+  (`getUpdates` çıktısı) yapıldı, tahmin kullanılmadı. Detay: BE-119.
 
-### Önkoşul işler (bu oturumda çözüldü)
+## Bu oturumda KISMİ ilerleme — dış onay/erişim bekliyor
 
-1. **Claude in Chrome bağlantısı** kuruldu — uzantı `engintass19@gmail.com` hesabında zaten
-   giriş yapılmış olmalı (aynı hesap Claude Code CLI'nın kullandığı hesapla eşleşmeli, aksi halde
-   pairing başarısız oluyor — bu oturumda önce hesap uyuşmazlığı yüzünden takıldı, düzeltildi).
-2. **Postiz backend süreci migration sonrası bozuktu** — PM2 `backend` app'i "online" görünüyordu
-   ama port 3000'i hiç bind etmemişti (nginx "connection refused"/"no live upstreams" veriyordu),
-   Google/email login bu yüzden hiç çalışmıyordu. `docker exec postiz pm2 restart backend` ile
-   düzeltildi. Aynı sorun tekrar çıkarsa aynı komut işe yarar.
-3. **Postiz'in Mastodon entegrasyonu hiç yapılandırılmamıştı** — `/opt/postiz/docker-compose.yaml`'da
-   `MASTODON_CLIENT_ID`/`MASTODON_CLIENT_SECRET` boştu. mastodon.social'da "Talk & Heal (Postiz)"
-   adında bir OAuth uygulaması oluşturulup env'e yazıldı, `docker compose up -d postiz` ile
-   container yeniden oluşturuldu. Detay: `TALK_AND_HEAL_HESAPLAR.md`.
-4. **Meta Developer App için gerçek bir Privacy Policy URL gerekiyordu** — `talkandheal.co.uk`
-   hâlâ eski WordPress sunucusunda (`hosting-devir-gorusmesi-goker.md`), bu depodaki statik
-   siteye HENÜZ geçilmedi. `gizlilik-politikasi.html` yazıldı, GitHub'a push edildi (commit
-   `18c625f`). Cloudflare Pages'e hızlı deploy denendi ama yeni `*.pages.dev` alt alan adı
-   uzun süre (10+ dk) erişilemez kaldı (DEPLOY-08, `08-deploy.md`) — GitHub Pages'e (repoda
-   zaten etkinmiş) geçilerek bypass edildi. **Canlı URL:**
-   `https://engintas243524.github.io/cigdem-tas-talk-and-heal/gizlilik-politikasi.html`
+- **Instagram/Facebook — Çiğdem'in 2FA onayında bekliyor:** Çiğdem'in kişisel hesap bilgisi
+  alındı, Meta App'te ("Sparro", `developers.facebook.com/apps/1605447844442171`) eksik 3 izin
+  (`instagram_basic`, `instagram_content_publish`, `instagram_manage_insights`) eklendi — kod
+  değişikliği gerekmedi (BE-121). Facebook girişinde şifre kabul edildi ama 2FA telefon onayı
+  (Çiğdem Londra'da, telefonu yanında değildi) tamamlanamadı.
+  **Sıradaki adım:** Çiğdem müsait olunca Postiz'de "Add Channel → Instagram (Facebook Business)"
+  tekrar denenmeli, `tascigdem@hotmail.com` ile giriş yapılıp telefon bildirimi ("61" gibi bir
+  sayı) hemen onaylanmalı (birkaç dakika içinde zaman aşımına uğruyor). Onaydan sonra consent
+  ekranında `facebook.com/TalkandHealUK` sayfası + bağlı `instagram.com/talkandhealuk` hesabı
+  seçilip "Allow" denmeli.
+- **LinkedIn şirket sayfası paylaşımı — kurumsal e-posta erişiminde bekliyor:** Şirket sayfası
+  (`talkandheal-uk`) adına paylaşım için "Community Management API" ürünü mevcut Developer
+  App'te istenemedi (LinkedIn kuralı: bu ürün App'te TEK ürün olmalı). Bunun için ayrı bir yeni
+  Developer App oluşturuldu ("Talk & Heal Postiz Page", Client ID `77ooimhpvmpzkl`), Talk & Heal
+  sayfasına bağlandı, şirket doğrulaması (company verification) tamamlandı. Ama "Community
+  Management API" isteği kurumsal domain e-postası istiyor — Talk & Heal'in kendi domaininde
+  (`talkandheal.co.uk` benzeri) bir e-posta VAR ama şu an kimsenin erişimi yok (Gmail/Hotmail
+  LinkedIn tarafından reddediliyor). Detay: BE-122.
+  **Sıradaki adım:** o kurumsal e-postaya erişim sağlanınca `developers.linkedin.com/apps/
+  264422020/products` → Community Management API → Request access → o e-postayı gir → gelen
+  kodu onayla. Kod tarafı zaten hazır (`linkedin.page.provider.ts`'deki `prompt=none` düzeltmesi),
+  sadece Client ID/Secret Netcup'a yazılıp Postiz'de "Add Channel → LinkedIn Page" denenmesi
+  yeterli olur. **Not:** aynı Developer App Sparrow'un kendi LinkedIn ihtiyacını da çözebilir.
 
-### Platform durumu (11 platform: Facebook, Instagram, LinkedIn, X, TikTok, YouTube, Bluesky,
-Threads, Google Business, Pinterest, Mastodon)
+## Önceki oturumdan kalan, henüz dokunulmamış bekleyenler
 
-- **Mastodon — TAMAMLANDI.** Hesap (`@talkandheal@mastodon.social`) açıldı, Postiz'e bağlandı,
-  Postiz'de yeni oluşturulan **"Talk & Heal" customer grubuna** atandı (Sparro'nun kendi
-  kanallarından ayrı, sol panelde ayrı başlık altında görünüyor).
-- **Bluesky — TAMAMLANDI.** Hesap (`talkandheal.bsky.social`) açıldı, "Postiz" adında bir App
-  Password oluşturuldu, Postiz'e bağlandı, "Talk & Heal" grubuna atandı. **Dikkat:** Postiz'in
-  "Add Channel → Bluesky" formu tarayıcı autofill ile Sparro'nun kendi bilgilerini
-  (`engintass19@gmail.com`) önceden dolduruyor — her seferinde manuel temizleyip doğru hesabı
-  girmek gerekiyor.
-- **Instagram — YARIDA.** Hesap açıldı (`talkandheal.uk` — düz `talkandheal` alınmıştı, alakasız
-  küçük bir hesap @Mir-za'ya ait), İşletme (Business) hesabına çevrildi (kategori:
-  Sağlık/Güzellik). **Henüz Postiz'e bağlanmadı** — bunun için Meta Developer App (Instagram
-  Standalone / "Business Login for Instagram") kurulması gerekiyor, artık gizlilik politikası
-  URL'i hazır olduğu için bu adıma geçilebilir.
-- **Facebook, LinkedIn, X, TikTok, YouTube, Threads, Google Business, Pinterest — HİÇ
-  BAŞLANMADI.**
+- **YouTube:** Şifre hâlâ bulunamadı, gerçek kanala (@cigdemtas8612, 4 gerçek video) geçiş
+  blokede; Postiz bağlantısı yeni/boş kanalda (@talkandheal-uk) kalıyor.
+- **Facebook — kişisel hesap bilgisi hâlâ tam netleşmedi:** `facebook.com/TalkandHealUK`
+  sayfasını yöneten hesabın Instagram ile aynı (`tascigdem@hotmail.com`) olduğu bu oturumda
+  doğrulandı, 2FA'da bekliyor (yukarıya bakın) — Facebook Page bağlantısı da aynı akışla
+  (Instagram ile birlikte) gelir, ayrı adım gerekmez.
+- **Pinterest:** App oluşturuldu (client_id `1605453`), "Trial erişimi" onayı bekleniyor.
+- **Google İşletme Profili:** Posta ile gönderilen doğrulama kodu bekleniyor (Flat 5, 164
+  Lordship Road, London, N16 5HB).
+- **Threads:** Facebook/Instagram çözülünce ele alınacak (aynı Meta ekosistemi).
+- **LinkedIn şirket sayfası — takipçi/içerik:** Sayfa (0 takipçi) henüz boş — Postiz bağlantısı
+  kurulunca ilk içerik/gönderi planlanmalı.
 
-### Yeni oturumda İLK yapılacak
+## Çözülen temel mimari sorunlar (önceki oturum, 2026-09-01)
 
-1. **Meta Developer App oluştur** (developers.facebook.com, "Talk & Heal" adında, Sparro'nun
-   kendi App'lerinden AYRI — müşteri karışmasın). Privacy Policy URL hazır (yukarıda). Bu tek
-   App, Instagram + Facebook + (sonra) Threads için kullanılabilir — Sparro'nun kendi deneyiminde
-   olduğu gibi ("Instagram Standalone" yolu, `business_management` izni EKLEME —
-   Sparro'da bu, gereksiz "İşletmeler" onay adımına ve scope hatasına yol açmıştı).
-2. Instagram Tester rolü eklenip `talkandheal.uk` hesabından kabul edilmeli (App henüz
-   Development modundaysa).
-3. Instagram bağlandıktan sonra Facebook Page kurulumuna geçilebilir (bir kişisel Facebook
-   hesabı üzerinden "Sayfa" oluşturmak gerekiyor — Çiğdem'in ya da kullanılacak hesabın kişisel
-   Facebook'u var mı henüz netleşmedi, sorulmalı).
-4. Sıradaki kolay platformlar (düşük geliştirici-konsolu yükü): TikTok artık mümkün olabilir
-   (Talk & Heal'in artık gerçek bir Privacy Policy URL'i var — Sparro'nun TikTok'u tam da bu
-   yüzden bloke olmuştu).
+`GET /events`'in yazma-yolu için tasarlanmış `ensureEventsTab()`'ı public okuma ucuna kopyalamış
+olması — bkz. `talk-and-heal-hata-gunlugu/10-Izleme-Bakim/10-izleme-bakim.md` (IZL-01), evrensel
+ders diğer projelere de uygulanabilir (bir "ensure/setup" fonksiyonunu her çağıran göz kapalı
+miras almamalı).
 
-## Detaylı gerekçe
+## ⚠️ Terk edilen/kapatılmış konular (tekrar denenmesin)
 
-Hesap/kimlik takibi: `TALK_AND_HEAL_HESAPLAR.md`. Cloudflare Pages/GitHub Pages olayının tam
-teşhis zinciri: `talk-and-heal-hata-gunlugu/08-Deploy/08-deploy.md` (DEPLOY-08).
+- **LinkedIn e-posta tutarlılığı:** Gerçek hesabın e-postasını marka kiti e-postasıyla
+  (`tascigdem1977@gmail.com`) tek/tutarlı hale getirme denemesi TERK EDİLDİ — o e-posta zaten
+  ayrı, boş/0-bağlantılı bir "gölge" hesaba bağlıydı, oradan kurtarmaya çalışırken LinkedIn
+  hesabı şüpheli aktivite gerekçesiyle kilitledi (devlet kimliği istiyor). Karar: kurtarılmayacak,
+  değersiz bir kabuk hesap. Gerçek hesap `tascigdem@hotmail.com` ile devam ediyor, hiç
+  etkilenmedi. Detay: `TALK_AND_HEAL_HESAPLAR.md`.
+- **LinkedIn Community Management API doğrulaması için `tascigdem1977@gmail.com` denemesi:**
+  reddedildi (kişisel domain), bu hesap zaten yukarıdaki madde yüzünden şüpheli/kilitli — bu
+  adımda BİR DAHA denenmesin, sadece gerçek kurumsal domain e-postası kullanılmalı.
 
-## Eski açık maddeler (değişmedi, bu oturumda dokunulmadı)
-
-- NOTES.md: `tascigdem1977@gmail.com` üzerinden gerçek Anthropic + Google Places API key'leri
-  henüz alınmadı.
-- `aksiyonAnaliz` kotası 13/13 dolu, kullanıcı "Limiti Yükselt" ile açmayı düşünüyor.
-- Planın kendi "Implementasyon sonrası" notundaki iki kod-dışı madde hâlâ açık: Sparrow'a
-  doküman notu işlenmesi, panelin (rakip-analizi.html) Sheets hücre notunu görsel olarak
-  göstermesi gerekip gerekmediği (kullanıcıya henüz sorulmadı).
-- Bilinen, bilerek kapsam dışı bırakılan ayrı bir risk: `googlePuani` parametresi seçiliyken
-  `rakipYorumBaglamiGetir` (Google Places tabanlı) rakip başına 2 ayrı unbatched subrequest
-  ekliyor — 10 rakip + googlePuani ile istek ~70'e çıkabiliyor. Free planda hâlâ bir risk, ayrı
-  bir takip bileti olarak ele alınmalı.
-- `talkandheal.co.uk`'in WordPress'ten bu depodaki statik siteye geçişi hâlâ yapılmadı
-  (`hosting-devir-gorusmesi-goker.md`) — domain yönetimi kimde net değil, Çiğdem'in netleştirmesi
-  gerekiyor. Bu, sosyal medya entegrasyonunu engellemiyor (GitHub Pages ile bypass edildi) ama
-  ayrı, çözülmesi gereken bir altyapı maddesi olarak kalmaya devam ediyor.
-- Talk & Heal randevu/ödeme/WhatsApp gibi hassas veri işlediği için tam kapsamlı bir gizlilik
-  politikası (UK ICO/GDPR uyumlu, hukuki incelemeli) hâlâ yazılmadı — bugün eklenen
-  `gizlilik-politikasi.html` sadece sosyal medya entegrasyonu için asgari bir bildirim.
+Detaylı gerekçe ve tam kurulum adımları: `TALK_AND_HEAL_HESAPLAR.md` (Marka Kiti bölümü dahil),
+platform-bazlı ilerleme takibi: `TALK_AND_HEAL_SOSYAL_MEDYA_ENTEGRASYON_STATE.md`.

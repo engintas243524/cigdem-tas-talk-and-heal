@@ -1,5 +1,11 @@
 # Talk and Heal — Tam Kapsamlı Aylık/Yıllık Gider ve Marj Tablosu (Çiğdem için, güncellendi 2026-08-17)
 
+**İlgili dosya (2026-08-27):** `out/TALK_AND_HEAL_SAGLAYICI_GIDER_TABLOSU.xlsx` — bu belgenin
+"sadece sağlayıcı" alt kümesini (Bölüm 1 + henüz alınmamış ama ihtiyaç duyulacak sağlayıcılar)
+USD/GBP yan yana formüllü bir Excel tablosu olarak yeniden üretir. Gelire bağlı Stripe/WhatsApp/
+vergi kalemleri (Bölüm 2 ve altı, aşağıda) o dosyaya DAHİL DEĞİL — onlar için hâlâ bu belge
+otoriter kaynak.
+
 **Bu bir yaşayan belge** (kullanıcı kararı, 2026-08-17) — tek seferlik bir hesap değil, yeni bir
 maliyetli araç/özellik eklendikçe ya da TBD satırlarından biri (Stripe/WhatsApp/vergi) netleştikçe
 tekrar hesaplanıp güncellenecek.

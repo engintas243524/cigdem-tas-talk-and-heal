@@ -189,6 +189,16 @@ even though the developer/user are in Turkey.
   (outcome-guarantee claims, false accreditation-status claims — real 2025 ASA precedent, competitor
   denigration) feeding Faz 1 (`YAYINCI_PROFILLERI` config) and Faz 2 (deterministic `etikGate.ts`).
 
+## Hatırlatma — her oturumda kontrol et: Hetzner hesabı silinmeli mi?
+
+Talk & Heal'in Postiz/sosyal-medya entegrasyonu, Sparrow'un paylaşık Postiz altyapısına
+(Hetzner → Netcup taşındı, 2026-08-26) bağlı. Netcup taşıması TAMAMLANDI ve doğrulandı (DNS
+çevrildi, HTTPS canlı), ama Hetzner hesabı güvenlik payı olarak birkaç gün açık bırakıldı —
+**taşımanın stabil çalıştığı doğrulanınca Hetzner hesabı TAMAMEN silinmeli** (sadece kart
+kaldırmak yetmiyor, sunucu var oldukça faturalandırma devam ediyor). Bu iş Sparrow tarafında
+takip ediliyor (`Sparrow/handoff.md`, `~/.claude/gundem.md`) ama Talk & Heal'in 11 platformu da
+aynı altyapıya bağlanacağı için buradan da hatırlatılıyor. Silindiyse bu notu kaldır.
+
 ## Mimari Yaklaşım Notu (2026-08-09 analizi — herhangi bir yeni aşama/entegrasyona geçmeden önce oku)
 
 Bu proje **canlıda**, gerçek müşteri (Çiğdem Taş) + ödeme + randevu + kişisel veri işliyor —

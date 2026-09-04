@@ -727,7 +727,7 @@ sorgulandı: 4 booking şablonu (`randevu_onay_danisan`, `randevu_hatirlatma_dan
       **Kurulum TAMAMLANDI (2026-08-19):** Uptime Kuma, GCP e2-micro'da (Always Free, us-central1,
       `tascigdem1977@gmail.com` hesabı, proje `talk-and-heal-izleme`) Docker ile ayağa kaldırıldı,
       firewall kuralı (`allow-uptime-kuma`, tcp:3001) eklendi, admin hesabı kuruldu
-      (`http://34.9.227.16:3001`). Webhook bildirimi ("Site Uyarısı") kuruldu ve varsayılan
+      (`http://34.9.227.16:3001`, kullanıcı adı: `talkandheal`, şifre kayıtlı değil — bilerek). Webhook bildirimi ("Site Uyarısı") kuruldu ve varsayılan
       etkin yapıldı. İki servis eklendi: "Talk and Heal Site" (GitHub Pages) ve "Talk and Heal
       Backend" (`/events`), ikisi de Normal. `UPTIME_WEBHOOK_SECRET` hem `.dev.vars`'a hem
       production'a (`wrangler secret put`) eklendi.
